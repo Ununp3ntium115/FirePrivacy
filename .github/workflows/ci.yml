@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  privacy-regression:
+    name: Privacy regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Local-analysis modules must contain no networking API
+        run: ./Tests/PrivacyRegression/no-network-in-local-analysis.sh
+
+  bundled-data:
+    name: Bundled data matches its source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Embedded demo report matches the generated file
+        run: |
+          python3 - <<'PY'
+          import sys
+          source = open("Resources/DemoReports/demo-report.ndjson").read().rstrip("\n")
+          embedded = open("Packages/AppActivityImportKit/Sources/AppActivityImportKit/DemoReport.swift").read()
+          body = embedded.split('public static let ndjson: String = #"""\n', 1)[1].rsplit('\n"""#', 1)[0]
+          if body != source:
+              sys.exit("DemoReport.swift is out of step with Resources/DemoReports/demo-report.ndjson")
+          print("demo report matches")
+          PY
+      - name: Embedded knowledge base matches the generated file
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          source = open("Resources/BundledKnowledgeBase/knowledge-base.json").read().rstrip("\n")
+          embedded = open("Packages/KnowledgeBaseKit/Sources/KnowledgeBaseKit/BundledKnowledgeBase.swift").read()
+          body = embedded.split('public static let json: String = #"""\n', 1)[1].rsplit('\n"""#', 1)[0]
+          if body != source:
+              sys.exit("BundledKnowledgeBase.swift is out of step with Resources/BundledKnowledgeBase/knowledge-base.json")
+          json.loads(body)
+          print("knowledge base matches and parses")
+          PY
+
+  swift:
+    name: Build and test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test

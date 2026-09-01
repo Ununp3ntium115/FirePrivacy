@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- The App Group carries only protection state and the verified prefilter.
+         No imported report data is ever written here (§12.2). -->
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.com.firesoftwaresolutions.fireprivacy</string>
+    </array>
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)com.firesoftwaresolutions.fireprivacy</string>
+    </array>
+    <!-- Requested at Gate 0. Until Apple grants it, SystemURLFilterBridge
+         reports the capability as missing and the Protection screen says so.
+    <key>com.apple.developer.networking.networkextension</key>
+    <array>
+        <string>url-filter</string>
+    </array>
+    -->
+</dict>
+</plist>

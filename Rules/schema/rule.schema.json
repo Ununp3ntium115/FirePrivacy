@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fireprivacy.example/schema/rule/1",
+  "title": "Fire Privacy detection rule",
+  "description": "A declarative detection rule. Rules are data, never code: nothing in this schema can change application behaviour beyond the fields described here (KB-008).",
+  "type": "object",
+  "required": ["id", "version", "titleKey", "conditions", "severity", "confidence", "recommendationIDs", "uncertainty", "testVectors"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Z]+(-[A-Z]+)*-[0-9]{3}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "titleKey": { "type": "string" },
+    "prerequisites": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minimumOSVersion": { "type": "integer" },
+        "requiresKnowledgeBase": { "type": "boolean" },
+        "requiresUserInput": { "type": "boolean" }
+      }
+    },
+    "conditions": {
+      "type": "object",
+      "description": "A condition tree. No scripting: only the documented operators.",
+      "additionalProperties": false,
+      "properties": {
+        "all": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+        "any": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+        "none": { "type": "array", "items": { "$ref": "#/$defs/condition" } }
+      }
+    },
+    "categoryExclusions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Categories that suppress the rule, such as shared infrastructure every app uses."
+    },
+    "confidence": {
+      "type": "object",
+      "required": ["base"],
+      "additionalProperties": false,
+      "properties": {
+        "base": { "type": "number", "minimum": 0, "maximum": 1 },
+        "penalties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["when", "amount"],
+            "additionalProperties": false,
+            "properties": {
+              "when": { "type": "string" },
+              "amount": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "severity": {
+      "type": "object",
+      "required": ["impact", "breadth", "persistence"],
+      "additionalProperties": false,
+      "properties": {
+        "impact": { "type": "number", "minimum": 1, "maximum": 5 },
+        "breadth": { "type": "string" },
+        "persistence": { "type": "string" },
+        "maximum": { "enum": ["info", "low", "medium", "high", "critical"] }
+      }
+    },
+    "recommendationIDs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Must include a no-action option (PER-004)."
+    },
+    "uncertainty": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "What the finding explicitly does not establish (DET-003)."
+    },
+    "prohibitedConclusions": { "type": "array", "items": { "type": "string" } },
+    "testVectors": {
+      "type": "object",
+      "required": ["positive", "negative"],
+      "additionalProperties": false,
+      "properties": {
+        "positive": { "type": "array", "minItems": 1 },
+        "negative": { "type": "array", "minItems": 1 }
+      }
+    },
+    "changeLog": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "enum": [
+            "appleDomainType", "knowledgeBaseCategory", "unrelatedPublisherCount",
+            "sensorType", "distinctDomainCount", "classifiedCoverage",
+            "userMarkedUnexpected", "protectionActive", "reportAgeDays", "hitCount"
+          ]
+        },
+        "operator": { "enum": ["equals", "notEquals", "greaterThanOrEqual", "lessThan", "contains", "notContains"] },
+        "value": {}
+      }
+    }
+  }
+}

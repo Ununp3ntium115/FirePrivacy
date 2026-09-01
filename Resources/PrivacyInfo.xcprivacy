@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Fire Privacy collects no data. Everything the app derives stays on the
+         device unless the person exports it themselves (§17.4, §17.5). -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- Reading the size and timestamps of files this app itself
+                     created, to show storage use in the Trust Center. -->
+                <string>C617.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- Checking free space before writing an import, so a large
+                     report fails cleanly instead of half-writing. -->
+                <string>E174.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- App-scoped preferences only. -->
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
