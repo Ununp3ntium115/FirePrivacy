@@ -1,0 +1,20 @@
+# Swift / SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Signing material must never be committed (SECURITY.md)
+*.p12
+*.cer
+*.mobileprovision
+*.certSigningRequest
+
+# OS
+.DS_Store
