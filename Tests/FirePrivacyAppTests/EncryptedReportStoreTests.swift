@@ -30,11 +30,26 @@ final class EncryptedReportStoreTests: XCTestCase {
         var synchronizedQuery = query
         synchronizedQuery[kSecAttrSynchronizable as String] = true
         XCTAssertEqual(SecItemCopyMatching(synchronizedQuery as CFDictionary, nil), errSecItemNotFound)
-        try provider.deleteKey()
+        do {
+            try provider.deleteKey()
+        } catch {
+            // Capture only a numeric result from the same cleanup query. Never
+            // print Keychain values or returned attributes. A successful retry
+            // does not turn the original deletion failure into a passing test.
+            let cleanupQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: "encrypted-report-key-v1",
+                kSecAttrSynchronizable as String: false
+            ]
+            let diagnosticStatus = SecItemDelete(cleanupQuery as CFDictionary)
+            XCTFail("Keychain deletion failed. Cleanup diagnostic OSStatus: \(diagnosticStatus).")
+            throw error
+        }
         XCTAssertNil(try provider.readKey())
     }
 
-    func testEncryptedRoundTripAndProtectedFiles() async throws {
+    func testEncryptedRoundTripAndBackupExcludedFiles() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager().removeItem(at: directory) }
         let keys = MemoryReportKeys()
@@ -58,9 +73,23 @@ final class EncryptedReportStoreTests: XCTestCase {
         for url in [directory, file] {
             let values = try url.resourceValues(forKeys: [.isExcludedFromBackupKey])
             XCTAssertEqual(values.isExcludedFromBackup, true)
+        }
+    }
+
+    func testCompleteFileProtectionRequiresPhysicalDevice() async throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("iOS hardware Data Protection is unavailable in Simulator. Run this test on a signed physical device with a passcode, and complete locked-device release QA.")
+        #else
+        let directory = temporaryDirectory()
+        defer { try? FileManager().removeItem(at: directory) }
+        let store = EncryptedReportStore(directoryURL: directory, keyProvider: MemoryReportKeys())
+        try await store.save(testReport())
+        let file = directory.appendingPathComponent("report.encrypted")
+        for url in [directory, file] {
             let attributes = try FileManager().attributesOfItem(atPath: url.path)
             XCTAssertEqual(attributes[.protectionKey] as? String, FileProtectionType.complete.rawValue)
         }
+        #endif
     }
 
     func testTamperingFailsClosedAndCannotSilentlyReplaceReport() async throws {

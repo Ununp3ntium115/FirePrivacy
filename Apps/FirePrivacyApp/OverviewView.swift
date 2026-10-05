@@ -20,18 +20,19 @@ struct OverviewView: View {
             HStack {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 56, weight: .medium))
-                    .foregroundStyle(FireStyle.orange)
+                    .foregroundStyle(FireStyle.flame)
+                    .shadow(color: FireStyle.ember.opacity(0.22), radius: 22)
                     .padding(24)
-                    .background(FireStyle.orange.opacity(0.09), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+                    .background(FireStyle.gold.opacity(0.09), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
                     .accessibilityHidden(true)
                 Spacer()
                 Label("ON YOUR DEVICE", systemImage: "iphone.gen3")
                     .font(.system(.caption2, design: .rounded).weight(.bold))
                     .tracking(1)
-                    .foregroundStyle(FireStyle.teal)
+                    .foregroundStyle(FireStyle.ember)
             }
 
-            PageHeader(eyebrow: "Your personal privacy notebook", title: "A clearer picture.\nA quieter mind.", subtitle: "Turn your iPhone or iPad’s App Privacy Report into evidence you can understand, one app at a time.")
+            PageHeader(eyebrow: "Your personal privacy notebook", title: "Your privacy. In focus.", subtitle: "Explore recorded activity. Choose with clarity. Bring an App Privacy Report from Apple Settings to get started.")
 
             FireCard {
                 VStack(alignment: .leading, spacing: 20) {
@@ -50,7 +51,7 @@ struct OverviewView: View {
                     } label: {
                         Label("How to export from Settings", systemImage: "questionmark.circle")
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(FireStyle.teal)
+                            .foregroundStyle(FireStyle.ember)
                             .padding(.vertical, 4)
                             .frame(maxWidth: .infinity)
                     }
@@ -68,53 +69,74 @@ struct OverviewView: View {
 
     @ViewBuilder
     private func reportOverview(_ report: PrivacyReport) -> some View {
+        let apps = report.apps
+        let domains = report.domains
         ReportStatusBanner()
-        PageHeader(eyebrow: "Your privacy, in focus", title: "Follow the evidence.", subtitle: "A historical snapshot from your imported report. A contact tells you that a domain was contacted, not what data was sent.")
+        Image(systemName: "flame.fill")
+            .font(.system(size: 46, weight: .medium))
+            .foregroundStyle(FireStyle.flame)
+            .shadow(color: FireStyle.ember.opacity(0.22), radius: 20)
+            .accessibilityHidden(true)
+        PageHeader(eyebrow: "A historical snapshot", title: "Your privacy. In focus.", subtitle: "Explore recorded activity. Choose with clarity.")
 
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 14)], alignment: .leading, spacing: 14) {
-            MetricCard(value: report.apps.count, title: "App identifiers", symbol: "app", color: FireStyle.teal)
-            MetricCard(value: report.domains.count, title: "Domains", symbol: "globe", color: FireStyle.teal)
-            MetricCard(value: report.totalContacts, title: "Reported contacts", symbol: "arrow.up.right", color: FireStyle.orange)
-            MetricCard(value: report.observations.filter { $0.category == .sensor }.count, title: "Sensor event records", symbol: "sensor", color: FireStyle.orange)
+            MetricCard(value: apps.count, title: "App identifiers", symbol: "app", color: FireStyle.ember)
+            MetricCard(value: domains.count, title: "Domains", symbol: "globe", color: FireStyle.ember)
+            MetricCard(value: report.totalContacts, title: "Reported contacts", symbol: "arrow.up.right", color: FireStyle.gold)
+            MetricCard(value: report.observations.filter { $0.category == .sensor }.count, title: "Sensor event records", symbol: "sensor", color: FireStyle.gold)
         }
 
-        FireCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 14) {
-                    SymbolBadge(symbol: "checkmark.shield")
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Understand first. Choose next.").font(.system(.title3, design: .rounded).weight(.bold)).foregroundStyle(FireStyle.text)
-                        Text("Review recorded activity and consider the settings that fit your needs. This report does not establish harm or show current permission states.").foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                NavigationLink {
-                    GuidanceView()
-                } label: {
-                    Label("Review your guidance", systemImage: "arrow.right")
-                        .font(.headline)
-                        .foregroundStyle(FireStyle.teal)
-                        .padding(.vertical, 6)
-                }
-            }
-        }
-
-        SectionHeading(title: "Most reported contacts", detail: "Sorted by exported contact count. Counts are not data volume or a risk score.")
-        if report.apps.isEmpty {
+        if apps.isEmpty {
             EmptyState(symbol: "app", title: "No app identifiers found", message: "The imported records do not contain recognized app activity.")
         } else {
             FireCard {
-                VStack(spacing: 0) {
-                    ForEach(Array(report.apps.prefix(5).enumerated()), id: \.element.id) { index, app in
+                VStack(alignment: .leading, spacing: 18) {
+                    SectionHeading(title: "Recorded activity", detail: "Reported contact count · most contacts first")
+                    ForEach(Array(apps.prefix(5).enumerated()), id: \.element.id) { index, app in
                         NavigationLink {
                             AppEvidenceView(app: app, report: report)
                         } label: {
-                            AppSummaryRow(app: app)
+                            ContactActivityRow(app: app, maximumContacts: apps.first?.contacts ?? 0)
                         }
                         .buttonStyle(.plain)
-                        if index < min(report.apps.count, 5) - 1 { Divider().overlay(Color.white.opacity(0.07)).padding(.vertical, 12) }
+                        if index < min(apps.count, 5) - 1 { Divider().overlay(FireStyle.gold.opacity(0.07)) }
                     }
+                    Text("Bars compare exported contact counts with the highest count in this report. They are not a risk score or data volume.")
+                        .font(.caption).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+
+        FireCard {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .top, spacing: 14) {
+                    SymbolBadge(symbol: "book")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Review your guidance").font(.system(.title3, design: .rounded).weight(.bold)).foregroundStyle(FireStyle.text)
+                        Text("Understand what the report shows, and consider settings that fit your needs.").foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                NavigationLink { GuidanceView() } label: {
+                    Label("View guidance", systemImage: "arrow.right")
+                        .font(.system(.headline, design: .rounded))
+                        .padding(.vertical, 15)
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(FireStyle.ink)
+                        .background(LinearGradient(colors: [FireStyle.gold, FireStyle.ember], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+
+        VStack(spacing: 12) {
+            Label("Analyzed on this device", systemImage: "lock.fill")
+                .font(.subheadline.weight(.medium)).foregroundStyle(FireStyle.text)
+                .padding(14).frame(maxWidth: .infinity)
+                .background(FireStyle.gold.opacity(0.055), in: RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(FireStyle.gold.opacity(0.12), lineWidth: 1))
+            Label("Contacts do not reveal what data was sent.", systemImage: "info.circle")
+                .font(.footnote).foregroundStyle(FireStyle.muted)
+                .fixedSize(horizontal: false, vertical: true)
         }
 
         FireCard {
@@ -136,22 +158,23 @@ struct ReportStatusBanner: View {
 
     var body: some View {
         if model.isDemo {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 Label("SAMPLE DATA · NOT YOUR DEVICE", systemImage: "sparkles")
-                    .font(.system(.caption, design: .rounded).weight(.bold))
-                    .foregroundStyle(FireStyle.orange)
+                    .font(.system(.caption2, design: .rounded).weight(.bold))
+                    .foregroundStyle(FireStyle.gold)
                     .accessibilityIdentifier("demo-report-badge")
-                Text("These apps and domains are fictional. The sample is not saved as your report.")
-                    .font(.subheadline).foregroundStyle(FireStyle.muted)
+                Text("Fictional apps and domains. This sample is not saved as your report.")
+                    .font(.caption).foregroundStyle(FireStyle.muted)
                 if model.hasSavedReport {
                     Button("Return to saved report") { Task { await model.restoreSavedReport() } }
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(FireStyle.teal)
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(FireStyle.ember)
                         .padding(.vertical, 4)
                 }
             }
-            .padding(16)
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(FireStyle.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
+            .background(FireStyle.gold.opacity(0.055), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(FireStyle.gold.opacity(0.19), lineWidth: 1))
         }
     }
 }
@@ -179,13 +202,64 @@ private struct MetricCard: View {
 
     var body: some View {
         FireCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Image(systemName: symbol).foregroundStyle(color).accessibilityHidden(true)
-                Text(value.formatted()).font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(FireStyle.text)
-                Text(title).font(.subheadline).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: symbol).font(.title2).foregroundStyle(color).frame(width: 30).accessibilityHidden(true)
+                    metricText
+                }
+                VStack(alignment: .leading, spacing: 10) {
+                    Image(systemName: symbol).font(.title2).foregroundStyle(color).accessibilityHidden(true)
+                    metricText
+                }
             }
             .accessibilityElement(children: .combine)
         }
+    }
+
+    private var metricText: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value.formatted()).font(.system(.title2, design: .rounded).weight(.bold)).foregroundStyle(FireStyle.text)
+            Text(title).font(.caption).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct ContactActivityRow: View {
+    let app: AppSummary
+    let maximumContacts: Int
+
+    private var fraction: CGFloat {
+        guard maximumContacts > 0 else { return 0 }
+        return CGFloat(min(1, max(0, Double(app.contacts) / Double(maximumContacts))))
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            SymbolBadge(symbol: "app")
+            VStack(alignment: .leading, spacing: 9) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text(verbatim: app.bundleID).font(.subheadline.weight(.medium)).foregroundStyle(FireStyle.text)
+                        Spacer(minLength: 0)
+                        Text(app.contacts.formatted()).font(.headline).foregroundStyle(FireStyle.text)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: app.bundleID).font(.subheadline.weight(.medium)).foregroundStyle(FireStyle.text)
+                        Text("\(app.contacts.formatted()) reported contacts").font(.caption).foregroundStyle(FireStyle.muted)
+                    }
+                }
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(FireStyle.gold.opacity(0.09))
+                        Capsule().fill(FireStyle.flame).frame(width: geometry.size.width * fraction)
+                    }
+                }
+                .frame(height: 8)
+                .accessibilityHidden(true)
+            }
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(FireStyle.muted).accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -222,8 +296,8 @@ struct InstructionStep: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            Text(number.formatted()).font(.system(.headline, design: .rounded)).foregroundStyle(FireStyle.teal)
-                .frame(width: 34, height: 34).background(FireStyle.teal.opacity(0.12), in: Circle()).accessibilityHidden(true)
+            Text(number.formatted()).font(.system(.headline, design: .rounded)).foregroundStyle(FireStyle.ember)
+                .frame(width: 34, height: 34).background(FireStyle.ember.opacity(0.12), in: Circle()).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 7) {
                 Text(title).font(.headline).foregroundStyle(FireStyle.text)
                 Text(detail).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)

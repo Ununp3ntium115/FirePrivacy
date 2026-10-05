@@ -26,7 +26,7 @@ struct GuidanceView: View {
                                         }
                                         Text(verbatim: finding.detail).font(.subheadline).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
                                         Label("\(finding.evidenceIDs.count.formatted()) supporting records", systemImage: "doc.text.magnifyingglass")
-                                            .font(.caption.weight(.medium)).foregroundStyle(FireStyle.teal)
+                                            .font(.caption.weight(.medium)).foregroundStyle(FireStyle.ember)
                                     }
                                 }
                             }
@@ -46,7 +46,7 @@ struct GuidanceView: View {
                                 SymbolBadge(symbol: guide.symbol)
                                 Text(guide.title).font(.system(.headline, design: .rounded)).foregroundStyle(FireStyle.text)
                                 Text(guide.summary).font(.subheadline).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
-                                Label("View steps", systemImage: "arrow.right").font(.caption.weight(.semibold)).foregroundStyle(FireStyle.teal)
+                                Label("View steps", systemImage: "arrow.right").font(.caption.weight(.semibold)).foregroundStyle(FireStyle.ember)
                             }
                         }
                     }
@@ -76,7 +76,7 @@ struct FindingDetailView: View {
                     SectionHeading(title: "What you can do")
                     ForEach(Array(finding.recommendedSteps.enumerated()), id: \.offset) { index, step in
                         HStack(alignment: .top, spacing: 14) {
-                            Text("\(index + 1)").font(.headline).foregroundStyle(FireStyle.teal).frame(width: 28).accessibilityHidden(true)
+                            Text("\(index + 1)").font(.headline).foregroundStyle(FireStyle.ember).frame(width: 28).accessibilityHidden(true)
                             Text(verbatim: step).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -123,7 +123,7 @@ struct SettingsGuideView: View {
             }
             FireCard {
                 VStack(alignment: .leading, spacing: 12) {
-                    Label("Consider the trade-off", systemImage: "scale.3d").font(.headline).foregroundStyle(FireStyle.orange)
+                    Label("Consider the trade-off", systemImage: "scale.3d").font(.headline).foregroundStyle(FireStyle.gold)
                     Text(guide.tradeoff).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
                 }
             }

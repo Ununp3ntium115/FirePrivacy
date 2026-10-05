@@ -10,7 +10,8 @@ for family in iphone ipad; do
   device="$(select_simulator "$family")"
   derived="$FIREPRIVACY_BUILD/DerivedData-$family"
   xcodebuild -project FirePrivacy.xcodeproj -scheme FirePrivacy -configuration Debug \
-    -destination "platform=iOS Simulator,id=$device" -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build
+    -destination "platform=iOS Simulator,id=$device" -derivedDataPath "$derived" \
+    CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- build
   app="$derived/Build/Products/Debug-iphonesimulator/FirePrivacy.app"
   bundle="$(python3 -c 'import plistlib,sys; print(plistlib.load(open(sys.argv[1],"rb"))["CFBundleIdentifier"])' "$app/Info.plist")"
   xcrun simctl boot "$device" >/dev/null 2>&1 || true

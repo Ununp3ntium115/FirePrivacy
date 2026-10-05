@@ -87,7 +87,7 @@ struct EvidenceView: View {
                         FireCard {
                             VStack(alignment: .leading, spacing: 8) {
                                 Label("Line \(issue.line.formatted()) · skipped", systemImage: "exclamationmark.circle")
-                                    .font(.headline).foregroundStyle(FireStyle.orange)
+                                    .font(.headline).foregroundStyle(FireStyle.gold)
                                 Text(verbatim: issue.message).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
                             }
                         }
@@ -110,7 +110,7 @@ struct AppSummaryRow: View {
                     .font(.subheadline).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
                 if app.sensorAccesses > 0 {
                     Text("\(app.sensorAccesses.formatted()) sensor event records")
-                        .font(.caption).foregroundStyle(FireStyle.orange).fixedSize(horizontal: false, vertical: true)
+                        .font(.caption).foregroundStyle(FireStyle.gold).fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 0)
@@ -217,7 +217,7 @@ struct ObservationCard: View {
         FireCard {
             VStack(alignment: .leading, spacing: 14) {
                 Label(observation.category == .network ? "Network activity record" : "Sensor event record", systemImage: observation.category == .network ? "network" : "sensor")
-                    .font(.headline).foregroundStyle(observation.category == .network ? FireStyle.teal : FireStyle.orange)
+                    .font(.headline).foregroundStyle(observation.category == .network ? FireStyle.ember : FireStyle.gold)
                 Text(verbatim: observation.bundleID).font(.subheadline.weight(.medium)).foregroundStyle(FireStyle.text).fixedSize(horizontal: false, vertical: true)
                 if let domain = observation.domain {
                     DetailRow(label: "Domain", value: domain)

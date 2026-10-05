@@ -25,10 +25,55 @@ final class FirePrivacyUITests: XCTestCase {
     }
 
     @MainActor
+    func testDeletingDemoClearsPreviouslyOpenedEvidence() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo"]
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any)["demo-report-badge"].firstMatch.waitForExistence(timeout: 15))
+        navigationItem(in: app, identifier: "evidence-tab", label: "Evidence").tap()
+
+        let weather = app.staticTexts["example.weather"].firstMatch
+        for _ in 0..<4 {
+            if weather.exists && weather.isHittable { break }
+            app.descendants(matching: .any)["evidence-screen"].firstMatch.swipeUp()
+        }
+        XCTAssertTrue(weather.waitForExistence(timeout: 5))
+        weather.tap()
+        XCTAssertTrue(app.navigationBars["App evidence"].waitForExistence(timeout: 5))
+
+        navigationItem(in: app, identifier: "settings-tab", label: "Settings").tap()
+        let delete = app.buttons["delete-all-button"].firstMatch
+        for _ in 0..<6 {
+            if delete.exists && delete.isHittable { break }
+            app.descendants(matching: .any)["settings-screen"].firstMatch.swipeUp()
+        }
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        delete.tap()
+        let confirm = app.buttons["Delete all app data"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+
+        let evidence = navigationItem(in: app, identifier: "evidence-tab", label: "Evidence")
+        XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+        evidence.tap()
+        XCTAssertTrue(app.staticTexts["Your evidence starts with an import"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars["App evidence"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["demo-report-badge"].firstMatch.exists)
+    }
+
+    @MainActor
     private func navigationItem(in app: XCUIApplication, identifier: String, label: String) -> XCUIElement {
-        let identified = app.descendants(matching: .any)[identifier].firstMatch
-        if identified.waitForExistence(timeout: 3) { return identified }
-        return app.tabBars.buttons[label].firstMatch
+        // A SwiftUI Label can propagate an identifier to its decorative image.
+        // Tap the tab button or an actionable sidebar element instead.
+        let tab = app.tabBars.buttons[label].firstMatch
+        if tab.waitForExistence(timeout: 2) { return tab }
+        let candidates = app.descendants(matching: .any).matching(identifier: identifier).allElementsBoundByIndex
+        if let accessibleRow = candidates.first(where: { $0.elementType != .image && $0.isHittable }) {
+            return accessibleRow
+        }
+        let cell = app.cells.containing(.staticText, identifier: label).firstMatch
+        if cell.exists { return cell }
+        return app.staticTexts[label].firstMatch
     }
 
     @MainActor

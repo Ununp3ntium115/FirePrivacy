@@ -128,12 +128,12 @@ def validate():
         check(any(item["NSPrivacyAccessedAPIType"] == "NSPrivacyAccessedAPICategoryFileTimestamp" for item in accessed), "declare the actual file metadata required-reason API usage")
     icons = ROOT / "Apps/FirePrivacyApp/Assets.xcassets/AppIcon.appiconset"
     images = json.loads((icons / "Contents.json").read_text())["images"]
-    check(any(image["idiom"] == "ios-marketing" for image in images), "App Store icon missing")
+    check(any(image["idiom"] == "ios-marketing" or (image["idiom"] == "universal" and image.get("platform") == "ios" and image.get("size") == "1024x1024") for image in images), "App Store icon missing")
     for image in images:
         png = (icons / image["filename"]).read_bytes()
         check(png[:8] == b"\x89PNG\r\n\x1a\n", "invalid app icon PNG")
         width, height, depth, color, _, _, _ = struct.unpack(">IIBBBBB", png[16:29])
-        size = int(float(image["size"].split("x")[0]) * int(image["scale"].removesuffix("x")))
+        size = int(float(image["size"].split("x")[0]) * int(image.get("scale", "1x").removesuffix("x")))
         check((width, height) == (size, size), "incorrect icon dimensions")
         check(color == 2 and depth == 8, "icons must be opaque 8-bit RGB")
     print("Project structure, universal targets, shared tests, manifests, document handling and opaque icon dimensions passed.")

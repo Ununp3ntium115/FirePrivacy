@@ -60,13 +60,13 @@ struct TrustCenterView: View {
 
             NavigationLink { PrivacyPolicyView() } label: {
                 Label("Read the privacy policy", systemImage: "doc.text")
-                    .font(.headline).foregroundStyle(FireStyle.teal).padding(.vertical, 12)
+                    .font(.headline).foregroundStyle(FireStyle.ember).padding(.vertical, 12)
             }
             .accessibilityIdentifier("privacy-policy-link")
             if let support = PublicLinks.support {
                 Link(destination: support) {
                     Label("Support in your browser", systemImage: "arrow.up.right.square")
-                        .font(.headline).foregroundStyle(FireStyle.teal).padding(.vertical, 12)
+                        .font(.headline).foregroundStyle(FireStyle.ember).padding(.vertical, 12)
                 }
                 Text("Opening an external policy or support link uses your browser and the website’s privacy practices.")
                     .font(.footnote).foregroundStyle(FireStyle.muted)
@@ -83,7 +83,7 @@ private struct TrustFact: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: symbol).foregroundStyle(FireStyle.teal).frame(width: 24).padding(.top, 3).accessibilityHidden(true)
+            Image(systemName: symbol).foregroundStyle(FireStyle.ember).frame(width: 24).padding(.top, 3).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 7) {
                 Text(title).font(.headline).foregroundStyle(FireStyle.text)
                 Text(detail).font(.subheadline).foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
@@ -113,7 +113,7 @@ struct AppSettingsView: View {
                     DetailRow(label: "Storage", value: "Encrypted; excluded from backup")
                     PrimaryButton(title: "Import privacy report", symbol: "square.and.arrow.down") { model.requestImport() }
                     NavigationLink { ImportGuideView() } label: {
-                        Label("How to export from Settings", systemImage: "questionmark.circle").foregroundStyle(FireStyle.teal).padding(.vertical, 8)
+                        Label("How to export from Settings", systemImage: "questionmark.circle").foregroundStyle(FireStyle.ember).padding(.vertical, 8)
                     }
                     QuietButton(title: "Explore a sample", symbol: "sparkles") { model.showDemo() }
                     if model.hasSavedReport {
@@ -127,7 +127,7 @@ struct AppSettingsView: View {
                     SectionHeading(title: "Export with care", detail: "Export the report currently displayed as normalized JSON. App identifiers, domains, event categories, and timestamps can be sensitive.")
                     if model.isDemo {
                         Text("You are viewing a fictional sample. Its export will be labeled as synthetic demo data.")
-                            .font(.subheadline).foregroundStyle(FireStyle.orange)
+                            .font(.subheadline).foregroundStyle(FireStyle.gold)
                     }
                     QuietButton(title: "Export displayed report", symbol: "square.and.arrow.up") { showExportConfirmation = true }
                         .disabled(model.report == nil)
@@ -146,8 +146,8 @@ struct AppSettingsView: View {
                             .font(.headline)
                             .padding(.vertical, 14)
                             .frame(maxWidth: .infinity)
-                            .foregroundStyle(FireStyle.orange)
-                            .background(FireStyle.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+                            .foregroundStyle(FireStyle.gold)
+                            .background(FireStyle.gold.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("delete-all-button")
@@ -162,11 +162,11 @@ struct AppSettingsView: View {
                     DetailRow(label: "Version", value: appVersion)
                     DetailRow(label: "Report import limit", value: "16 MB")
                     NavigationLink { PrivacyPolicyView() } label: {
-                        Label("Privacy policy", systemImage: "doc.text").foregroundStyle(FireStyle.teal).padding(.vertical, 8)
+                        Label("Privacy policy", systemImage: "doc.text").foregroundStyle(FireStyle.ember).padding(.vertical, 8)
                     }
                     if let support = PublicLinks.support {
                         Link(destination: support) {
-                            Label("Contact & support", systemImage: "arrow.up.right.square").foregroundStyle(FireStyle.teal).padding(.vertical, 8)
+                            Label("Contact & support", systemImage: "arrow.up.right.square").foregroundStyle(FireStyle.ember).padding(.vertical, 8)
                         }
                     } else {
                         Text("A public support address has not been configured for this development build.").font(.footnote).foregroundStyle(FireStyle.muted)
@@ -211,10 +211,10 @@ struct PrivacyPolicyView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     SectionHeading(title: "Policy and support")
                     if let privacy = PublicLinks.privacy {
-                        Link(destination: privacy) { Label("Public privacy policy", systemImage: "arrow.up.right.square").foregroundStyle(FireStyle.teal).padding(.vertical, 8) }
+                        Link(destination: privacy) { Label("Public privacy policy", systemImage: "arrow.up.right.square").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
                     }
                     if let support = PublicLinks.support {
-                        Link(destination: support) { Label("Contact the developer", systemImage: "arrow.up.right.square").foregroundStyle(FireStyle.teal).padding(.vertical, 8) }
+                        Link(destination: support) { Label("Contact the developer", systemImage: "arrow.up.right.square").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
                     } else {
                         Text("A developer contact has not yet been configured for this development build. A functioning public support contact is required before release.")
                             .foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)

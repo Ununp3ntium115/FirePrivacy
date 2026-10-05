@@ -2,7 +2,7 @@ name: Native iPhone and iPad validation
 
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -46,6 +46,7 @@ jobs:
           name: native-${{ matrix.family }}
           path: |
             .build/apple/*.xcresult
+            .build/apple/TestLog-*.txt
             .build/apple/Screenshots/*.png
           include-hidden-files: true
           if-no-files-found: warn

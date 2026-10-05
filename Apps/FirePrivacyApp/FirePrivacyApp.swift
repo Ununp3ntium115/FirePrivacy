@@ -11,7 +11,7 @@ struct FirePrivacyApp: App {
             FirePrivacyRootView()
                 .environmentObject(model)
                 .preferredColorScheme(.dark)
-                .tint(FireStyle.teal)
+                .tint(FireStyle.ember)
         }
     }
 }
@@ -35,6 +35,11 @@ enum AppSection: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+private struct SidebarNavigationIdentity: Hashable, Sendable {
+    let section: AppSection
+    let reportID: UUID?
+}
+
 struct FirePrivacyRootView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -53,12 +58,14 @@ struct FirePrivacyRootView: View {
                         .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 310)
                 } detail: {
                     NavigationStack { sectionView(selectedSidebar ?? .overview) }
+                        .id(SidebarNavigationIdentity(section: selectedSidebar ?? .overview, reportID: model.report?.id))
                 }
                 .navigationSplitViewStyle(.balanced)
             } else {
                 TabView(selection: $selectedTab) {
                     ForEach(AppSection.allCases) { section in
                         NavigationStack { sectionView(section) }
+                            .id(model.report?.id)
                             .tabItem { Label(section.rawValue, systemImage: section.symbol).accessibilityIdentifier(section.rawValue.lowercased() + "-tab") }
                             .tag(section)
                     }
@@ -72,9 +79,9 @@ struct FirePrivacyRootView: View {
                     FireStyle.ink.opacity(0.72).ignoresSafeArea()
                     VStack(spacing: 16) {
                         if reduceMotion {
-                            Image(systemName: "hourglass").font(.largeTitle).foregroundStyle(FireStyle.teal).accessibilityHidden(true)
+                            Image(systemName: "hourglass").font(.largeTitle).foregroundStyle(FireStyle.ember).accessibilityHidden(true)
                         } else {
-                            ProgressView().controlSize(.large).tint(FireStyle.teal)
+                            ProgressView().controlSize(.large).tint(FireStyle.ember)
                         }
                         Text(model.workingMessage).font(.headline).foregroundStyle(FireStyle.text)
                     }
@@ -91,7 +98,7 @@ struct FirePrivacyRootView: View {
                 ZStack {
                     FireStyle.ink.ignoresSafeArea()
                     VStack(spacing: 16) {
-                        Image(systemName: "lock.shield").font(.largeTitle).foregroundStyle(FireStyle.teal)
+                        Image(systemName: "lock.shield").font(.largeTitle).foregroundStyle(FireStyle.ember)
                         Text("Fire Privacy").font(.system(.title2, design: .rounded).weight(.bold)).foregroundStyle(FireStyle.text)
                     }
                 }
@@ -132,9 +139,10 @@ struct FirePrivacyRootView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 36, weight: .semibold))
-                        .foregroundStyle(FireStyle.orange)
+                        .foregroundStyle(FireStyle.flame)
+                        .shadow(color: FireStyle.ember.opacity(0.25), radius: 14)
                         .accessibilityHidden(true)
-                    Text("Privacy starts\nwith clarity.")
+                    Text("Clarity, on\nyour device.")
                         .font(.system(.title2, design: .rounded).weight(.bold))
                         .foregroundStyle(FireStyle.text)
                 }
@@ -146,7 +154,17 @@ struct FirePrivacyRootView: View {
                     Label(section.rawValue, systemImage: section.symbol)
                         .padding(.vertical, 8)
                         .tag(section)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(section.rawValue)
+                        .accessibilityAddTraits(.isButton)
                         .accessibilityIdentifier(section.rawValue.lowercased() + "-tab")
+                        .foregroundStyle(selectedSidebar == section ? FireStyle.text : FireStyle.muted)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(LinearGradient(colors: selectedSidebar == section ? [FireStyle.ember.opacity(0.34), FireStyle.gold.opacity(0.12)] : [.clear, .clear], startPoint: .leading, endPoint: .trailing))
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(FireStyle.ember.opacity(selectedSidebar == section ? 0.45 : 0), lineWidth: 1))
+                        )
                 }
             }
             Section {
@@ -158,7 +176,7 @@ struct FirePrivacyRootView: View {
             .listRowBackground(Color.clear)
         }
         .scrollContentBackground(.hidden)
-        .background(FireStyle.ink)
+        .background(FireBackdrop())
     }
 
     @ViewBuilder
@@ -178,7 +196,7 @@ struct FirePrivacyRootView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 7) {
-                    Image(systemName: "flame.fill").foregroundStyle(FireStyle.orange).accessibilityHidden(true)
+                    Image(systemName: "flame.fill").foregroundStyle(FireStyle.flame).accessibilityHidden(true)
                     Text("Fire Privacy").font(.system(.headline, design: .rounded)).foregroundStyle(FireStyle.text)
                 }
                 .accessibilityElement(children: .combine)

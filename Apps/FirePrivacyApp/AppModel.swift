@@ -38,19 +38,28 @@ final class AppModel: ObservableObject {
     func load() async {
         guard !didLoad else { return }
         didLoad = true
+        beginWork("Opening your report")
+        defer { finishWork() }
         do {
             try await Task.detached { try ReportFileIO.removeAllExportFiles() }.value
         } catch {
             notice = AppNotice(title: "Temporary export needs attention", message: "A temporary export could not be removed. You can retry by deleting app data in Settings.\n\n" + error.localizedDescription)
         }
-        await restoreSavedReport()
-        if ProcessInfo.processInfo.arguments.contains("--demo") { showDemo() }
+        await readSavedReport()
+        if ProcessInfo.processInfo.arguments.contains("--demo") {
+            report = .demo
+            isDemo = true
+        }
     }
 
     func restoreSavedReport() async {
         guard !isWorking else { return }
         beginWork("Opening your report")
         defer { finishWork() }
+        await readSavedReport()
+    }
+
+    private func readSavedReport() async {
         do {
             report = try await store.load()
             hasSavedReport = report != nil

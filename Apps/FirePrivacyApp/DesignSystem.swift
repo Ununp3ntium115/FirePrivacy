@@ -1,19 +1,26 @@
 import SwiftUI
 
 enum FireStyle {
-    static let ink = Color(red: 0.025, green: 0.055, blue: 0.085)
-    static let surface = Color(red: 0.060, green: 0.105, blue: 0.150)
-    static let teal = Color(red: 0.42, green: 0.91, blue: 0.82)
-    static let orange = Color(red: 1.00, green: 0.64, blue: 0.42)
-    static let text = Color(red: 0.96, green: 0.98, blue: 0.99)
-    static let muted = Color(red: 0.69, green: 0.76, blue: 0.83)
+    static let ink = Color(red: 16 / 255, green: 12 / 255, blue: 10 / 255)
+    static let surface = Color(red: 35 / 255, green: 25 / 255, blue: 19 / 255)
+    static let raised = Color(red: 48 / 255, green: 31 / 255, blue: 21 / 255)
+    static let ember = Color(red: 1, green: 128 / 255, blue: 85 / 255)
+    static let gold = Color(red: 1, green: 190 / 255, blue: 104 / 255)
+    static let text = Color(red: 1, green: 246 / 255, blue: 235 / 255)
+    static let muted = Color(red: 207 / 255, green: 191 / 255, blue: 177 / 255)
+    static var flame: LinearGradient { LinearGradient(colors: [gold, ember], startPoint: .top, endPoint: .bottom) }
 }
 
 struct FireBackdrop: View {
     var body: some View {
-        LinearGradient(colors: [FireStyle.surface, FireStyle.ink, FireStyle.ink], startPoint: .topLeading, endPoint: .bottomTrailing)
-            .ignoresSafeArea()
-            .accessibilityHidden(true)
+        ZStack {
+            FireStyle.ink
+            LinearGradient(colors: [FireStyle.surface.opacity(0.75), FireStyle.ink], startPoint: .topLeading, endPoint: .bottomTrailing)
+            RadialGradient(colors: [FireStyle.ember.opacity(0.09), .clear], center: .topLeading, startRadius: 0, endRadius: 520)
+            RadialGradient(colors: [FireStyle.gold.opacity(0.045), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 440)
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }
 
@@ -24,8 +31,9 @@ struct FireCard<Content: View>: View {
         content
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(FireStyle.surface.opacity(0.86), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white.opacity(0.075), lineWidth: 1))
+            .background(LinearGradient(colors: [FireStyle.raised.opacity(0.84), FireStyle.surface.opacity(0.94)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(FireStyle.gold.opacity(0.16), lineWidth: 1))
+            .shadow(color: .black.opacity(0.16), radius: 16, y: 8)
     }
 }
 
@@ -39,7 +47,7 @@ struct PageHeader: View {
             Text(eyebrow.uppercased())
                 .font(.system(.caption, design: .rounded).weight(.bold))
                 .tracking(2)
-                .foregroundStyle(FireStyle.teal)
+                .foregroundStyle(FireStyle.ember)
             Text(verbatim: title)
                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
                 .foregroundStyle(FireStyle.text)
@@ -76,7 +84,7 @@ struct SectionHeading: View {
 
 struct SymbolBadge: View {
     let symbol: String
-    var color: Color = FireStyle.teal
+    var color: Color = FireStyle.ember
     var body: some View {
         Image(systemName: symbol)
             .font(.system(.title3).weight(.semibold))
@@ -100,7 +108,8 @@ struct PrimaryButton: View {
                 .padding(.horizontal, 20)
                 .frame(maxWidth: .infinity)
                 .foregroundStyle(FireStyle.ink)
-                .background(FireStyle.teal, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                .background(LinearGradient(colors: [FireStyle.gold, FireStyle.ember], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                .shadow(color: FireStyle.ember.opacity(0.15), radius: 14, y: 4)
         }
         .buttonStyle(.plain)
     }
@@ -119,7 +128,8 @@ struct QuietButton: View {
                 .padding(.horizontal, 20)
                 .frame(maxWidth: .infinity)
                 .foregroundStyle(FireStyle.text)
-                .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                .background(FireStyle.gold.opacity(0.055), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(FireStyle.gold.opacity(0.13), lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
