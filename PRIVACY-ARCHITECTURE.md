@@ -1,103 +1,42 @@
-# Fire Privacy — privacy architecture
+# Fire Privacy — first-release privacy architecture
 
-This document states what Fire Privacy does with data. It is written so that a
-reviewer can check each claim against the source.
+This document describes the implemented MVP. Apple-platform behavior must still be verified on a supported simulator and physical device before release; see the validation record and release checklist.
 
-## 1. Default: nothing leaves the device
+## Data flow
 
-Importing a report, normalizing it, matching domains, building findings, scoring,
-exporting and deleting all happen on the device with **no network request**.
+The user chooses a file from Files. Fire Privacy reads a bounded copy into memory, validates supported newline-delimited JSON records, and derives descriptive app/domain summaries and evidence-linked findings. Unsupported or invalid lines are counted and explained. No raw input file is retained or modified.
 
-That is enforced structurally rather than by intention: the modules on the
-local-analysis path (`ObservationCore`, `AppActivityImportKit`, `FindingEngine`,
-`PrivacyProfileKit`, `ObservationStore`, `ReportKit`, `ConsentKit`) contain no
-networking API at all. `Tests/PrivacyRegression/no-network-in-local-analysis.sh`
-fails the build if one is introduced.
+The app stores one normalized report in its own Application Support directory. Persistence uses CryptoKit AES-GCM and a random 256-bit Keychain key with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. The key is not synchronized through iCloud. Report files use complete file protection and are excluded from backup. A failed import or save does not publish a replacement report.
 
-## 2. The complete network ledger
+Export is initiated by the user after a privacy warning. It produces a readable normalized JSON file for the system share sheet. That file may contain sensitive app identifiers, domains, and timestamps. Fire Privacy cleans its temporary export after the share sheet closes and clears stale exports at startup; exported copies held by another app are outside its control. Export does not reproduce the original Apple file.
 
-| Purpose | When | Carries data about you |
+Delete-all removes the saved report, temporary exports, and its encryption key. Failures are surfaced; the app does not claim deletion completed after a storage error. Deletion cannot remove the user's original file or copies previously shared outside Fire Privacy.
+
+The synthetic demo is labeled and is not persisted as a personal report.
+
+## Network ledger
+
+| Operation | App-operated network requests | Information shared |
 | --- | --- | --- |
-| Import and analysis | never connects | — |
-| Knowledge-base update | only if enabled | no |
-| Filter list update | only while protection is on | no |
-| System URL filter lookups | performed by iOS, not by the app | no (Fire Privacy never receives the URL) |
-| Your own model endpoint | only if you configure one | yes — the previewed structured summary |
-| Sharing an export | only when you tap share | yes — whatever you chose to include |
+| Import, analysis, findings, persistence | None | None |
+| Synthetic demo | None | None |
+| Share export | None by Fire Privacy; the selected destination may transmit | User-selected readable report |
+| Open policy/support link | System browser, only after the user opens a configured link | Browser/destination behavior applies |
 
-The same table is shown in the app's Trust Center, generated from
-`NetworkLedger.entries`.
+There are no analytics, ads, accounts, remote updates, model adapters, VPNs, traffic filters, or third-party SDKs in this release. Future additions require an updated network ledger, consent design, manifest, privacy labels, and review.
 
-## 3. What is stored, and where
+## Untrusted input
 
-| Data | Storage | Default retention |
-| --- | --- | --- |
-| Your original file in Files | untouched | never modified |
-| Temporary import copy | app temp directory | deleted at end of import |
-| Encrypted raw copy | off | off unless you turn it on |
-| Normalized observations | encrypted file per session | user-controlled |
-| Findings, scores | same encrypted file | same as observations |
-| Explanations | in memory, cache invalidated when the finding changes | until the finding changes |
-| Consent receipts | local | until deleted |
-| Protection state, verified prefilter | App Group | while protection is on |
+The importer enforces input-size, line-size, record-count, nesting, text-length, duplicate-key, UTF-8, and numerical limits. Invalid records are quarantined rather than converted into invented observations. Displayed external strings are plain text, with control and direction-changing characters handled by the importer. Unsupported schemas remain unsupported; testing a synthetic fixture is not proof of compatibility with all Apple exports.
 
-Raw report data is **never** written to the App Group that extensions can read.
+No imported string is executed as code, rendered as HTML, interpolated into SQL, or sent to a model. The local-analysis source has no networking APIs. The regression script guards that structural constraint; it does not substitute for runtime or storage tests.
 
-## 4. Encryption
+## Accuracy
 
-- AES-GCM per record, with a versioned envelope so keys can be rotated.
-- The root key is 32 random bytes in the Keychain with
-  `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` and no iCloud synchronization.
-- Files are written with complete file protection.
-- "Delete all Fire Privacy data" removes the ciphertext **and destroys the key**,
-  so anything that survived is unreadable.
+A contact is a contact, not proof of data transmission, tracking, wrongdoing, or harm. A hit count is frequency, not bytes. A sensor begin/end record may be part of one interval, so the app describes sensor event records rather than inventing an access count. Historical exports do not expose current permissions. Bundle identifiers are displayed as provided; no installed-app enumeration or verified app-name lookup is claimed.
 
-## 5. Untrusted input
+Findings are descriptive and cite observations. The app supplies manual settings guidance and does not claim to change another app's permissions. No risk score, signed knowledge base, vendor attribution, causal sensor/network inference, or active protection is presented.
 
-Everything in an imported file is untrusted: domains, app names, owner strings,
-contexts. They are:
+## Future scope
 
-- length-bounded and stripped of control characters, bidi overrides and
-  zero-width characters on import (`UntrustedText`);
-- never rendered as markup, never concatenated into SQL, never concatenated into
-  model instructions;
-- passed to a model only as typed fields in `AdvisoryInput`, which is the entire
-  surface a model can see.
-
-The parser enforces structural limits while parsing: nesting depth, string
-length, duplicate keys, invalid UTF-8 and oversized lines each quarantine a line
-with a reason rather than being partially believed.
-
-## 6. AI boundary
-
-- The deterministic rules engine decides everything. A model only rephrases.
-- Model output is validated before display: evidence IDs must exist, action IDs
-  must exist *and* be possible on this device, and the text may not claim payload
-  visibility, a current permission state, a legal conclusion, or more certainty
-  than the finding carries.
-- Failing validation falls back to the deterministic explanation, and the UI says
-  which mode actually produced the text.
-- Private Cloud Compute is described as **server-side Apple processing**, never as
-  on-device processing, and is disabled until Apple ships it in a production
-  release.
-- Ollama is not assumed to exist on iOS. A local endpoint is a machine the user
-  runs, requires TLS with a pinned certificate outside developer builds, and
-  shows the exact fields that will leave the iPhone.
-
-## 7. What Fire Privacy will never do
-
-- Create an advertising identifier or fingerprint the device.
-- Combine report data across users.
-- Sell, license or share report data.
-- Use imported data to train a model.
-- Enroll anyone in a research dataset.
-- Transmit a first-party analytics event when diagnostics are off.
-
-## 8. Accuracy commitments
-
-- A domain contact is reported as a contact, never as a transmission.
-- A hit count is described as contact frequency, never as data volume.
-- Sensor/network correlation is labeled temporal, never causal.
-- An unknown owner is reported as unknown, never as dangerous.
-- Words like "malicious", "illegal", "spying" and "stolen" require stronger
-  evidence than a hostname and never appear in routine heuristic findings.
+The original repository proposed signed knowledge-base updates, protection extensions, and optional model explanations. Those are future designs, not first-release features or implemented controls. They require separate implementation, capability approval where applicable, security testing, and revised disclosure before shipping.

@@ -1,0 +1,11 @@
+DRAFT — use these notes only after the submitted binary passes the listed flows.
+
+Fire Privacy is a local App Privacy Report viewer for iPhone and iPad. No account or login is required. The app does not provide a VPN, traffic filtering, installed-app enumeration, permission control, tracker classification, or live monitoring.
+
+The first screen provides a clearly labeled synthetic demo so you can review the app without exporting personal activity. Load the example, explore the recorded app/domain/sensor details, then try export and delete. Demo values are fictional and do not imply protection is enabled.
+
+For the real workflow, export an App Privacy Report from Settings → Privacy & Security → App Privacy Report to Files, then select it using the app's import action. The app describes historical domain contacts and sensor events; it does not claim to know transmitted payloads, malicious intent, or current permission state.
+
+The app stores one report locally, encrypted with Apple CryptoKit AES-GCM and a key in the device Keychain. Sharing is explicitly initiated by the user through the system share sheet. Delete removes the stored report and encryption key; it does not delete the source file in Files or copies already shared. No application network request, analytics SDK, advertising SDK, remote model, or account is used.
+
+Review contact, exact version/build, public privacy-policy URL, public support URL, and any compatibility limitations must be filled in App Store Connect using the actual submitted build and verified account details. Do not send a personal App Privacy Report as review correspondence; a synthetic reproducer is sufficient.

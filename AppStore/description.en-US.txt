@@ -1,0 +1,16 @@
+See what your App Privacy Report recorded, in one calm, readable place.
+
+Fire Privacy imports the App Privacy Report you export from iPhone or iPad Settings and organizes recorded app activity on your device. Explore contacted domains and sensor access, inspect the evidence, and keep a single private report for later.
+
+• Import an App Privacy Report from Files.
+• Explore apps, contacted domains, and recorded sensor access.
+• Try the clearly labeled synthetic demo before importing your own report.
+• Keep your saved report encrypted on your device.
+• Export a readable report through the system share sheet when you choose.
+• Delete the saved report and its encryption key from the app.
+
+No account, ads, subscriptions, or remote analysis. The app's analysis stays on your device.
+
+A domain contact is a recorded event. It does not show what data was sent or prove that a domain is harmful. Sensor access is historical evidence, not a view of another app's current permissions. Fire Privacy helps you understand the report; it does not block traffic, run a VPN, or change other apps' permissions.
+
+To create a report, open Settings → Privacy & Security → App Privacy Report, then export/share your report to Files and select it in Fire Privacy. Report availability and detail depend on your device settings and operating system. The original file and any copies you share remain under your control.

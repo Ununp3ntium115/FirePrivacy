@@ -1,99 +1,52 @@
 # Fire Privacy
 
-A privacy control center for iPhone. Fire Privacy reads the App Privacy Report
-that *you* export from iOS Settings, explains what it shows with linked
-evidence, and — where iOS provides a supported mechanism — helps you act on it.
+A native iPhone and iPad privacy report reader. Import an App Privacy Report exported from Settings, explore recorded domain contacts and sensor events, and get clear steps for reviewing privacy settings. Reports are analyzed on the device. No account, advertisements, tracking SDKs, or app-operated network requests.
 
-**Free, no account, no advertising, no data resale.** Everything is analyzed on
-the device by default.
+## The first release
 
----
+- An adaptive SwiftUI dashboard, app and domain detail, linked evidence, and settings guidance.
+- Bounded newline-delimited JSON import with visible rejected-record counts. Supported records and limits are documented in [BUILDING](Documentation/BUILDING.md).
+- One normalized report encrypted with CryptoKit AES-GCM, using a device-only Keychain key and file protection.
+- Explicit sharing and deletion controls, with a warning before exporting readable report data.
+- A clearly labeled synthetic demo that works without an account or a personal export.
+- An in-app Trust Center that explains storage, sharing, and the limits of the evidence.
 
-## What Fire Privacy does
+A recorded domain contact does not reveal its payload or prove harm. Historical sensor events do not show current permissions. App identities are exported bundle identifiers, not an inventory of installed apps. This release does not block traffic, change other apps’ settings, classify tracking vendors, or use AI.
 
-1. **Historical visibility.** You export Apple's App Privacy Report and import
-   the newline-delimited JSON file. Fire Privacy parses it on-device, associates
-   contacted domains and sensor access with app bundle identifiers, matches them
-   against a signed local knowledge base, and produces evidence-backed findings.
-2. **Guided control.** It explains the trade-off of each privacy choice in plain
-   language and gives exact steps to change iOS settings. It never pretends it
-   can silently change another app's permissions.
-3. **Preventive filtering.** On iOS 26 or later it can use Apple's
-   privacy-preserving URL Filter so that *iOS* denies requests to known tracking
-   destinations. Fire Privacy does not receive the addresses you request.
-4. **Private explanation.** A deterministic rules engine is the source of truth.
-   An optional model — Apple's on-device model, or an endpoint you run yourself —
-   only rewrites a finding in plainer words, and everything it writes is checked
-   against the finding before you see it.
+## Develop
 
-## What Fire Privacy cannot do
+Open `FirePrivacy.xcodeproj` in a supported Xcode on macOS. The app targets iOS/iPadOS 17 or later; App Store submission must use Apple's currently required SDK. See [BUILDING](Documentation/BUILDING.md) for simulator, device, archive, and upload commands.
 
-This list is part of the product, not a disclaimer. A consumer App Store app
-cannot:
+The portable analysis engine can also be built and tested on Linux with Swift 6:
 
-- enumerate every app installed on your iPhone;
-- read the current permission state of other apps;
-- disable an SDK inside another app;
-- see inside another app's encrypted traffic;
-- open another app's Settings page;
-- prove that a domain contact was harmful, or that a sensor reading was sent.
-
-Fire Privacy identifies **evidence and indicators**. Where it is inferring, it
-says so; where it does not know, it says that too.
-
-## Editions
-
-| | Consumer | Managed (supervised devices) |
-| --- | --- | --- |
-| Import and analyze App Privacy Report | Yes | Yes |
-| Deterministic findings and guidance | Yes | Yes |
-| System URL filter (iOS 26+) | Yes | Yes |
-| Live flow attribution / allow-drop filtering | No | Yes |
-| MDM policy enforcement | No | Yes |
-
-The MVP does **not** use a packet-tunnel VPN as a general traffic-inspection
-mechanism. See `Documentation/ADR/ADR-002-no-packet-tunnel.md`.
-
-## Repository layout
-
-```
-├── Package.swift              Swift package with every domain module
-├── Apps/FirePrivacyApp/       iPhone app target sources
-├── Extensions/                URL filter control provider, Safari content blocker
-├── Packages/                  ObservationCore, AppActivityImportKit, KnowledgeBaseKit,
-│                              FindingEngine, AdvisorKit, ProtectionKit, ConsentKit,
-│                              ObservationStore, ReportKit, TrustCenterKit, FirePrivacyUI
-├── Resources/                 Demo report, bundled knowledge base, privacy manifest
-├── Rules/                     Rule schema, sources and change log
-├── Tests/PrivacyRegression/   Checks the privacy promises hold in the source
-└── Documentation/             ADRs, threat model, App Review notes, build guide
+```sh
+swift build
+swift test
+./Tests/PrivacyRegression/no-network-in-local-analysis.sh
 ```
 
-## Building
+The app's UI, Keychain, CryptoKit storage, simulator checks, and signing require Apple platforms. A passing Linux suite does not validate those parts.
 
-See `Documentation/BUILDING.md`. In short: the modules build with SwiftPM
-(`swift build`, `swift test`); the iPhone app is assembled in Xcode from
-`Apps/FirePrivacyApp` plus these packages.
+## Release
 
-**Nothing in this repository has been compiled yet** — see the status note below.
+[RELEASE-CHECKLIST](Documentation/RELEASE-CHECKLIST.md) records the checks required before submission. Draft metadata and review notes live in `AppStore/`; deployable privacy and support pages live in `website/`. Public page URLs must be hosted and checked before submission. App Store Connect handles uploads and review; the Apple Developer site handles developer resources and signing capabilities.
 
-## Status
+Team `LYDVWU62G4` was supplied by the developer for signing. The proposed bundle identifier is a development default until it is registered for this app. Signing certificates, private keys, passwords, and App Store Connect API keys must never be committed.
 
-Gate 1 (local analysis MVP) is implemented: import, normalization, knowledge
-base, deterministic findings, scoring, dashboard, app and domain detail,
-evidence chain, Trust Center, export and delete-all. Protection and model
-adapters are present as interfaces with honest "not available in this build"
-states, pending the Apple capability approvals described in
-`Documentation/RELEASE-GATES.md`.
+The source implementation is a first-release candidate, not an assertion of App Store approval or legal compliance. See the validation record for completed tests and remaining checks.
 
-**The code has not been compiled yet.** It was written in an environment with
-no Swift toolchain, so `swift build` and `swift test` have never run against it.
-The privacy regression script and the bundled-data consistency checks do pass.
-Expect a first compile to surface type errors, most likely in the SwiftUI layer
-and the Swift 6 concurrency annotations. That first compile is the top of the
-backlog.
+## Structure
 
-## Licence and ownership
+```text
+Apps/FirePrivacyApp/        SwiftUI app and encrypted storage
+Sources/FirePrivacyCore/   Portable parser, summaries, and descriptive findings
+Tests/                    Core, Apple-platform, and privacy checks
+Resources/                Synthetic demo report
+FirePrivacy.xcodeproj/     Universal iPhone/iPad app project
+scripts/                  Build, archive, and upload helpers
+Documentation/            Architecture, validation, and release requirements
+AppStore/                 Draft store listing and review material
+website/                  Privacy and support pages ready to host
+```
 
-Fire Software Solutions LLC. See `SECURITY.md` for reporting a vulnerability and
-`PRIVACY-ARCHITECTURE.md` for the data-flow commitments.
+Read [CONTRIBUTING](CONTRIBUTING.md), [SECURITY](SECURITY.md), and [PRIVACY-ARCHITECTURE](PRIVACY-ARCHITECTURE.md) before changing privacy behavior.

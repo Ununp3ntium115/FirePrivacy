@@ -1,0 +1,52 @@
+name: Native iPhone and iPad validation
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [iphone, ipad]
+    env:
+      # Available on the official macos-26 runner image; iOS 26.2 SDK.
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check portable analysis and privacy promises
+        run: |
+          swift test
+          bash Tests/PrivacyRegression/no-network-in-local-analysis.sh
+          python3 scripts/validate-project.py
+      - name: Compile universal app without signing
+        run: bash scripts/build-ios.sh
+      - name: Test encrypted storage and native UI
+        run: bash scripts/test-ios.sh '${{ matrix.family }}'
+      - name: Capture actual native demo screenshots
+        if: matrix.family == 'iphone'
+        run: bash scripts/capture-screenshots.sh
+      - name: Retain test results and screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-${{ matrix.family }}
+          path: |
+            .build/apple/*.xcresult
+            .build/apple/Screenshots/*.png
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
