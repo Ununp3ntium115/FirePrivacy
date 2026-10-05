@@ -33,7 +33,10 @@ IDENTITY = hashlib.sha1(CERTIFICATE).hexdigest().upper()
 
 class ArchiveFixture:
     def __init__(self, directory, edition):
-        self.root = Path(directory)
+        # macOS commonly exposes runner temporary paths through /var while
+        # Path.resolve() returns /private/var. Model the validator's canonical
+        # paths rather than comparing two spellings of the same fixture.
+        self.root = Path(directory).resolve()
         self.archive = self.root / "FirePrivacy.xcarchive"
         self.build = self.root / "apple"
         self.build.mkdir()
@@ -120,7 +123,7 @@ class ArchiveFixture:
             self.environment[RELEASE.PROFILE_VARIABLES[target]] = profile["UUID"]
 
     def target_at(self, path):
-        return next(target for target, bundle in self.bundles.items() if bundle == Path(path))
+        return next(target for target, bundle in self.bundles.items() if bundle == Path(path).resolve())
 
     def run(self, arguments, *, capture_output, text, check):
         self.calls.append(arguments)
@@ -194,6 +197,25 @@ def archive_fixture(edition="consumer"):
 
 
 class ReleaseValidationTests(unittest.TestCase):
+    def test_runner_temporary_symlink_alias_uses_canonical_fixture_paths(self):
+        for edition in RELEASE.EDITIONS:
+            with self.subTest(edition=edition), tempfile.TemporaryDirectory(prefix="release-path-alias-") as directory:
+                root = Path(directory).resolve()
+                actual = root / "actual"
+                actual.mkdir()
+                alias = root / "runner-temp-alias"
+                alias.symlink_to(actual, target_is_directory=True)
+                fixture = ArchiveFixture(alias, edition)
+                fixture.manual()
+                self.assertEqual(fixture.root, actual)
+                for target, bundle in fixture.bundles.items():
+                    self.assertEqual(fixture.target_at(alias / bundle.relative_to(actual)), target)
+                with (mock.patch.object(RELEASE, "BUILD", fixture.build),
+                      mock.patch.object(RELEASE.subprocess, "run", side_effect=fixture.run),
+                      mock.patch.object(RELEASE, "verify_apple_profile")):
+                    fixture.stamp()
+                    fixture.invoke("verify")
+
     def test_each_edition_stamps_exact_targets_and_hashes(self):
         for edition, (_, selected, _) in RELEASE.EDITIONS.items():
             with self.subTest(edition=edition), archive_fixture(edition) as fixture:

@@ -58,19 +58,23 @@ final class FirePrivacyEngine {
     private(set) var weeklySummary: LocalWeeklySummary?
     private(set) var sessions: [ReportSessionDescriptor] = []
     private(set) var unavailableSessionIDs: Set<UUID> = []
+    private(set) var pendingSystemCleanup: Set<ConsentFeature> = []
     private(set) var report: PrivacyReport?
     private(set) var protection: ProtectionSnapshot
     private var operationGeneration = UUID()
     private var didRestore = false
     private let protectionService = ProtectionService()
     private let reminders = LocalReminderService()
+    private let cleanupPlan: ProtectionCleanupPlan
     private let transport: any ApprovedRequestTransport
     private let appVersion: String
     private let osVersion: String
 
-    init(store: EncryptedReportStore, transport: any ApprovedRequestTransport = ApprovedHTTPTransport()) {
+    init(store: EncryptedReportStore, transport: any ApprovedRequestTransport = ApprovedHTTPTransport(),
+         cleanupPlan: ProtectionCleanupPlan = ProtectionCleanupPlan()) {
         self.store = store
         self.transport = transport
+        self.cleanupPlan = cleanupPlan
         appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
         osVersion = ProcessInfo.processInfo.operatingSystemVersionString
         gate = ApprovedNetworkGate(appVersion: appVersion, osVersion: osVersion)
@@ -86,6 +90,11 @@ final class FirePrivacyEngine {
 
     func restore() async throws -> EncryptedWorkspaceSnapshot {
         if !didRestore {
+            pendingSystemCleanup = try await cleanupPlan.load()
+            if !pendingSystemCleanup.isEmpty {
+                // A previous user-requested removal survives deletion of private data.
+                try? await retrySystemCleanup()
+            }
             if let saved = try await store.loadFeatureState(EnginePreferences.self, key: "preferences") {
                 guard saved.version == 1, saved.acceptedFindingKeys.count <= 10_000,
                       saved.ignoredFindingKeys.count <= 10_000, saved.overrides.sorted.count <= 10_000 else {
@@ -188,6 +197,7 @@ final class FirePrivacyEngine {
     func grant(_ feature: ConsentFeature, scope: String,
                disclosureVersion: String = ConsentDisclosure.currentVersion) async throws {
         guard feature != .privateCloudCompute else { throw EngineError.unavailable }
+        guard !pendingSystemCleanup.contains(feature) else { throw EngineError.unavailable }
         _ = try await gate.grantConsent(feature: feature, disclosureVersion: disclosureVersion, scopeIdentity: scope)
         do { try await persistConsent() }
         catch { try? await gate.revokeConsent(feature); throw error }
@@ -197,11 +207,12 @@ final class FirePrivacyEngine {
         operationGeneration = UUID()
         try await gate.revokeConsent(feature)
         let protectionFeatures: Set<ConsentFeature> = [.safariProtection, .encryptedDNS, .urlProtection, .managedProtection]
+        var removalError: (any Error)?
         if protectionFeatures.contains(feature) {
             preferences.pendingProtectionRemoval.insert(feature)
-            try await store.saveFeatureState(preferences, key: "preferences")
+            pendingSystemCleanup.insert(feature)
+            do { try await cleanupPlan.save(pendingSystemCleanup) } catch { removalError = error }
         }
-        var removalError: (any Error)?
         do {
             switch feature {
             case .safariProtection: try await protectionService.removeSafari()
@@ -214,20 +225,22 @@ final class FirePrivacyEngine {
             case .onDeviceAdvisor, .selfHostedAdvisor: advisorResult = nil
             default: break
             }
-        } catch { removalError = error }
-        if removalError == nil {
+            pendingSystemCleanup.remove(feature)
             preferences.pendingProtectionRemoval.remove(feature)
+            try await cleanupPlan.save(pendingSystemCleanup)
+        } catch { removalError = error }
+        do {
+            try await persistConsent()
             try await store.saveFeatureState(preferences, key: "preferences")
-        }
-        try await persistConsent()
+        } catch { removalError = error }
         await refreshProtection()
         if let removalError { throw removalError }
     }
 
     private func persistConsent() async throws {
         let snapshot = await gate.consentSnapshot()
-        try await store.saveFeatureState(snapshot, key: "consent")
         consent = snapshot
+        try await store.saveFeatureState(snapshot, key: "consent")
     }
 
     func savePreferences(_ value: EnginePreferences) async throws {
@@ -315,7 +328,9 @@ final class FirePrivacyEngine {
             try await store.saveFeatureState(await gate.ledger.snapshot(), key: "network-events")
             return response
         } catch {
-            try? await store.saveFeatureState(await gate.ledger.snapshot(), key: "network-events")
+            if generation == operationGeneration {
+                try? await store.saveFeatureState(await gate.ledger.snapshot(), key: "network-events")
+            }
             throw error
         }
     }
@@ -333,13 +348,14 @@ final class FirePrivacyEngine {
     func installFilterDataset(_ signed: SignedFilterDataset) async throws -> ValidatedFilterDataset {
         let key = "filter-" + signed.manifest.kind.rawValue.lowercased()
         let existing = try await store.loadFeatureState(StoredFilterDataset.self, key: key)
+        let manifestDigest = ContentDigest.sha256(try signed.manifest.signedRepresentation())
         if let existing, signed.manifest.version == existing.signed.manifest.version,
-           signed.manifest.payloadSHA256 != existing.acceptedDigest { throw FilterDatasetError.rollback }
+           manifestDigest != existing.acceptedDigest { throw FilterDatasetError.rollback }
         let minimum = existing?.highestVersion ?? (signed.manifest.kind == .safariDomainsV1 ? 1 : 0)
         let verified = try FilterDatasetVerifier.verify(signed, trustedKeys: BundledProtectionDataset.trustedKeys(),
             highestAcceptedVersion: minimum)
         try await store.saveFeatureState(StoredFilterDataset(signed: signed,
-            highestVersion: max(minimum, signed.manifest.version), acceptedDigest: signed.manifest.payloadSHA256), key: key)
+            highestVersion: max(minimum, signed.manifest.version), acceptedDigest: manifestDigest), key: key)
         return verified
     }
 
@@ -420,27 +436,45 @@ final class FirePrivacyEngine {
         operationGeneration = UUID()
         let activeFeatures = Set(consent.receipts.filter(\.isActive).map(\.feature))
             .union(preferences.pendingProtectionRemoval)
+            .union(try await cleanupPlan.load())
+        let protectionFeatures: Set<ConsentFeature> = [.safariProtection, .encryptedDNS, .urlProtection, .managedProtection]
+        pendingSystemCleanup = activeFeatures.intersection(protectionFeatures)
+        // Commit a nonsensitive durable removal plan before destroying its private origin.
+        try await cleanupPlan.save(pendingSystemCleanup)
         try await gate.deleteAll()
         await reminders.removeAll()
         var failure: (any Error)?
+        do { try await retrySystemCleanup() } catch { failure = error }
+        try await store.deleteAll()
+        report = nil; sessions = []; preferences = EnginePreferences(); consent = ConsentState()
+        knowledgeBase = nil; analysis = nil; lifecycle = nil; advisorResult = nil
+        comparison = nil; weeklySummary = nil; didRestore = false
+        if let failure { throw failure }
+    }
+
+    func retrySystemCleanup() async throws {
+        var features = try await cleanupPlan.load()
+        var failure: (any Error)?
         let edition = Bundle.main.object(forInfoDictionaryKey: "FirePrivacyDistributionEdition") as? String ?? "consumer"
-        for feature in [ConsentFeature.safariProtection, .encryptedDNS, .urlProtection, .managedProtection] {
-            guard activeFeatures.contains(feature) else { continue }
+        for feature in features {
             do {
                 switch feature {
                 case .safariProtection: try await protectionService.removeSafari()
                 case .encryptedDNS: try await protectionService.removeDNS()
                 case .urlProtection:
-                    if edition == "url-filter", #available(iOS 26.0, *) { try await URLFilterService().remove() }
-                case .managedProtection: if edition == "managed" { try await ManagedProtectionService().remove() }
-                default: break
+                    guard edition == "url-filter" else { throw EngineError.unavailable }
+                    if #available(iOS 26.0, *) { try await URLFilterService().remove() }
+                    else { throw EngineError.unavailable }
+                case .managedProtection:
+                    guard edition == "managed" else { throw EngineError.unavailable }
+                    try await ManagedProtectionService().remove()
+                default: throw EngineError.unavailable
                 }
+                features.remove(feature)
             } catch { failure = error }
         }
-        do { try await store.deleteAll() } catch { failure = error }
+        pendingSystemCleanup = features
+        try await cleanupPlan.save(features)
         if let failure { throw failure }
-        report = nil; sessions = []; preferences = EnginePreferences(); consent = ConsentState()
-        knowledgeBase = nil; analysis = nil; lifecycle = nil; advisorResult = nil
-        comparison = nil; weeklySummary = nil; didRestore = false
     }
 }
