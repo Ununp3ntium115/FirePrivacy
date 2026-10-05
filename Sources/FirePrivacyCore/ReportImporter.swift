@@ -22,19 +22,21 @@ public enum ReportImporter {
 
     /// Imports only supported exported event records. Invalid lines are quarantined
     /// without copying their sensitive contents into error messages.
-    public static func parse(_ data: Data, importedAt: Date = Date()) throws -> PrivacyReport {
+    public static func parse(_ data: Data, importedAt: Date = Date(), sourceFilename: String? = nil) throws -> PrivacyReport {
         guard data.count <= maximumFileBytes else { throw ImportError.fileTooLarge }
         var observations: [Observation] = []
         var issues: [ImportIssue] = []
         var nonemptyRecords = 0
         var contactTotal = 0
         let timestamps = TimestampParser()
+        let sourceDigest = ContentDigest.sha256(data)
 
         var position = data.startIndex
         var lineNumber = 0
         while position < data.endIndex {
             let lineEnd = data[position..<data.endIndex].firstIndex(of: 0x0A) ?? data.endIndex
             var line = Data(data[position..<lineEnd])
+            let lineDigest = ContentDigest.sha256(line)
             position = lineEnd == data.endIndex ? data.endIndex : lineEnd + 1
             lineNumber += 1
             if lineNumber == 1, line.starts(with: [0xEF, 0xBB, 0xBF]) { line.removeFirst(3) }
@@ -49,7 +51,9 @@ public enum ReportImporter {
                 guard let object = try JSONSerialization.jsonObject(with: line) as? [String: Any] else {
                     throw LineError("Expected one JSON object per line.")
                 }
-                let observation = try parseRecord(object, rawHitCount: validator.topLevelHitCount, timestamps: timestamps)
+                let observation = try parseRecord(object, rawNumbers: validator.topLevelNumbers, timestamps: timestamps,
+                    id: ContentDigest.stableID("FirePrivacy/Observation/v2|\(sourceDigest)|\(lineNumber)|\(lineDigest)"),
+                    sourceLine: lineNumber, lineDigest: lineDigest)
                 if observation.category == .network {
                     let (nextTotal, overflow) = contactTotal.addingReportingOverflow(observation.count)
                     guard !overflow else { throw LineError("Contact total exceeds the supported integer range.") }
@@ -63,10 +67,17 @@ public enum ReportImporter {
             }
         }
         guard !observations.isEmpty else { throw ImportError.noRecognizedRecords(issues: issues.count) }
-        return PrivacyReport(importedAt: importedAt, observations: observations, issues: issues)
+        let times = observations.flatMap { [$0.timestamp, $0.firstTimestamp, $0.lastTimestamp].compactMap { $0 } }
+        let filename = sourceFilename?.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last.map(String.init)
+        let metadata = ReportMetadata(sourceSHA256: sourceDigest, sourceFilename: filename,
+            reportStart: times.min(), reportEnd: times.max(), status: issues.isEmpty ? .complete : .partial,
+            recognizedRecords: observations.count, skippedRecords: issues.count)
+        return PrivacyReport(id: ContentDigest.stableID("FirePrivacy/Report/v2|" + sourceDigest), importedAt: importedAt,
+                             observations: observations, issues: issues, metadata: metadata)
     }
 
-    private static func parseRecord(_ object: [String: Any], rawHitCount: String?, timestamps: TimestampParser) throws -> Observation {
+    private static func parseRecord(_ object: [String: Any], rawNumbers: [String: String], timestamps: TimestampParser,
+                                    id: UUID, sourceLine: Int, lineDigest: String) throws -> Observation {
         guard let type = object["type"] as? String, type == "networkActivity" || type == "access" else {
             throw LineError("Unsupported record type. Only networkActivity and access events are imported.")
         }
@@ -86,26 +97,36 @@ public enum ReportImporter {
         guard let bundleID = type == "access" ? nestedID : (topLevelID ?? nestedID) else {
             throw LineError("Missing or unsupported app bundle identifier.")
         }
+        var warnings: [String] = []
+        let context = optionalText(object, key: "context", warnings: &warnings)
+        let owner = optionalText(object, key: "domainOwner", warnings: &warnings)
+        let domainType = reportedValue(object, key: "domainType", rawNumbers: rawNumbers, warnings: &warnings)
+        let initiatedType = reportedValue(object, key: "initiatedType", rawNumbers: rawNumbers, warnings: &warnings)
+        let classification = reportedValue(object, key: "domainClassification", rawNumbers: rawNumbers, warnings: &warnings)
 
         if type == "networkActivity" {
             guard let originalDomain = object["domain"] as? String,
                   let domain = normalizedDomain(originalDomain) else {
                 throw LineError("Missing or unsupported domain name.")
             }
-            guard let count = nonnegativeInteger(rawHitCount) else {
+            if domain != originalDomain { warnings.append("Domain spelling was normalized to its canonical host identity.") }
+            guard let count = nonnegativeInteger(rawNumbers["hits"]) else {
                 throw LineError("Network hits must be a nonnegative integer in the supported range.")
             }
             let first = try timestamps.read(object, key: "firstTimeStamp")
             let last = try timestamps.read(object, key: "lastTimeStamp")
             let single = try timestamps.read(object, key: "timeStamp")
-            if let firstDate = first.date, let lastDate = last.date ?? single.date, firstDate > lastDate {
+            if let firstInstant = first.instant, let lastInstant = last.instant ?? single.instant, firstInstant > lastInstant {
                 throw LineError("The first timestamp is later than the last timestamp.")
             }
             return Observation(
-                bundleID: bundleID, domain: domain, category: .network,
+                id: id, bundleID: bundleID, domain: domain, category: .network,
                 accessType: type, count: count, timestamp: last.date ?? single.date ?? first.date,
                 firstTimestamp: first.date, lastTimestamp: last.date,
-                timestampText: single.text, firstTimestampText: first.text, lastTimestampText: last.text
+                timestampText: single.text, firstTimestampText: first.text, lastTimestampText: last.text,
+                provenance: ObservationProvenance(sourceLine: sourceLine, sourceSHA256: lineDigest, normalizationWarnings: warnings),
+                context: context, domainOwner: owner, domainType: domainType, initiatedType: initiatedType,
+                domainClassification: classification, originalDomain: originalDomain
             )
         }
 
@@ -123,10 +144,50 @@ public enum ReportImporter {
             kind = nil
         }
         let timestamp = try timestamps.read(object, key: "timeStamp")
+        let sensorIdentifier = exactIdentifier(object, key: "identifier", warnings: &warnings)
         return Observation(
-            bundleID: bundleID, category: .sensor, accessType: category,
-            count: 1, timestamp: timestamp.date, timestampText: timestamp.text, eventKind: kind
+            id: id, bundleID: bundleID, category: .sensor, accessType: category,
+            count: 1, timestamp: timestamp.date, timestampText: timestamp.text, eventKind: kind,
+            provenance: ObservationProvenance(sourceLine: sourceLine, sourceSHA256: lineDigest, normalizationWarnings: warnings),
+            context: context, domainOwner: owner, domainType: domainType, initiatedType: initiatedType,
+            domainClassification: classification, sensorIdentifier: sensorIdentifier
         )
+    }
+
+    private static func optionalText(_ object: [String: Any], key: String, warnings: inout [String]) -> String? {
+        guard let raw = object[key] else { return nil }
+        guard let text = raw as? String else { warnings.append("Unsupported \(key) value was omitted."); return nil }
+        let safe = ImportedText.sanitize(text)
+        if safe != text { warnings.append("\(key) contained hidden characters or exceeded the display limit.") }
+        return safe.isEmpty ? nil : safe
+    }
+
+    private static func exactIdentifier(_ object: [String: Any], key: String, warnings: inout [String]) -> String? {
+        guard let raw = object[key] else { return nil }
+        guard let text = raw as? String, !text.isEmpty,
+              ImportedText.sanitize(text) == text else {
+            warnings.append("Unsupported sensor identifier was omitted; it cannot be used for interval pairing.")
+            return nil
+        }
+        return text
+    }
+
+    private static func reportedValue(_ object: [String: Any], key: String, rawNumbers: [String: String],
+                                      warnings: inout [String]) -> ReportedValue? {
+        guard let value = object[key] else { return nil }
+        if let token = rawNumbers[key] {
+            guard token.utf8.count <= 128 else { warnings.append("Unsupported \(key) numeric length was omitted."); return nil }
+            return Int(token).map(ReportedValue.integer) ?? .number(token)
+        }
+        if let text = value as? String {
+            let safe = ImportedText.sanitize(text)
+            if safe != text { warnings.append("\(key) contained hidden characters or exceeded the display limit.") }
+            return .text(safe)
+        }
+        if value is NSNull { return .null }
+        if let bool = value as? Bool { return .boolean(bool) }
+        warnings.append("Unsupported \(key) structure was omitted.")
+        return nil
     }
 
     private static func accessorBundleID(_ object: [String: Any]) throws -> String? {
@@ -152,6 +213,11 @@ public enum ReportImporter {
     }
 
     private static func normalizedDomain(_ value: String) -> String? {
+        guard ImportedText.sanitize(value, maximumCharacters: 4_096) == value else { return nil }
+        if let identity = DomainIdentity(value) { return identity.value }
+        // Preserve earlier strictly ASCII destination compatibility, including
+        // single-label names and IPv4 literals. A failed DomainIdentity has no
+        // registrable-domain assertion and cannot match a PSL owner.
         guard !value.isEmpty, value.utf8.count <= 253 else { return nil }
         let normalized = value.lowercased()
         guard normalized.utf8.allSatisfy({
@@ -200,26 +266,37 @@ private struct LineError: Error {
     init(_ message: String) { self.message = message }
 }
 
-private struct TimestampParser {
+struct TimestampParser {
     private let whole: ISO8601DateFormatter
-    private let fractional: ISO8601DateFormatter
 
     init() {
         whole = ISO8601DateFormatter()
         whole.formatOptions = [.withInternetDateTime]
-        fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     }
 
-    func read(_ object: [String: Any], key: String) throws -> (date: Date?, text: String?) {
-        guard let value = object[key] else { return (nil, nil) }
+    func read(_ object: [String: Any], key: String) throws -> (date: Date?, text: String?, instant: ExactExportTimestamp?) {
+        guard let value = object[key] else { return (nil, nil, nil) }
         guard let text = value as? String, text.utf8.count <= 64,
               text.range(of: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"#, options: .regularExpression) != nil,
-              hasValidCalendarFields(text),
-              let date = fractional.date(from: text) ?? whole.date(from: text) else {
+              hasValidCalendarFields(text) else {
             throw LineError("A timestamp is not supported ISO 8601 text.")
         }
-        return (date, text)
+        let bytes = Array(text.utf8)
+        var zoneIndex = 19
+        var nanoseconds = 0
+        if bytes[zoneIndex] == 46 {
+            zoneIndex += 1
+            let beginning = zoneIndex
+            while (48...57).contains(bytes[zoneIndex]) {
+                nanoseconds = nanoseconds * 10 + Int(bytes[zoneIndex] - 48)
+                zoneIndex += 1
+            }
+            for _ in (zoneIndex - beginning)..<9 { nanoseconds *= 10 }
+        }
+        let wholeText = String(text.prefix(19)) + String(decoding: bytes[zoneIndex...], as: UTF8.self)
+        guard let base = whole.date(from: wholeText) else { throw LineError("A timestamp is not supported ISO 8601 text.") }
+        let instant = ExactExportTimestamp(seconds: Int64(base.timeIntervalSince1970), nanoseconds: nanoseconds)
+        return (instant.date, text, instant)
     }
 
     private func hasValidCalendarFields(_ text: String) -> Bool {
@@ -247,7 +324,7 @@ private struct TimestampParser {
 /// Duplicate keys are rejected rather than accepting a parser's last-value choice.
 private struct BoundedJSONValidator {
     let bytes: [UInt8]
-    private(set) var topLevelHitCount: String?
+    private(set) var topLevelNumbers: [String: String] = [:]
     private var index = 0
     private let maximumStringBytes = 4_096
 
@@ -290,9 +367,9 @@ private struct BoundedJSONValidator {
             whitespace()
             let valueBeginning = index
             try value(depth: depth + 1)
-            if depth == 0, key == "hits", valueBeginning < bytes.count,
+            if depth == 0, valueBeginning < bytes.count,
                bytes[valueBeginning] == 0x2D || (0x30...0x39).contains(bytes[valueBeginning]) {
-                topLevelHitCount = String(decoding: bytes[valueBeginning..<index], as: UTF8.self)
+                topLevelNumbers[key] = String(decoding: bytes[valueBeginning..<index], as: UTF8.self)
             }
             whitespace()
             if consume(0x7D) { return }

@@ -13,6 +13,12 @@ struct SharedReport: Identifiable, Sendable {
     let url: URL
 }
 
+enum ExportFormat: String, CaseIterable, Identifiable, Sendable {
+    case json, csv, markdown
+    var id: String { rawValue }
+    var fileExtension: String { self == .markdown ? "md" : rawValue }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published private(set) var report: PrivacyReport?
@@ -25,14 +31,29 @@ final class AppModel: ObservableObject {
     @Published var showReplaceConfirmation = false
     @Published var notice: AppNotice?
     @Published var sharedReport: SharedReport?
+    @Published private(set) var analysis: FindingAnalysis?
+    @Published private(set) var sessions: [ReportSessionDescriptor] = []
+    @Published private(set) var comparison: ReportComparison?
+    @Published private(set) var weeklySummary: LocalWeeklySummary?
+    @Published private(set) var preferences = EnginePreferences()
+    @Published private(set) var consent = ConsentState()
+    @Published private(set) var protection: ProtectionSnapshot
+    @Published private(set) var advisorResult: AdvisorResult?
+    @Published private(set) var networkEvents: [NetworkEvent] = []
+    @Published private(set) var knowledgeBaseVersion: String?
+    @Published private(set) var knowledgeBaseFailure = false
+    @Published var retainEncryptedSourceForNextImport = false
 
     private let store: EncryptedReportStore
+    let engine: FirePrivacyEngine
     private var didLoad = false
     private var pendingOpenedFile: URL?
     private var deferredOpenedFile: URL?
 
     init(store: EncryptedReportStore = EncryptedReportStore()) {
         self.store = store
+        engine = FirePrivacyEngine(store: store)
+        protection = engine.protection
     }
 
     func load() async {
@@ -47,8 +68,7 @@ final class AppModel: ObservableObject {
         }
         await readSavedReport()
         if ProcessInfo.processInfo.arguments.contains("--demo") {
-            report = .demo
-            isDemo = true
+            await loadDemo()
         }
     }
 
@@ -61,8 +81,9 @@ final class AppModel: ObservableObject {
 
     private func readSavedReport() async {
         do {
-            report = try await store.load()
-            hasSavedReport = report != nil
+            _ = try await engine.restore()
+            await syncEngine()
+            hasSavedReport = !sessions.isEmpty
             savedReportUnavailable = false
             isDemo = false
         } catch {
@@ -122,13 +143,15 @@ final class AppModel: ObservableObject {
         beginWork("Reading your report on this device")
         defer { finishWork() }
         do {
+            let retainSource = retainEncryptedSourceForNextImport
             let imported = try await Task.detached(priority: .userInitiated) {
                 let bytes = try ReportFileIO.readImportedData(from: url)
-                return try ReportImporter.parse(bytes)
+                return (try ReportImporter.parse(bytes, sourceFilename: url.lastPathComponent), retainSource ? bytes : nil)
             }.value
-            // Publish only after the encrypted replacement has been saved successfully.
-            try await store.save(imported)
-            report = imported
+            // Selecting a Files document explicitly authorizes the disclosed local import.
+            try await engine.grant(.localImport, scope: "local-import-v1")
+            _ = try await engine.importReport(imported.0, source: imported.1)
+            await syncEngine()
             isDemo = false
             hasSavedReport = true
             savedReportUnavailable = false
@@ -139,23 +162,108 @@ final class AppModel: ObservableObject {
 
     func showDemo() {
         guard !isWorking else { return }
-        report = .demo
-        isDemo = true
+        Task { await loadDemo() }
     }
 
-    func prepareExport() async {
+    private func loadDemo() async {
+        do {
+            try await engine.showSample()
+            await syncEngine()
+            isDemo = true
+        } catch { showFailure("Sample could not be opened", error) }
+    }
+
+    func selectReport(_ id: UUID) async {
+        guard !isWorking else { return }
+        beginWork("Opening encrypted history")
+        defer { finishWork() }
+        do {
+            _ = try await engine.selectReport(id)
+            await syncEngine()
+            isDemo = false
+        } catch { showFailure("Report unavailable", error) }
+    }
+
+    func savePreferences(_ value: EnginePreferences) async {
+        do { try await engine.savePreferences(value); await syncEngine() }
+        catch { showFailure("Preference was not saved", error) }
+    }
+
+    func grantFeature(_ feature: ConsentFeature, scope: String,
+                      disclosureVersion: String = ConsentDisclosure.currentVersion) async -> Bool {
+        do {
+            try await engine.grant(feature, scope: scope, disclosureVersion: disclosureVersion)
+            await syncEngine()
+            return true
+        } catch { showFailure("Consent could not be saved", error); return false }
+    }
+
+    func revokeFeature(_ feature: ConsentFeature) async {
+        do { try await engine.revoke(feature); await syncEngine() }
+        catch { await syncEngine(); showFailure("Removal needs attention", error) }
+    }
+
+    func refreshProtection() async {
+        await engine.refreshProtection()
+        do { try await engine.rebuildAnalysis() } catch { showFailure("Analysis unavailable", error) }
+        await syncEngine()
+    }
+
+    func assessLocally() async {
+        beginWork("Preparing evidence-backed guidance")
+        defer { finishWork() }
+        do { _ = try await engine.assessLocally(); await syncEngine() }
+        catch { showFailure("Advisor unavailable", error) }
+    }
+
+    func syncEngine() async {
+        report = engine.report
+        analysis = engine.analysis
+        sessions = engine.sessions
+        comparison = engine.comparison
+        weeklySummary = engine.weeklySummary
+        preferences = engine.preferences
+        consent = engine.consent
+        protection = engine.protection
+        advisorResult = engine.advisorResult
+        networkEvents = await engine.gate.ledger.snapshot()
+        knowledgeBaseVersion = engine.knowledgeBase?.version
+        knowledgeBaseFailure = engine.knowledgeBaseFailure
+    }
+
+    private func showFailure(_ title: String, _ error: any Error) {
+        notice = AppNotice(title: title, message: error.localizedDescription)
+    }
+
+    func prepareExport(format: ExportFormat = .json, options: ReportExportOptions = .full) async {
         guard !isWorking, let report else { return }
         beginWork("Preparing your export")
         defer { finishWork() }
-        let isSyntheticDemo = isDemo
+        let analysis = self.analysis
         do {
             let url = try await Task.detached(priority: .userInitiated) {
-                try ReportFileIO.makeExportFile(for: report, isSyntheticDemo: isSyntheticDemo)
+                let data: Data
+                switch format {
+                case .json: data = try ReportExporter.json(report: report, analysis: analysis, options: options)
+                case .csv: data = ReportExporter.csv(report: report, options: options)
+                case .markdown: data = ReportExporter.markdown(report: report, analysis: analysis, options: options)
+                }
+                return try ReportFileIO.makeExportFile(data: data, fileExtension: format.fileExtension)
             }.value
             sharedReport = SharedReport(url: url)
         } catch {
             notice = AppNotice(title: "Export could not be prepared", message: error.localizedDescription)
         }
+    }
+
+    func prepareDiagnostics() async {
+        guard !isWorking else { return }
+        beginWork("Preparing sanitized diagnostics")
+        defer { finishWork() }
+        do {
+            let data = try await engine.diagnostics()
+            sharedReport = SharedReport(url: try ReportFileIO.makeExportFile(data: data, fileExtension: "json"))
+        } catch { showFailure("Diagnostics unavailable", error) }
     }
 
     func removeExport(_ url: URL) async {
@@ -178,11 +286,13 @@ final class AppModel: ObservableObject {
                 try ReportFileIO.removeExportFile(at: sharedReport.url)
                 self.sharedReport = nil
             }
-            try await store.deleteAll()
+            try await engine.deleteAll()
+            await syncEngine()
             report = nil
             isDemo = false
             hasSavedReport = false
             savedReportUnavailable = false
+            notice = nil
         } catch {
             // A partial storage failure is visible; do not claim complete deletion.
             savedReportUnavailable = true

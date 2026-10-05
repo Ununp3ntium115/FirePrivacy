@@ -1,0 +1,12 @@
+{
+  "datasetVersion": "1.0.0",
+  "expiresAt": 1822778333,
+  "generatedAt": 1791242333,
+  "minimumAppVersion": "1.0.0",
+  "payloadSHA256": "afbcd33de3e47cffb038ee546b0977b300bd7779d2d50963abd093ade5c7578e",
+  "recordCount": 3,
+  "schemaVersion": 1,
+  "sequence": 1,
+  "signatureBase64": "nlUzgY5EWFymmU0pSvrwQql+pZyxv8mA5PgXGRvXbFRXIDnwaB0W65JXVdPMTmAmhKuA+8g8qeCZ7zHH0Mj7Bg==",
+  "signingKeyID": "fireprivacy-bootstrap-2026-10"
+}

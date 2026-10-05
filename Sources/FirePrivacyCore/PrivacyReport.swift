@@ -23,13 +23,26 @@ public struct Observation: Identifiable, Codable, Equatable, Sendable {
     public let firstTimestampText: String?
     public let lastTimestampText: String?
     public let eventKind: String?
+    public let provenance: ObservationProvenance?
+    public let context: String?
+    public let domainOwner: String?
+    public let domainType: ReportedValue?
+    public let initiatedType: ReportedValue?
+    public let domainClassification: ReportedValue?
+    /// Exact bounded exported resource/access identifier; its semantics are not inferred.
+    public let sensorIdentifier: String?
+    public let originalDomain: String?
 
     public init(
         id: UUID = UUID(), bundleID: String, domain: String? = nil,
         category: ObservationCategory, accessType: String, count: Int,
         timestamp: Date? = nil, firstTimestamp: Date? = nil, lastTimestamp: Date? = nil,
         timestampText: String? = nil, firstTimestampText: String? = nil,
-        lastTimestampText: String? = nil, eventKind: String? = nil
+        lastTimestampText: String? = nil, eventKind: String? = nil,
+        provenance: ObservationProvenance? = nil, context: String? = nil,
+        domainOwner: String? = nil, domainType: ReportedValue? = nil,
+        initiatedType: ReportedValue? = nil, domainClassification: ReportedValue? = nil,
+        sensorIdentifier: String? = nil, originalDomain: String? = nil
     ) {
         self.id = id
         self.bundleID = bundleID
@@ -44,6 +57,14 @@ public struct Observation: Identifiable, Codable, Equatable, Sendable {
         self.firstTimestampText = firstTimestampText
         self.lastTimestampText = lastTimestampText
         self.eventKind = eventKind
+        self.provenance = provenance
+        self.context = context
+        self.domainOwner = domainOwner
+        self.domainType = domainType
+        self.initiatedType = initiatedType
+        self.domainClassification = domainClassification
+        self.sensorIdentifier = sensorIdentifier
+        self.originalDomain = originalDomain
     }
 }
 
@@ -107,12 +128,14 @@ public struct PrivacyReport: Identifiable, Codable, Equatable, Sendable {
     public let importedAt: Date
     public let observations: [Observation]
     public let issues: [ImportIssue]
+    public let metadata: ReportMetadata?
 
-    public init(id: UUID = UUID(), importedAt: Date = Date(), observations: [Observation], issues: [ImportIssue] = []) {
+    public init(id: UUID = UUID(), importedAt: Date = Date(), observations: [Observation], issues: [ImportIssue] = [], metadata: ReportMetadata? = nil) {
         self.id = id
         self.importedAt = importedAt
         self.observations = observations
         self.issues = issues
+        self.metadata = metadata
     }
 
     public var totalContacts: Int {

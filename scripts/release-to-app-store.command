@@ -4,7 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export TEAM_ID="${TEAM_ID:-LYDVWU62G4}"
-export BUNDLE_ID="${BUNDLE_ID:-com.firesoftwaresolutions.FirePrivacy}"
+export BUNDLE_ID="${BUNDLE_ID:-${APP_BASE_BUNDLE_ID:-com.firesoftwaresolutions.FirePrivacy}}"
+export APP_EDITION="${APP_EDITION:-consumer}"
 export PRIVACY_POLICY_URL="${PRIVACY_POLICY_URL:-https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md}"
 export SUPPORT_URL="${SUPPORT_URL:-https://github.com/Ununp3ntium115/FirePrivacy/issues}"
 if [[ "${1:-}" != "" && "${1:-}" != "--upload" ]]; then

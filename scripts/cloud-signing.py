@@ -37,6 +37,25 @@ UUID_PATTERN = re.compile(
 APPLE_ID_PATTERN = re.compile(r"[A-Z0-9]{10}")
 BUNDLE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+")
 ASC_BINDINGS = ("ASC_PRIVATE_KEY_BASE64", "ASC_KEY_ID", "ASC_ISSUER_ID")
+APP_GROUP_DEFAULT = "group.com.firesoftwaresolutions.FirePrivacy.protection"
+NETWORK_ENTITLEMENT = "com.apple.developer.networking.networkextension"
+GROUP_ENTITLEMENT = "com.apple.security.application-groups"
+EXTENSION_BINDINGS = {
+    "SafariContentBlocker": ("APPLE_SAFARI_PROVISION_PROFILE_BASE64", "SAFARI_PROVISIONING_PROFILE_SPECIFIER", frozenset()),
+    "URLFilterControl": ("APPLE_URL_PROVISION_PROFILE_BASE64", "URL_PROVISIONING_PROFILE_SPECIFIER", frozenset({"url-filter-provider"})),
+    "ManagedFilterData": ("APPLE_MANAGED_DATA_PROVISION_PROFILE_BASE64", "MANAGED_DATA_PROVISIONING_PROFILE_SPECIFIER", frozenset({"content-filter-provider"})),
+    "ManagedFilterControl": ("APPLE_MANAGED_CONTROL_PROVISION_PROFILE_BASE64", "MANAGED_CONTROL_PROVISIONING_PROFILE_SPECIFIER", frozenset({"content-filter-provider"})),
+}
+EDITION_EXTENSIONS = {
+    "consumer": ("SafariContentBlocker",),
+    "url-filter": ("SafariContentBlocker", "URLFilterControl"),
+    "managed": ("SafariContentBlocker", "ManagedFilterData", "ManagedFilterControl"),
+}
+EDITION_CAPABILITIES = {
+    "consumer": frozenset({"dns-settings"}),
+    "url-filter": frozenset({"dns-settings", "url-filter-provider"}),
+    "managed": frozenset({"dns-settings", "content-filter-provider"}),
+}
 
 
 class SigningError(Exception):
@@ -90,8 +109,9 @@ def save_state(directory: Path, state: dict) -> None:
     temporary.replace(directory / STATE_NAME)
 
 
-def decode_binding(name: str, maximum: int) -> bytes:
-    encoded = required(name)
+def decode_base64_value(encoded: str, name: str, maximum: int) -> bytes:
+    if not isinstance(encoded, str) or not encoded:
+        raise SigningError(f"Required profile binding {name} is missing or empty.")
     if len(encoded) > maximum * 2:
         raise SigningError(f"Environment binding {name} exceeds the expected size.")
     try:
@@ -101,6 +121,55 @@ def decode_binding(name: str, maximum: int) -> bytes:
     if not decoded or len(decoded) > maximum:
         raise SigningError(f"Environment binding {name} has an invalid decoded size.")
     return decoded
+
+
+def decode_binding(name: str, maximum: int) -> bytes:
+    return decode_base64_value(required(name), name, maximum)
+
+
+def selected_configuration() -> tuple[str, str, str]:
+    base = os.environ.get("APP_BASE_BUNDLE_ID") or os.environ.get("BUNDLE_ID", "")
+    legacy = os.environ.get("BUNDLE_ID", "")
+    if not base or not BUNDLE_PATTERN.fullmatch(base) or (legacy and legacy != base):
+        raise SigningError("APP_BASE_BUNDLE_ID must be a valid registered bundle identifier and agree with any BUNDLE_ID alias.")
+    edition = os.environ.get("APP_EDITION") or "consumer"
+    if edition not in EDITION_EXTENSIONS:
+        raise SigningError("APP_EDITION must be consumer, url-filter, or managed.")
+    group = os.environ.get("FIREPRIVACY_APP_GROUP_ID") or APP_GROUP_DEFAULT
+    if not group.startswith("group.") or not BUNDLE_PATTERN.fullmatch(group):
+        raise SigningError("FIREPRIVACY_APP_GROUP_ID must be a registered App Group identifier.")
+    return base, edition, group
+
+
+def extension_profiles(edition: str) -> dict[str, bytes]:
+    """Decode only the selected edition's profiles, never privilege extras.
+
+    Prefer individual secrets to stay within GitHub's per-secret size limit.
+    The optional aggregate binding is a raw JSON object whose exact target-name
+    keys map to base64 profiles; the JSON itself is not base64 encoded.
+    """
+    selected = EDITION_EXTENSIONS[edition]
+    aggregate = os.environ.get("APPLE_EXTENSION_PROFILES_BASE64", "")
+    if aggregate:
+        if len(aggregate) > 40 * 1024 * 1024:
+            raise SigningError("The extension profile map exceeds its expected size.")
+        def unique_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise SigningError("The extension profile map contains duplicate target names.")
+                result[key] = value
+            return result
+        try:
+            values = json.loads(aggregate, object_pairs_hook=unique_pairs)
+        except (ValueError, TypeError):
+            raise SigningError("APPLE_EXTENSION_PROFILES_BASE64 must be a raw JSON target-name to base64-profile object.") from None
+        if not isinstance(values, dict) or not set(values).issubset(EXTENSION_BINDINGS):
+            raise SigningError("The extension profile map contains unknown target names.")
+        if any(os.environ.get(EXTENSION_BINDINGS[name][0]) for name in selected):
+            raise SigningError("Choose either an aggregate profile map or individual profiles for the selected edition.")
+        return {name: decode_base64_value(values.get(name), name, 5 * 1024 * 1024) for name in selected}
+    return {name: decode_binding(EXTENSION_BINDINGS[name][0], 5 * 1024 * 1024) for name in selected}
 
 
 def run(arguments: list[str], description: str, *, allow_failure: bool = False) -> bytes | None:
@@ -207,7 +276,9 @@ def verify_apple_profile(profile: Path) -> None:
         core.CFRelease(policy)
 
 
-def profile_metadata(profile: Path, keychain: Path, team: str, bundle: str) -> tuple[str, set[str]]:
+def profile_metadata(profile: Path, keychain: Path, team: str, bundle: str,
+                     app_group: str | None = None,
+                     required_network_capabilities: frozenset[str] = frozenset()) -> tuple[str, set[str]]:
     verify_apple_profile(profile)
     # -k confines security cms embedded certificate imports to our temporary
     # keychain. Never replace prior Apple-policy verification with plist extraction.
@@ -224,6 +295,7 @@ def profile_metadata(profile: Path, keychain: Path, team: str, bundle: str) -> t
     identifier = data.get("UUID")
     if not isinstance(identifier, str) or not UUID_PATTERN.fullmatch(identifier):
         raise SigningError("The provisioning profile UUID must use the standard 36-character format.")
+    identifier = identifier.upper()
     expiration = data.get("ExpirationDate")
     if not isinstance(expiration, dt.datetime):
         raise SigningError("The provisioning profile has no valid expiration date.")
@@ -257,6 +329,14 @@ def profile_metadata(profile: Path, keychain: Path, team: str, bundle: str) -> t
         or entitlements.get("get-task-allow") is not False
     ):
         raise SigningError("An App Store distribution profile without device or development access is required.")
+    if app_group is not None:
+        groups = entitlements.get(GROUP_ENTITLEMENT)
+        if not isinstance(groups, list) or app_group not in groups or not all(isinstance(group, str) for group in groups):
+            raise SigningError("The provisioning profile does not grant the configured registered App Group.")
+    if required_network_capabilities:
+        capabilities = entitlements.get(NETWORK_ENTITLEMENT)
+        if not isinstance(capabilities, list) or not all(isinstance(value, str) for value in capabilities) or not required_network_capabilities.issubset(capabilities):
+            raise SigningError("The provisioning profile is missing the target's required Network Extension capabilities.")
     certificates = data.get("DeveloperCertificates")
     if not isinstance(certificates, list) or not certificates or not all(isinstance(item, bytes) for item in certificates):
         raise SigningError("The provisioning profile contains no valid distribution certificates.")
@@ -286,10 +366,9 @@ def install_profile(directory: Path, source: Path, identifier: str, state: dict)
     os.fchmod(descriptor, 0o600)
     with os.fdopen(descriptor, "wb") as stream:
         stream.write(content)
-    state["profile_uuid"] = identifier
-    state["profile_marker"] = str(marker)
-    state["profile_target"] = str(destination)
-    state["profile_sha256"] = hashlib.sha256(content).hexdigest()
+    owned = {"profile_uuid": identifier, "profile_marker": str(marker), "profile_target": str(destination),
+             "profile_sha256": hashlib.sha256(content).hexdigest()}
+    state.setdefault("profiles", []).append(owned)
     try:
         save_state(directory, state)
     except Exception:
@@ -307,12 +386,13 @@ def prepare() -> None:
     if mode not in {"archive", "upload"}:
         raise SigningError("RELEASE_MODE must be archive or upload.")
     team = os.environ.get("TEAM_ID", "LYDVWU62G4")
-    bundle = required("BUNDLE_ID")
-    if not APPLE_ID_PATTERN.fullmatch(team) or not BUNDLE_PATTERN.fullmatch(bundle):
-        raise SigningError("TEAM_ID or BUNDLE_ID has an invalid format.")
+    bundle, edition, app_group = selected_configuration()
+    if not APPLE_ID_PATTERN.fullmatch(team):
+        raise SigningError("TEAM_ID has an invalid format.")
     password = required("APPLE_DISTRIBUTION_P12_PASSWORD")
     p12_data = decode_binding("APPLE_DISTRIBUTION_P12_BASE64", 10 * 1024 * 1024)
     profile_data = decode_binding("APPLE_PROVISION_PROFILE_BASE64", 5 * 1024 * 1024)
+    extension_data = extension_profiles(edition)
     # GitHub workflow env declarations resolve absent secrets to empty values.
     # Empty ASC declarations do not turn an archive-only run into an upload.
     needs_asc = mode == "upload" or any(os.environ.get(name) for name in ASC_BINDINGS)
@@ -331,12 +411,17 @@ def prepare() -> None:
     # the workflow's always() cleanup can recover from any subsequent failure.
     os.environ["FIREPRIVACY_SIGNING_DIR"] = str(directory)
     publish("FIREPRIVACY_SIGNING_DIR", str(directory))
-    state: dict = {"version": 1}
+    state: dict = {"version": 2, "profiles": []}
     save_state(directory, state)
     p12 = directory / "distribution.p12"
     profile = directory / "distribution.mobileprovision"
     private_write(p12, p12_data)
     private_write(profile, profile_data)
+    profile_sources = {"app": profile}
+    for name, content in extension_data.items():
+        source = directory / f"{name}.mobileprovision"
+        private_write(source, content)
+        profile_sources[name] = source
     if asc_data is not None:
         asc_path = directory / f"AuthKey_{key_id}.p8"
         private_write(asc_path, asc_data)
@@ -358,7 +443,16 @@ def prepare() -> None:
     run(["/usr/bin/security", "create-keychain", "-p", keychain_password, str(keychain)], "create the temporary signing keychain")
     run(["/usr/bin/security", "set-keychain-settings", "-lut", "21600", str(keychain)], "set the temporary keychain timeout")
     run(["/usr/bin/security", "unlock-keychain", "-p", keychain_password, str(keychain)], "unlock the temporary signing keychain")
-    identifier, profile_certificates = profile_metadata(profile, keychain, team, bundle)
+    metadata = {}
+    for name, source in profile_sources.items():
+        target_bundle = bundle if name == "app" else f"{bundle}.{name}"
+        capabilities = EDITION_CAPABILITIES[edition] if name == "app" else EXTENSION_BINDINGS[name][2]
+        metadata[name] = profile_metadata(source, keychain, team, target_bundle, app_group, capabilities)
+    if len({value[0] for value in metadata.values()}) != len(metadata):
+        raise SigningError("Every selected app or extension target must have a distinct provisioning profile UUID.")
+    profile_certificates = set.intersection(*(value[1] for value in metadata.values()))
+    if not profile_certificates:
+        raise SigningError("All selected provisioning profiles must authorize a common distribution certificate.")
     run(
         ["/usr/bin/security", "import", str(p12), "-k", str(keychain), "-P", password,
          "-T", "/usr/bin/codesign", "-T", "/usr/bin/security"],
@@ -381,10 +475,18 @@ def prepare() -> None:
     }
     matching = trusted & profile_certificates
     if len(matching) != 1:
-        raise SigningError("Exactly one trusted valid signing identity must match the provisioning profile certificates.")
-    install_profile(directory, profile, identifier, state)
+        raise SigningError("Exactly one trusted valid signing identity must match every selected provisioning profile.")
+    for name, source in profile_sources.items():
+        install_profile(directory, source, metadata[name][0], state)
     publish("SIGNING_MODE", "manual")
-    publish("FIREPRIVACY_PROFILE_UUID", identifier)
+    publish("APP_BASE_BUNDLE_ID", bundle)
+    publish("BUNDLE_ID", bundle)
+    publish("APP_EDITION", edition)
+    publish("FIREPRIVACY_APP_GROUP_ID", app_group)
+    publish("FIREPRIVACY_PROFILE_UUID", metadata["app"][0])
+    publish("APP_PROVISIONING_PROFILE_SPECIFIER", metadata["app"][0])
+    for name in extension_data:
+        publish(EXTENSION_BINDINGS[name][1], metadata[name][0])
     publish("FIREPRIVACY_SIGNING_IDENTITY", matching.pop())
     if asc_data is not None:
         publish("ASC_KEY_PATH", str(asc_path))
@@ -418,7 +520,7 @@ def cleanup() -> None:
         if state_path.is_file() and not state_path.is_symlink():
             try:
                 candidate = json.loads(state_path.read_text(encoding="utf-8"))
-                if not isinstance(candidate, dict) or candidate.get("version") != 1:
+                if not isinstance(candidate, dict) or candidate.get("version") not in (1, 2):
                     raise ValueError
                 state = candidate
             except (ValueError, OSError, UnicodeDecodeError):
@@ -434,10 +536,21 @@ def cleanup() -> None:
             if run(["/usr/bin/security", "delete-keychain", str(keychain)], "delete the temporary signing keychain", allow_failure=True) is None:
                 failures.append("macOS could not delete the temporary signing keychain registration.")
 
-        identifier = state.get("profile_uuid")
-        marker_value = state.get("profile_marker")
-        target_value = state.get("profile_target")
-        if identifier is not None or marker_value is not None or target_value is not None:
+        # Version 1 covered only the app profile. Preserve cleanup compatibility
+        # while recording every selected target's owned inode in version 2.
+        profiles = state.get("profiles", []) if state.get("version") == 2 else [state]
+        if not isinstance(profiles, list) or len(profiles) > 5:
+            failures.append("The owned provisioning profile cleanup list is invalid.")
+            profiles = []
+        for owned in profiles:
+            if not isinstance(owned, dict):
+                failures.append("The owned provisioning profile cleanup state is invalid.")
+                continue
+            identifier = owned.get("profile_uuid")
+            marker_value = owned.get("profile_marker")
+            target_value = owned.get("profile_target")
+            if identifier is None and marker_value is None and target_value is None:
+                continue
             owned_root = profile_directory().resolve()
             if not isinstance(identifier, str) or not UUID_PATTERN.fullmatch(identifier) or not isinstance(marker_value, str) or not isinstance(target_value, str):
                 failures.append("The owned provisioning profile cleanup state is invalid.")
@@ -454,10 +567,13 @@ def cleanup() -> None:
                 if not safe_paths:
                     failures.append("Cleanup refused a provisioning profile outside its owned location.")
                 else:
-                    if target.exists() and marker.exists() and os.path.samefile(marker, target):
-                        target.unlink()
-                    if marker.exists():
-                        marker.unlink()
+                    try:
+                        if target.exists() and marker.exists() and os.path.samefile(marker, target):
+                            target.unlink()
+                        if marker.exists():
+                            marker.unlink()
+                    except OSError:
+                        failures.append("An owned provisioning profile could not be removed.")
     finally:
         # Includes decoded P12, mobileprovision, API key, keychain files, and
         # cleanup state even when an earlier cleanup operation reports failure.

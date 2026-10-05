@@ -106,6 +106,27 @@ enum ReportFileIO {
         }
     }
 
+    static func makeExportFile(data: Data, fileExtension: String) throws -> URL {
+        guard ["json", "csv", "md"].contains(fileExtension), data.count <= 48 * 1_024 * 1_024 else {
+            throw ReportFileError.exportFailed
+        }
+        let directory = FileManager().temporaryDirectory.appendingPathComponent("FirePrivacyExports", isDirectory: true)
+        let url = directory.appendingPathComponent("FirePrivacy-\(UUID().uuidString).\(fileExtension)")
+        do {
+            try FileManager().createDirectory(at: directory, withIntermediateDirectories: true,
+                attributes: [.protectionKey: FileProtectionType.complete])
+            try FileManager().setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: directory.path)
+            var folder = directory
+            var values = URLResourceValues(); values.isExcludedFromBackup = true
+            try folder.setResourceValues(values)
+            try writeProtectedData(data, to: url)
+            return url
+        } catch {
+            try? FileManager().removeItem(at: url)
+            throw ReportFileError.exportFailed
+        }
+    }
+
     static func removeExportFile(at url: URL) throws {
         do {
             if FileManager().fileExists(atPath: url.path) { try FileManager().removeItem(at: url) }

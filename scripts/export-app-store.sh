@@ -5,7 +5,7 @@ set -euo pipefail
 source "$(dirname "$0")/apple-common.sh"
 cd "$FIREPRIVACY_ROOT"
 require_apple_toolchain
-: "${BUNDLE_ID:?Set BUNDLE_ID to the registered App Store Connect bundle identifier}"
+configure_bundle_identifiers
 TEAM_ID="${TEAM_ID:-LYDVWU62G4}"
 export BUNDLE_ID TEAM_ID
 configure_apple_auth
@@ -17,7 +17,7 @@ if [[ "$destination" != export && "$destination" != upload ]]; then
   exit 1
 fi
 python3 scripts/release-validation.py verify "$archive"
-codesign --verify --deep --strict "$archive/Products/Applications/FirePrivacy.app"
+codesign --verify --deep --strict "$archive/Products/Applications/$FIREPRIVACY_PRODUCT"
 for public_url in "${PRIVACY_POLICY_URL:-}" "${SUPPORT_URL:-}"; do
   if [[ -n "$public_url" ]]; then
     curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 30 --output /dev/null "$public_url"
@@ -37,7 +37,15 @@ options = {'method':'app-store-connect','destination':os.environ['FIREPRIVACY_EX
            'uploadSymbols':True,'manageAppVersionAndBuildNumber':False}
 if os.environ['SIGNING_MODE']=='manual':
     options['signingCertificate']=os.environ['FIREPRIVACY_SIGNING_IDENTITY']
-    options['provisioningProfiles']={os.environ['BUNDLE_ID']:os.environ['FIREPRIVACY_PROFILE_UUID']}
+    base = os.environ['APP_BASE_BUNDLE_ID']
+    targets = [('', 'APP_PROVISIONING_PROFILE_SPECIFIER'),
+               ('.SafariContentBlocker', 'SAFARI_PROVISIONING_PROFILE_SPECIFIER')]
+    if os.environ['APP_EDITION'] == 'url-filter':
+        targets += [('.URLFilterControl', 'URL_PROVISIONING_PROFILE_SPECIFIER')]
+    elif os.environ['APP_EDITION'] == 'managed':
+        targets += [('.ManagedFilterData', 'MANAGED_DATA_PROVISIONING_PROFILE_SPECIFIER'),
+                    ('.ManagedFilterControl', 'MANAGED_CONTROL_PROVISIONING_PROFILE_SPECIFIER')]
+    options['provisioningProfiles'] = {base + suffix: os.environ[variable] for suffix, variable in targets}
 with (Path(os.environ['FIREPRIVACY_EXPORT_PATH'])/'ExportOptions.plist').open('wb') as file:
     plistlib.dump(options,file)
 PY

@@ -12,6 +12,6 @@ extension PrivacyReport {
             Observation(bundleID: "example.weather", category: .sensor, accessType: "location", count: 1, timestamp: date, eventKind: "intervalBegin"),
             Observation(bundleID: "example.weather", category: .sensor, accessType: "location", count: 1, timestamp: date.addingTimeInterval(20), eventKind: "intervalEnd"),
             Observation(bundleID: "example.journal", category: .sensor, accessType: "camera", count: 1, timestamp: date, eventKind: "intervalBegin")
-        ])
+        ], metadata: ReportMetadata(recognizedRecords: 7, isSyntheticDemo: true))
     }
 }

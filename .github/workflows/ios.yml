@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      screenshots:
+        description: Capture native previews after engineering validation
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -39,7 +44,7 @@ jobs:
       - name: Test encrypted storage and native UI
         run: bash scripts/test-ios.sh '${{ matrix.family }}'
       - name: Capture actual native demo screenshots
-        if: matrix.family == 'iphone'
+        if: matrix.family == 'iphone' && github.event_name == 'workflow_dispatch' && inputs.screenshots
         run: bash scripts/capture-screenshots.sh
       - name: Retain test results and screenshots
         if: always()

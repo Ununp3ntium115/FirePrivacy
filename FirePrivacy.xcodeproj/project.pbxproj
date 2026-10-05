@@ -49,12 +49,22 @@
 		};
 		D8B2A1B580DEB36740373FAA /* info_exception */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (Info.plist,);
+			membershipExceptions = (Info.plist, URLInfo.plist, ManagedInfo.plist, FirePrivacy.entitlements, FirePrivacyURL.entitlements, FirePrivacyManaged.entitlements,);
 			target = 3924529617CB51187306BF4D;
+		};
+		58615348035740E8685FE140 /* url_app_exception */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, URLInfo.plist, ManagedInfo.plist, FirePrivacy.entitlements, FirePrivacyURL.entitlements, FirePrivacyManaged.entitlements,);
+			target = D2698482A141A2F30E7EEA77;
+		};
+		023D190DC923951313D64EDF /* managed_app_exception */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, URLInfo.plist, ManagedInfo.plist, FirePrivacy.entitlements, FirePrivacyURL.entitlements, FirePrivacyManaged.entitlements,);
+			target = 25D674C1324517DFA88FCA03;
 		};
 		3E86FAF32E031FA851A10FA9 /* app_group */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (D8B2A1B580DEB36740373FAA,);
+			exceptions = (D8B2A1B580DEB36740373FAA, 58615348035740E8685FE140, 023D190DC923951313D64EDF,);
 			path = Apps/FirePrivacyApp;
 			sourceTree = "<group>";
 		};
@@ -68,16 +78,309 @@
 			path = Tests/FirePrivacyUITests;
 			sourceTree = "<group>";
 		};
+		9086D9469960AF1F9F19D3CE /* shared_group */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Extensions/Shared;
+			sourceTree = "<group>";
+		};
 		488D2491FA2E276E69F69FC1 /* main_group */ = {
 			isa = PBXGroup;
-			children = (3E86FAF32E031FA851A10FA9, 9EB3003A8FAB9F36D5B3BC38, 207ACD78EE8A826BDC7C4A9A, EA46603D8CAB754E3192F337,);
+			children = (3E86FAF32E031FA851A10FA9, 9EB3003A8FAB9F36D5B3BC38, 207ACD78EE8A826BDC7C4A9A, 9086D9469960AF1F9F19D3CE, DA403C2B815478DCC8CBDA7E, 1011302E1BC6AF8EB31D479E, BD6F52B8BD9D1CE54755B12A, 0E2C6FCD9FAA23E954D9C4ED, EA46603D8CAB754E3192F337,);
 			sourceTree = "<group>";
 		};
 		EA46603D8CAB754E3192F337 /* products */ = {
 			isa = PBXGroup;
-			children = (B4CFE48C937F748D3C5564DF, 2C993D5975BA6B43F88A839E, 5E95731AC6A10D100FF29C84,);
+			children = (B4CFE48C937F748D3C5564DF, 2C993D5975BA6B43F88A839E, 5E95731AC6A10D100FF29C84, 700F5F688B0CDE8D9277D500, 4410FD10E1F83E973362E093, 70F7B3AFBA73C595CE32EE35, DE79119476A8575BC3CD6205, 3D9DC69DACC484B0126E42C8, C94D4F8992CC42FE41D5398B,);
 			name = Products;
 			sourceTree = "<group>";
+		};
+		700F5F688B0CDE8D9277D500 /* safari_product */ = {
+			isa = PBXFileReference;
+			explicitFileType = "wrapper.app-extension";
+			includeInIndex = 0;
+			path = SafariContentBlocker.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		617D6D2548DA49270A62A895 /* safari_exception */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, FirePrivacy.entitlements,);
+			target = DD96FA9443FF73CC643F5071;
+		};
+		DA403C2B815478DCC8CBDA7E /* safari_group */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (617D6D2548DA49270A62A895,);
+			path = Extensions/SafariContentBlocker;
+			sourceTree = "<group>";
+		};
+		511AFE38B99F19F688B09097 /* safari_core_build */ = {
+			isa = PBXBuildFile;
+			productRef = D11372E99E87998C961D2032;
+		};
+		207864EB8B57D900286D1857 /* safari_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = 700F5F688B0CDE8D9277D500;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		0657E880120F70DA33203B3A /* safari_proxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C616804018D03CB038800455;
+			proxyType = 1;
+			remoteGlobalIDString = DD96FA9443FF73CC643F5071;
+			remoteInfo = SafariContentBlocker;
+		};
+		F2040239B981A00735B12552 /* safari_dependency */ = {
+			isa = PBXTargetDependency;
+			target = DD96FA9443FF73CC643F5071;
+			targetProxy = 0657E880120F70DA33203B3A;
+		};
+		19FC6528EA1E7B0C8B3E1AA2 /* safari_sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6611BED1B457588931730C30 /* safari_resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D8A92977CCF94C1DE4A76739 /* safari_frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (511AFE38B99F19F688B09097,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD96FA9443FF73CC643F5071 /* safari_target */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7ABC610D8EAF7420771BEC90;
+			buildPhases = (19FC6528EA1E7B0C8B3E1AA2, D8A92977CCF94C1DE4A76739, 6611BED1B457588931730C30,);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (DA403C2B815478DCC8CBDA7E, 9086D9469960AF1F9F19D3CE,);
+			name = SafariContentBlocker;
+			packageProductDependencies = (D11372E99E87998C961D2032,);
+			productName = SafariContentBlocker;
+			productReference = 700F5F688B0CDE8D9277D500;
+			productType = "com.apple.product-type.app-extension";
+		};
+		4410FD10E1F83E973362E093 /* url_product */ = {
+			isa = PBXFileReference;
+			explicitFileType = "wrapper.app-extension";
+			includeInIndex = 0;
+			path = URLFilterControl.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		5ED2C70E193CD1A05BBEC71B /* url_exception */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, FirePrivacy.entitlements,);
+			target = 59DC6D26BCA4E34F77ECB5E3;
+		};
+		1011302E1BC6AF8EB31D479E /* url_group */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (5ED2C70E193CD1A05BBEC71B,);
+			path = Extensions/URLFilterControl;
+			sourceTree = "<group>";
+		};
+		994F45296A607B9D2063AA4E /* url_core_build */ = {
+			isa = PBXBuildFile;
+			productRef = D11372E99E87998C961D2032;
+		};
+		20A280265B42909752B8B1A7 /* url_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = 4410FD10E1F83E973362E093;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		4914664BD92B0B809D77EB31 /* url_proxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C616804018D03CB038800455;
+			proxyType = 1;
+			remoteGlobalIDString = 59DC6D26BCA4E34F77ECB5E3;
+			remoteInfo = URLFilterControl;
+		};
+		2C77294B9B5ABC99C98C88E1 /* url_dependency */ = {
+			isa = PBXTargetDependency;
+			target = 59DC6D26BCA4E34F77ECB5E3;
+			targetProxy = 4914664BD92B0B809D77EB31;
+		};
+		795580D5059FDA8E8E74BD57 /* url_sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0B53C88A7C213E5A9E3C68DD /* url_resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E36B9123F144C4B10E6A9D8 /* url_frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (994F45296A607B9D2063AA4E,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		59DC6D26BCA4E34F77ECB5E3 /* url_target */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B9F2A34097780AB6306AB6A2;
+			buildPhases = (795580D5059FDA8E8E74BD57, 5E36B9123F144C4B10E6A9D8, 0B53C88A7C213E5A9E3C68DD,);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (1011302E1BC6AF8EB31D479E, 9086D9469960AF1F9F19D3CE,);
+			name = URLFilterControl;
+			packageProductDependencies = (D11372E99E87998C961D2032,);
+			productName = URLFilterControl;
+			productReference = 4410FD10E1F83E973362E093;
+			productType = "com.apple.product-type.app-extension";
+		};
+		70F7B3AFBA73C595CE32EE35 /* managed_data_product */ = {
+			isa = PBXFileReference;
+			explicitFileType = "wrapper.app-extension";
+			includeInIndex = 0;
+			path = ManagedFilterData.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		5A44082E49B093C526B66A2C /* managed_data_exception */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, FirePrivacy.entitlements,);
+			target = 3599686EDE5A891391901552;
+		};
+		BD6F52B8BD9D1CE54755B12A /* managed_data_group */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (5A44082E49B093C526B66A2C,);
+			path = Extensions/ManagedFilterData;
+			sourceTree = "<group>";
+		};
+		81ADE857D9ABAE3424E1AC07 /* managed_data_core_build */ = {
+			isa = PBXBuildFile;
+			productRef = D11372E99E87998C961D2032;
+		};
+		593427E42EC6EA9B399F7BB9 /* managed_data_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = 70F7B3AFBA73C595CE32EE35;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		9439225947045A6E1CC93D13 /* managed_data_proxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C616804018D03CB038800455;
+			proxyType = 1;
+			remoteGlobalIDString = 3599686EDE5A891391901552;
+			remoteInfo = ManagedFilterData;
+		};
+		3ACCD7FD6E8D9F948C8E1E0C /* managed_data_dependency */ = {
+			isa = PBXTargetDependency;
+			target = 3599686EDE5A891391901552;
+			targetProxy = 9439225947045A6E1CC93D13;
+		};
+		DA43F98F796782324D2A7BC0 /* managed_data_sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		088BB9AA8E04ECA137E2E093 /* managed_data_resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A7C042C8196AB9B8833BD23 /* managed_data_frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (81ADE857D9ABAE3424E1AC07,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3599686EDE5A891391901552 /* managed_data_target */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6208354C362A07004A93DB3C;
+			buildPhases = (DA43F98F796782324D2A7BC0, 0A7C042C8196AB9B8833BD23, 088BB9AA8E04ECA137E2E093,);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (BD6F52B8BD9D1CE54755B12A, 9086D9469960AF1F9F19D3CE,);
+			name = ManagedFilterData;
+			packageProductDependencies = (D11372E99E87998C961D2032,);
+			productName = ManagedFilterData;
+			productReference = 70F7B3AFBA73C595CE32EE35;
+			productType = "com.apple.product-type.app-extension";
+		};
+		DE79119476A8575BC3CD6205 /* managed_control_product */ = {
+			isa = PBXFileReference;
+			explicitFileType = "wrapper.app-extension";
+			includeInIndex = 0;
+			path = ManagedFilterControl.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		388491C2393886968E1DEA6B /* managed_control_exception */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist, FirePrivacy.entitlements,);
+			target = 482503471E2EEEE263A1F947;
+		};
+		0E2C6FCD9FAA23E954D9C4ED /* managed_control_group */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (388491C2393886968E1DEA6B,);
+			path = Extensions/ManagedFilterControl;
+			sourceTree = "<group>";
+		};
+		66F4EBC1F733625FB1BA8BA3 /* managed_control_core_build */ = {
+			isa = PBXBuildFile;
+			productRef = D11372E99E87998C961D2032;
+		};
+		8624D61C2BA1A04BE7B86DC5 /* managed_control_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = DE79119476A8575BC3CD6205;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		5C1843A1D0F16C04C66AB8D8 /* managed_control_proxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C616804018D03CB038800455;
+			proxyType = 1;
+			remoteGlobalIDString = 482503471E2EEEE263A1F947;
+			remoteInfo = ManagedFilterControl;
+		};
+		61F6C714E95411DB5BE4AA7F /* managed_control_dependency */ = {
+			isa = PBXTargetDependency;
+			target = 482503471E2EEEE263A1F947;
+			targetProxy = 5C1843A1D0F16C04C66AB8D8;
+		};
+		9578387E329B1CB3DDCCD94C /* managed_control_sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		651E6142E736BBAF589BBFF3 /* managed_control_resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		059A7007472D2BB40E55F59B /* managed_control_frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (66F4EBC1F733625FB1BA8BA3,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		482503471E2EEEE263A1F947 /* managed_control_target */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D755A47D4175500AF25A2D91;
+			buildPhases = (9578387E329B1CB3DDCCD94C, 059A7007472D2BB40E55F59B, 651E6142E736BBAF589BBFF3,);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (0E2C6FCD9FAA23E954D9C4ED, 9086D9469960AF1F9F19D3CE,);
+			name = ManagedFilterControl;
+			packageProductDependencies = (D11372E99E87998C961D2032,);
+			productName = ManagedFilterControl;
+			productReference = DE79119476A8575BC3CD6205;
+			productType = "com.apple.product-type.app-extension";
+		};
+		7FB5B5BC80EED715C6B653B3 /* embed_plugins */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (207864EB8B57D900286D1857,);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4A858F64388FCDE3F8AF0419 /* app_sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -136,14 +439,172 @@
 		3924529617CB51187306BF4D /* app_target */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4E5692756749A0D9F9ADC05F;
-			buildPhases = (4A858F64388FCDE3F8AF0419, 1DF658D753EF9F094C2D29BE, BC80AD68F5FC1FA5ACA8E702,);
+			buildPhases = (4A858F64388FCDE3F8AF0419, 1DF658D753EF9F094C2D29BE, BC80AD68F5FC1FA5ACA8E702, 7FB5B5BC80EED715C6B653B3,);
 			buildRules = ();
-			dependencies = ();
-			fileSystemSynchronizedGroups = (3E86FAF32E031FA851A10FA9,);
+			dependencies = (F2040239B981A00735B12552,);
+			fileSystemSynchronizedGroups = (3E86FAF32E031FA851A10FA9, 9086D9469960AF1F9F19D3CE,);
 			name = FirePrivacy;
 			packageProductDependencies = (D11372E99E87998C961D2032,);
 			productName = FirePrivacy;
 			productReference = B4CFE48C937F748D3C5564DF;
+			productType = "com.apple.product-type.application";
+		};
+		3D9DC69DACC484B0126E42C8 /* url_app_product */ = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.application;
+			includeInIndex = 0;
+			path = FirePrivacyURL.app;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		3C4937B8743DFB3C12B15BB2 /* url_app_core_build */ = {
+			isa = PBXBuildFile;
+			productRef = D11372E99E87998C961D2032;
+		};
+		5033B27FFAF5D7BDF7FF843E /* url_app_sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9BDCFAAB33FA15ADF0A14D /* url_app_resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3235AFA0C3F222C86DEB9423 /* url_app_frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (3C4937B8743DFB3C12B15BB2,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		407DDC33099D45B32D2D3E70 /* url_app_safari_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = 700F5F688B0CDE8D9277D500;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		38797F4C10D934CD8302DBBD /* url_app_safari_dependency */ = {
+			isa = PBXTargetDependency;
+			target = DD96FA9443FF73CC643F5071;
+			targetProxy = 0657E880120F70DA33203B3A;
+		};
+		28BF3CC6D042A341670F7E57 /* url_app_url_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = 4410FD10E1F83E973362E093;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		56F85751F3EB92096EC250A3 /* url_app_url_dependency */ = {
+			isa = PBXTargetDependency;
+			target = 59DC6D26BCA4E34F77ECB5E3;
+			targetProxy = 4914664BD92B0B809D77EB31;
+		};
+		0F6CCA5C1A0C47CB7D306CD6 /* url_app_embed_plugins */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (407DDC33099D45B32D2D3E70,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3FEC29C4849125F58B496A9C /* url_app_embed_foundation */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (28BF3CC6D042A341670F7E57,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2698482A141A2F30E7EEA77 /* url_app_target */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 697D8A9F57B5A71D42442695;
+			buildPhases = (5033B27FFAF5D7BDF7FF843E, 3235AFA0C3F222C86DEB9423, 9F9BDCFAAB33FA15ADF0A14D, 0F6CCA5C1A0C47CB7D306CD6, 3FEC29C4849125F58B496A9C,);
+			buildRules = ();
+			dependencies = (38797F4C10D934CD8302DBBD, 56F85751F3EB92096EC250A3,);
+			fileSystemSynchronizedGroups = (3E86FAF32E031FA851A10FA9, 9086D9469960AF1F9F19D3CE,);
+			name = FirePrivacyURL;
+			packageProductDependencies = (D11372E99E87998C961D2032,);
+			productName = FirePrivacyURL;
+			productReference = 3D9DC69DACC484B0126E42C8;
+			productType = "com.apple.product-type.application";
+		};
+		C94D4F8992CC42FE41D5398B /* managed_app_product */ = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.application;
+			includeInIndex = 0;
+			path = FirePrivacyManaged.app;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		2D05A944E0F36C9720B88E61 /* managed_app_core_build */ = {
+			isa = PBXBuildFile;
+			productRef = D11372E99E87998C961D2032;
+		};
+		7224D2009EC3461A04148F65 /* managed_app_sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		752BFBE96D815B2B1BF92E62 /* managed_app_resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		719D34CE3750C13F163920F8 /* managed_app_frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (2D05A944E0F36C9720B88E61,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6DE1AB727273F197F6989F10 /* managed_app_safari_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = 700F5F688B0CDE8D9277D500;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		F6DFF82E5DB664B9A2BFB203 /* managed_app_safari_dependency */ = {
+			isa = PBXTargetDependency;
+			target = DD96FA9443FF73CC643F5071;
+			targetProxy = 0657E880120F70DA33203B3A;
+		};
+		AA93AB710ADE9C22D7CE6CD1 /* managed_app_managed_data_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = 70F7B3AFBA73C595CE32EE35;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		3BAC86694EF2439E26243A2B /* managed_app_managed_data_dependency */ = {
+			isa = PBXTargetDependency;
+			target = 3599686EDE5A891391901552;
+			targetProxy = 9439225947045A6E1CC93D13;
+		};
+		D2DD0FC65191A6BB057411FE /* managed_app_managed_control_embed */ = {
+			isa = PBXBuildFile;
+			fileRef = DE79119476A8575BC3CD6205;
+			settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };
+		};
+		71BBD6B1BF4BCC4399230D9B /* managed_app_managed_control_dependency */ = {
+			isa = PBXTargetDependency;
+			target = 482503471E2EEEE263A1F947;
+			targetProxy = 5C1843A1D0F16C04C66AB8D8;
+		};
+		39EF4DD473773F8527932D60 /* managed_app_embed_plugins */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (6DE1AB727273F197F6989F10, AA93AB710ADE9C22D7CE6CD1, D2DD0FC65191A6BB057411FE,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		25D674C1324517DFA88FCA03 /* managed_app_target */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0E9EB68F42DCB12074DFDE91;
+			buildPhases = (7224D2009EC3461A04148F65, 719D34CE3750C13F163920F8, 752BFBE96D815B2B1BF92E62, 39EF4DD473773F8527932D60,);
+			buildRules = ();
+			dependencies = (F6DFF82E5DB664B9A2BFB203, 3BAC86694EF2439E26243A2B, 71BBD6B1BF4BCC4399230D9B,);
+			fileSystemSynchronizedGroups = (3E86FAF32E031FA851A10FA9, 9086D9469960AF1F9F19D3CE,);
+			name = FirePrivacyManaged;
+			packageProductDependencies = (D11372E99E87998C961D2032,);
+			productName = FirePrivacyManaged;
+			productReference = C94D4F8992CC42FE41D5398B;
 			productType = "com.apple.product-type.application";
 		};
 		BF5D805647EB2D41EC3BF2B1 /* test_target */ = {
@@ -181,6 +642,12 @@
 					3924529617CB51187306BF4D = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
 					BF5D805647EB2D41EC3BF2B1 = { CreatedOnToolsVersion = 26.0; TestTargetID = 3924529617CB51187306BF4D; };
 					37E4D1DA1555D571EF0EE565 = { CreatedOnToolsVersion = 26.0; TestTargetID = 3924529617CB51187306BF4D; };
+					DD96FA9443FF73CC643F5071 = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
+					59DC6D26BCA4E34F77ECB5E3 = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
+					3599686EDE5A891391901552 = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
+					482503471E2EEEE263A1F947 = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
+					D2698482A141A2F30E7EEA77 = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
+					25D674C1324517DFA88FCA03 = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
 				};
 			};
 			buildConfigurationList = B8C24D0A05766A7F9CD2DA31;
@@ -194,7 +661,7 @@
 			productRefGroup = EA46603D8CAB754E3192F337;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (3924529617CB51187306BF4D, BF5D805647EB2D41EC3BF2B1, 37E4D1DA1555D571EF0EE565,);
+			targets = (3924529617CB51187306BF4D, BF5D805647EB2D41EC3BF2B1, 37E4D1DA1555D571EF0EE565, DD96FA9443FF73CC643F5071, 59DC6D26BCA4E34F77ECB5E3, 3599686EDE5A891391901552, 482503471E2EEEE263A1F947, D2698482A141A2F30E7EEA77, 25D674C1324517DFA88FCA03,);
 		};
 		D343B62451CE1612DBA1F0CC /* test_dependency */ = {
 			isa = PBXTargetDependency;
@@ -244,6 +711,11 @@
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
+				APP_BASE_BUNDLE_ID = com.firesoftwaresolutions.FirePrivacy;
+				FIREPRIVACY_APP_GROUP_ID = group.com.firesoftwaresolutions.FirePrivacy.protection;
+				FIREPRIVACY_PIR_SERVER_URL = "";
+				FIREPRIVACY_PRIVACY_PASS_ISSUER_URL = "";
+				FIREPRIVACY_PIR_CONFIGURATION_IDENTITY = "";
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_NS_ASSERTIONS = YES;
 				SWIFT_COMPILATION_MODE = singlefile;
@@ -284,6 +756,11 @@
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
+				APP_BASE_BUNDLE_ID = com.firesoftwaresolutions.FirePrivacy;
+				FIREPRIVACY_APP_GROUP_ID = group.com.firesoftwaresolutions.FirePrivacy.protection;
+				FIREPRIVACY_PIR_SERVER_URL = "";
+				FIREPRIVACY_PRIVACY_PASS_ISSUER_URL = "";
+				FIREPRIVACY_PIR_CONFIGURATION_IDENTITY = "";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -313,7 +790,9 @@
 				FIREPRIVACY_SUPPORT_URL = "https://github.com/Ununp3ntium115/FirePrivacy/issues";
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.firesoftwaresolutions.FirePrivacy;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID)";
+				CODE_SIGN_ENTITLEMENTS = Apps/FirePrivacyApp/FirePrivacy.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROVISIONING_PROFILE_SPECIFIER)";
 				PRODUCT_MODULE_NAME = FirePrivacyApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -339,7 +818,9 @@
 				FIREPRIVACY_SUPPORT_URL = "https://github.com/Ununp3ntium115/FirePrivacy/issues";
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.firesoftwaresolutions.FirePrivacy;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID)";
+				CODE_SIGN_ENTITLEMENTS = Apps/FirePrivacyApp/FirePrivacy.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROVISIONING_PROFILE_SPECIFIER)";
 				PRODUCT_MODULE_NAME = FirePrivacyApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -364,7 +845,7 @@
 				DEVELOPMENT_TEAM = LYDVWU62G4;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",);
-				PRODUCT_BUNDLE_IDENTIFIER = com.firesoftwaresolutions.FirePrivacy.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -380,7 +861,7 @@
 				DEVELOPMENT_TEAM = LYDVWU62G4;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",);
-				PRODUCT_BUNDLE_IDENTIFIER = com.firesoftwaresolutions.FirePrivacy.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -401,7 +882,7 @@
 				DEVELOPMENT_TEAM = LYDVWU62G4;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",);
-				PRODUCT_BUNDLE_IDENTIFIER = com.firesoftwaresolutions.FirePrivacy.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -416,7 +897,7 @@
 				DEVELOPMENT_TEAM = LYDVWU62G4;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",);
-				PRODUCT_BUNDLE_IDENTIFIER = com.firesoftwaresolutions.FirePrivacy.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -427,6 +908,354 @@
 		D91E9FDB1C37CF8797735CAE /* ui_configs */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (7D1AA4F253976853952300A3, 2BA89B60FBD46EC3C3D7D9A7,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF49EC22CFA61FAB66ABC157 /* url_app_debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Apps/FirePrivacyApp/URLInfo.plist;
+				FIREPRIVACY_PRIVACY_URL = "https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md";
+				FIREPRIVACY_SUPPORT_URL = "https://github.com/Ununp3ntium115/FirePrivacy/issues";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID)";
+				CODE_SIGN_ENTITLEMENTS = Apps/FirePrivacyApp/FirePrivacyURL.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROVISIONING_PROFILE_SPECIFIER)";
+				PRODUCT_MODULE_NAME = FirePrivacyApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3DE443CC5DA54F851538DB10 /* url_app_release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Apps/FirePrivacyApp/URLInfo.plist;
+				FIREPRIVACY_PRIVACY_URL = "https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md";
+				FIREPRIVACY_SUPPORT_URL = "https://github.com/Ununp3ntium115/FirePrivacy/issues";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID)";
+				CODE_SIGN_ENTITLEMENTS = Apps/FirePrivacyApp/FirePrivacyURL.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROVISIONING_PROFILE_SPECIFIER)";
+				PRODUCT_MODULE_NAME = FirePrivacyApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		697D8A9F57B5A71D42442695 /* url_app_configs */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (FF49EC22CFA61FAB66ABC157, 3DE443CC5DA54F851538DB10,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD1ED7D58C98D72F9DB0D5D0 /* managed_app_debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Apps/FirePrivacyApp/ManagedInfo.plist;
+				FIREPRIVACY_PRIVACY_URL = "https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md";
+				FIREPRIVACY_SUPPORT_URL = "https://github.com/Ununp3ntium115/FirePrivacy/issues";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID)";
+				CODE_SIGN_ENTITLEMENTS = Apps/FirePrivacyApp/FirePrivacyManaged.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROVISIONING_PROFILE_SPECIFIER)";
+				PRODUCT_MODULE_NAME = FirePrivacyApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		483DAC538592BF88A704C1B4 /* managed_app_release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Apps/FirePrivacyApp/ManagedInfo.plist;
+				FIREPRIVACY_PRIVACY_URL = "https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md";
+				FIREPRIVACY_SUPPORT_URL = "https://github.com/Ununp3ntium115/FirePrivacy/issues";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID)";
+				CODE_SIGN_ENTITLEMENTS = Apps/FirePrivacyApp/FirePrivacyManaged.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROVISIONING_PROFILE_SPECIFIER)";
+				PRODUCT_MODULE_NAME = FirePrivacyApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0E9EB68F42DCB12074DFDE91 /* managed_app_configs */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (DD1ED7D58C98D72F9DB0D5D0, 483DAC538592BF88A704C1B4,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9CF54A6CE13CCFA479E309DF /* safari_debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/SafariContentBlocker/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/SafariContentBlocker/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).SafariContentBlocker";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = SafariContentBlocker;
+				PROVISIONING_PROFILE_SPECIFIER = "$(SAFARI_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Debug;
+		};
+		0E774EAA7F825B77384BF417 /* safari_release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/SafariContentBlocker/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/SafariContentBlocker/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).SafariContentBlocker";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = SafariContentBlocker;
+				PROVISIONING_PROFILE_SPECIFIER = "$(SAFARI_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Release;
+		};
+		7ABC610D8EAF7420771BEC90 /* safari_configs */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (9CF54A6CE13CCFA479E309DF, 0E774EAA7F825B77384BF417,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7834C01DEA7D1225C27A8C0E /* url_debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/URLFilterControl/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/URLFilterControl/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).URLFilterControl";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = URLFilterControl;
+				PROVISIONING_PROFILE_SPECIFIER = "$(URL_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Debug;
+		};
+		E0E8C0FC0090A60B45123847 /* url_release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/URLFilterControl/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/URLFilterControl/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).URLFilterControl";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = URLFilterControl;
+				PROVISIONING_PROFILE_SPECIFIER = "$(URL_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Release;
+		};
+		B9F2A34097780AB6306AB6A2 /* url_configs */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (7834C01DEA7D1225C27A8C0E, E0E8C0FC0090A60B45123847,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		40956EF0B4F86717ECFB8B12 /* managed_data_debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/ManagedFilterData/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/ManagedFilterData/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).ManagedFilterData";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = ManagedFilterData;
+				PROVISIONING_PROFILE_SPECIFIER = "$(MANAGED_DATA_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Debug;
+		};
+		8042369D802377D09316D7CD /* managed_data_release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/ManagedFilterData/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/ManagedFilterData/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).ManagedFilterData";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = ManagedFilterData;
+				PROVISIONING_PROFILE_SPECIFIER = "$(MANAGED_DATA_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Release;
+		};
+		6208354C362A07004A93DB3C /* managed_data_configs */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (40956EF0B4F86717ECFB8B12, 8042369D802377D09316D7CD,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5100B4573098CFF4399E9415 /* managed_control_debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/ManagedFilterControl/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/ManagedFilterControl/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).ManagedFilterControl";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = ManagedFilterControl;
+				PROVISIONING_PROFILE_SPECIFIER = "$(MANAGED_CONTROL_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Debug;
+		};
+		264C6F2C02A30B81DBF55EF1 /* managed_control_release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LYDVWU62G4;
+				MARKETING_VERSION = 1.0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Extensions/ManagedFilterControl/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Extensions/ManagedFilterControl/FirePrivacy.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BASE_BUNDLE_ID).ManagedFilterControl";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = ManagedFilterControl;
+				PROVISIONING_PROFILE_SPECIFIER = "$(MANAGED_CONTROL_PROVISIONING_PROFILE_SPECIFIER)";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",);
+			};
+			name = Release;
+		};
+		D755A47D4175500AF25A2D91 /* managed_control_configs */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (5100B4573098CFF4399E9415, 264C6F2C02A30B81DBF55EF1,);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};

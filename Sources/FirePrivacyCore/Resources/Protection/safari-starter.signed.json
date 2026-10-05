@@ -1,0 +1,15 @@
+{
+  "manifest": {
+    "expiresAtSeconds": 1799019202,
+    "issuedAtSeconds": 1791243202,
+    "keyID": "fireprivacy-safari-publisher-2026-10",
+    "kind": "safariDomainsV1",
+    "payloadByteCount": 18,
+    "payloadSHA256": "6aff5f70425020740affa7e82f2e8b701dea9e416ef3e56575be660e76145c00",
+    "schemaVersion": 1,
+    "tag": "fireprivacy-safari-starter/1",
+    "version": 1
+  },
+  "payload": "WyJhcGkuc2VnbWVudC5pbyJd",
+  "signature": "JJr9ytBdRiZY9SpD3D++dUdrqpaAkBnr2GM78Y+LqLql5fiMtn3NBxvXg/23aMRhPnc464QR6rX2LdY+MdjtAA=="
+}

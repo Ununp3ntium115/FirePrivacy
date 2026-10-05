@@ -8,11 +8,13 @@ handling; real certificate trust and Apple signing still require a macOS run.
 from __future__ import annotations
 
 import base64
+import copy
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 import datetime as dt
 import hashlib
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import plistlib
@@ -34,6 +36,7 @@ TEAM = "LYDVWU62G4"
 APP_ID_PREFIX = "OLDPREFIX1"
 BUNDLE = "com.example.FirePrivacy"
 UUID = "12345678-1234-1234-1234-123456789ABC"
+APP_GROUP = SIGNING.APP_GROUP_DEFAULT
 PASSWORD = "dummy-password-for-test"
 ORIGINAL_KEYCHAINS = [
     "/tmp/original Login.keychain-db",
@@ -93,6 +96,7 @@ class FakeMacCommands:
 
     def __init__(self, profile):
         self.profile = profile
+        self.profiles = {}
         self.calls = []
         self.fail_import = False
         self.fail_restore = False
@@ -114,7 +118,8 @@ class FakeMacCommands:
         if operation == "list-keychains" and allow_failure and self.fail_restore:
             return None
         if operation == "cms":
-            return plistlib.dumps(self.profile)
+            name = Path(arguments[-1]).stem
+            return plistlib.dumps(self.profile if name == "distribution" else self.profiles[name])
         if operation == "find-identity":
             return (
                 f' 1) {self.identity} "Apple Distribution: Fixture"\n'
@@ -144,10 +149,18 @@ def signing_fixture():
                 "com.apple.developer.team-identifier": TEAM,
                 "application-identifier": f"{APP_ID_PREFIX}.{BUNDLE}",
                 "get-task-allow": False,
+                SIGNING.GROUP_ENTITLEMENT: [APP_GROUP],
+                SIGNING.NETWORK_ENTITLEMENT: ["dns-settings"],
             },
             "DeveloperCertificates": [CERTIFICATE],
         }
         commands = FakeMacCommands(profile)
+        for index, (target, bindings) in enumerate(SIGNING.EXTENSION_BINDINGS.items(), start=1):
+            extension = copy.deepcopy(profile)
+            extension["UUID"] = f"12345678-1234-1234-1234-{index:012X}"
+            extension["Entitlements"]["application-identifier"] = f"{APP_ID_PREFIX}.{BUNDLE}.{target}"
+            extension["Entitlements"][SIGNING.NETWORK_ENTITLEMENT] = sorted(bindings[2])
+            commands.profiles[target] = extension
         security = FakeSecurityFramework()
         output = io.StringIO()
         environment = {
@@ -160,6 +173,7 @@ def signing_fixture():
             "APPLE_DISTRIBUTION_P12_PASSWORD": PASSWORD,
             "APPLE_DISTRIBUTION_P12_BASE64": base64.b64encode(b"dummy-p12").decode(),
             "APPLE_PROVISION_PROFILE_BASE64": base64.b64encode(b"dummy-cms").decode(),
+            "APPLE_SAFARI_PROVISION_PROFILE_BASE64": base64.b64encode(b"dummy-SafariContentBlocker-cms").decode(),
             # GitHub injects empty strings for undeclared secrets. An archive
             # must not mistake these declarations for supplied ASC credentials.
             "ASC_PRIVATE_KEY_BASE64": "",
@@ -183,6 +197,14 @@ def signing_fixture():
 def prepare_with_main():
     with mock.patch.object(SIGNING.sys, "argv", ["cloud-signing.py", "prepare"]):
         return SIGNING.main()
+
+
+def select_edition(profile, commands, edition):
+    """Supply only synthetic profiles required by the chosen edition."""
+    os.environ["APP_EDITION"] = edition
+    profile["Entitlements"][SIGNING.NETWORK_ENTITLEMENT] = sorted(SIGNING.EDITION_CAPABILITIES[edition])
+    for target in SIGNING.EDITION_EXTENSIONS[edition]:
+        os.environ[SIGNING.EXTENSION_BINDINGS[target][0]] = base64.b64encode(f"dummy-{target}-cms".encode()).decode()
 
 
 class CloudSigningTests(unittest.TestCase):
@@ -356,6 +378,166 @@ class CloudSigningTests(unittest.TestCase):
                     ["/usr/bin/security", "import", "-P", PASSWORD], "import identity"
                 )
             self.assertNotIn(PASSWORD, str(result.exception))
+
+    def test_each_edition_verifies_and_installs_only_its_exact_profile_subset(self):
+        for edition, targets in SIGNING.EDITION_EXTENSIONS.items():
+            with self.subTest(edition=edition), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                select_edition(profile, commands, edition)
+                # Unselected malformed bindings must not enable or require a
+                # privileged target in a consumer or unrelated edition.
+                for target in set(SIGNING.EXTENSION_BINDINGS) - set(targets):
+                    os.environ[SIGNING.EXTENSION_BINDINGS[target][0]] = "not-base64"
+                SIGNING.prepare()
+                directory = Path(os.environ["FIREPRIVACY_SIGNING_DIR"])
+                state = json.loads((directory / "state.json").read_text())
+                self.assertEqual(len(state["profiles"]), len(targets) + 1)
+                decoded = {Path(call[-1]).stem for call in commands.calls if call[1] == "cms"}
+                self.assertEqual(decoded, {"distribution", *targets})
+                published = environment_file.read_text()
+                self.assertIn(f"APP_EDITION={edition}\n", published)
+                self.assertIn(f"APP_BASE_BUNDLE_ID={BUNDLE}\n", published)
+                self.assertIn(f"FIREPRIVACY_APP_GROUP_ID={APP_GROUP}\n", published)
+                for target, bindings in SIGNING.EXTENSION_BINDINGS.items():
+                    self.assertEqual(f"{bindings[1]}=" in published, target in targets)
+                SIGNING.cleanup()
+                self.assertFalse(directory.exists())
+                self.assertEqual(list((root / "profiles").iterdir()), [])
+
+    def test_aggregate_schema_decodes_selected_profiles_and_ignores_known_extras(self):
+        with signing_fixture() as fixture:
+            root, environment_file, profile, commands, security, output = fixture
+            os.environ["APPLE_SAFARI_PROVISION_PROFILE_BASE64"] = ""
+            os.environ["APPLE_URL_PROVISION_PROFILE_BASE64"] = "irrelevant"
+            os.environ["APPLE_EXTENSION_PROFILES_BASE64"] = json.dumps({
+                "SafariContentBlocker": base64.b64encode(b"dummy-SafariContentBlocker-cms").decode(),
+                "URLFilterControl": {"unselected": "not activated"},
+            })
+            SIGNING.prepare()
+            self.assertNotIn("URL_PROVISIONING_PROFILE_SPECIFIER=", environment_file.read_text())
+            SIGNING.cleanup()
+
+    def test_invalid_aggregate_or_missing_selected_profiles_fail_before_mutation(self):
+        supplied = base64.b64encode(b"dummy-cms").decode()
+        cases = {
+            "duplicate": '{"SafariContentBlocker":"x","SafariContentBlocker":"y"}',
+            "unknown": json.dumps({"OtherExtension": supplied}),
+            "missing": "{}",
+            "wrong type": "[]",
+            "selected malformed": json.dumps({"SafariContentBlocker": "not base64"}),
+            "mixed": json.dumps({"SafariContentBlocker": supplied}),
+        }
+        for case, value in cases.items():
+            with self.subTest(case=case), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                os.environ["APPLE_EXTENSION_PROFILES_BASE64"] = value
+                if case != "mixed":
+                    os.environ["APPLE_SAFARI_PROVISION_PROFILE_BASE64"] = ""
+                self.assertEqual(prepare_with_main(), 1)
+                self.assertFalse(commands.calls)
+                self.assertEqual(environment_file.read_text(), "")
+
+    def test_selected_profile_is_required_but_unselected_profile_is_optional(self):
+        with signing_fixture() as fixture:
+            root, environment_file, profile, commands, security, output = fixture
+            select_edition(profile, commands, "managed")
+            os.environ["APPLE_MANAGED_CONTROL_PROVISION_PROFILE_BASE64"] = ""
+            self.assertEqual(prepare_with_main(), 1)
+            self.assertFalse(commands.calls)
+            self.assertEqual(environment_file.read_text(), "")
+
+    def test_invalid_edition_or_incoherent_bundle_alias_fail_before_mutation(self):
+        for mutation in ("edition", "alias", "group"):
+            with self.subTest(mutation=mutation), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                if mutation == "edition":
+                    os.environ["APP_EDITION"] = "all"
+                elif mutation == "alias":
+                    os.environ["APP_BASE_BUNDLE_ID"] = "com.example.Other"
+                else:
+                    os.environ["FIREPRIVACY_APP_GROUP_ID"] = "unregistered"
+                self.assertEqual(prepare_with_main(), 1)
+                self.assertFalse(commands.calls)
+
+    def test_every_selected_target_requires_group_and_network_grants_before_import(self):
+        cases = (("consumer", "app", "group"), ("consumer", "SafariContentBlocker", "group"),
+                 ("consumer", "app", "network"), ("url-filter", "URLFilterControl", "network"),
+                 ("managed", "ManagedFilterData", "network"), ("managed", "ManagedFilterControl", "network"))
+        for edition, target, mutation in cases:
+            with self.subTest(edition=edition, target=target, mutation=mutation), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                select_edition(profile, commands, edition)
+                selected = profile if target == "app" else commands.profiles[target]
+                entitlement = SIGNING.GROUP_ENTITLEMENT if mutation == "group" else SIGNING.NETWORK_ENTITLEMENT
+                selected["Entitlements"][entitlement] = []
+                self.assertEqual(prepare_with_main(), 1)
+                self.assertFalse(any(call[1] == "import" for call in commands.calls))
+                self.assertFalse(Path(os.environ["FIREPRIVACY_SIGNING_DIR"]).exists())
+
+    def test_selected_extension_bundle_and_team_are_checked_independently(self):
+        for mutation in ("bundle", "team"):
+            with self.subTest(mutation=mutation), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                entitlements = commands.profiles["SafariContentBlocker"]["Entitlements"]
+                key = "application-identifier" if mutation == "bundle" else "com.apple.developer.team-identifier"
+                entitlements[key] = "wrong-value"
+                self.assertEqual(prepare_with_main(), 1)
+                self.assertFalse(any(call[1] == "import" for call in commands.calls))
+
+    def test_duplicate_target_profile_uuid_is_rejected_before_import(self):
+        for identifier in (UUID, UUID.lower()):
+            with self.subTest(identifier=identifier), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                commands.profiles["SafariContentBlocker"]["UUID"] = identifier
+                self.assertEqual(prepare_with_main(), 1)
+                self.assertFalse(any(call[1] == "import" for call in commands.calls))
+
+    def test_all_selected_profiles_must_authorize_common_certificate_before_import(self):
+        with signing_fixture() as fixture:
+            root, environment_file, profile, commands, security, output = fixture
+            commands.profiles["SafariContentBlocker"]["DeveloperCertificates"] = [b"different certificate"]
+            self.assertEqual(prepare_with_main(), 1)
+            self.assertFalse(any(call[1] == "import" for call in commands.calls))
+
+    def test_partial_profile_installation_removes_prior_owned_profiles_only(self):
+        with signing_fixture() as fixture:
+            root, environment_file, profile, commands, security, output = fixture
+            extension_uuid = commands.profiles["SafariContentBlocker"]["UUID"]
+            existing = root / "profiles" / f"{extension_uuid}.mobileprovision"
+            existing.parent.mkdir()
+            existing.write_bytes(b"preexisting conflict")
+            self.assertEqual(prepare_with_main(), 1)
+            self.assertEqual(list((root / "profiles").iterdir()), [existing])
+            self.assertEqual(existing.read_bytes(), b"preexisting conflict")
+            self.assertFalse(Path(os.environ["FIREPRIVACY_SIGNING_DIR"]).exists())
+
+    def test_cleanup_preserves_replaced_profile_inode_and_removes_other_owned_files(self):
+        with signing_fixture() as fixture:
+            root, environment_file, profile, commands, security, output = fixture
+            SIGNING.prepare()
+            existing = root / "profiles" / f"{UUID}.mobileprovision"
+            existing.unlink()
+            existing.write_bytes(b"replacement belonging to another operation")
+            SIGNING.cleanup()
+            self.assertEqual(list((root / "profiles").iterdir()), [existing])
+            self.assertEqual(existing.read_bytes(), b"replacement belonging to another operation")
+
+    def test_cleanup_supports_previous_single_profile_state(self):
+        with signing_fixture() as fixture:
+            root, environment_file, profile, commands, security, output = fixture
+            SIGNING.prepare()
+            directory = Path(os.environ["FIREPRIVACY_SIGNING_DIR"])
+            state = json.loads((directory / "state.json").read_text())
+            # Retire the second synthetic target before modeling a v1 run.
+            extra = state["profiles"].pop()
+            Path(extra["profile_target"]).unlink()
+            Path(extra["profile_marker"]).unlink()
+            state.update(state.pop("profiles")[0])
+            state["version"] = 1
+            SIGNING.save_state(directory, state)
+            SIGNING.cleanup()
+            self.assertFalse(directory.exists())
+            self.assertEqual(list((root / "profiles").iterdir()), [])
 
 
 if __name__ == "__main__":
