@@ -10,6 +10,7 @@ private enum EvidenceKind: String, CaseIterable, Identifiable, Sendable {
 
 struct EvidenceView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var kind: EvidenceKind = .apps
     @State private var search = ""
 
@@ -18,10 +19,7 @@ struct EvidenceView: View {
             ReportStatusBanner()
             PageHeader(eyebrow: "The report, unpacked", title: "Look closer.", subtitle: "Browse the app identifiers, domains, and event records Apple exported. Every detail comes back to an imported observation.")
             if let report = model.report {
-                Picker("Evidence type", selection: $kind) {
-                    ForEach(EvidenceKind.allCases) { kind in Text(kind.rawValue).tag(kind) }
-                }
-                .pickerStyle(.segmented)
+                evidencePicker
                 if kind != .notes {
                     HStack(spacing: 12) {
                         Image(systemName: "magnifyingglass").foregroundStyle(FireStyle.muted).accessibilityHidden(true)
@@ -42,6 +40,28 @@ struct EvidenceView: View {
             }
         }
         .accessibilityIdentifier("evidence-screen")
+    }
+
+    @ViewBuilder
+    private var evidencePicker: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            pickerContent
+                .pickerStyle(.menu)
+                .font(.headline)
+                .frame(minHeight: 44)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("evidence-type-picker")
+        } else {
+            pickerContent
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("evidence-type-picker")
+        }
+    }
+
+    private var pickerContent: some View {
+        Picker("Evidence type", selection: $kind) {
+            ForEach(EvidenceKind.allCases) { kind in Text(kind.rawValue).tag(kind) }
+        }
     }
 
     @ViewBuilder

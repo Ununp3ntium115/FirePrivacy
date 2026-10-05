@@ -98,7 +98,7 @@ struct AppSettingsView: View {
     @State private var showDeleteConfirmation = false
 
     private var savedState: String {
-        if model.savedReportUnavailable { return "Saved data could not be opened" }
+        if model.savedReportUnavailable { return "Saved data needs attention" }
         if model.hasSavedReport { return model.isDemo ? "Saved report retained; sample shown" : "One report on this device" }
         return model.isDemo ? "Sample only; no report saved" : "No report saved"
     }

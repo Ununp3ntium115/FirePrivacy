@@ -16,5 +16,6 @@ export SWIFTPM_MODULECACHE_OVERRIDE="$FP_CACHE/modules"
 FP_SWIFT_ARGS=(--jobs "${FP_JOBS:-4}" --cache-path "$FP_CACHE/cache" --config-path "$FP_CACHE/config" --security-path "$FP_CACHE/security")
 "$FP_SWIFT" build "${FP_SWIFT_ARGS[@]}"
 "$FP_SWIFT" test "${FP_SWIFT_ARGS[@]}"
+python3 -m unittest discover -s Tests/CloudRelease -p 'test_*.py'
 python3 scripts/validate-project.py
 bash Tests/PrivacyRegression/no-network-in-local-analysis.sh

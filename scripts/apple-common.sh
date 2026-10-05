@@ -41,3 +41,25 @@ configure_apple_auth() {
   fi
   # With no API key, xcodebuild uses the Apple account already signed in to Xcode.
 }
+
+configure_signing() {
+  SIGNING_MODE="${SIGNING_MODE:-automatic}"
+  APPLE_SIGN_ARGS=(CODE_SIGN_STYLE=Automatic)
+  if [[ "$SIGNING_MODE" == manual ]]; then
+    : "${FIREPRIVACY_PROFILE_UUID:?Manual signing requires the verified profile UUID}"
+    : "${FIREPRIVACY_SIGNING_IDENTITY:?Manual signing requires the verified distribution identity}"
+    python3 - "$FIREPRIVACY_PROFILE_UUID" "$FIREPRIVACY_SIGNING_IDENTITY" <<'PY'
+import re, sys
+if not re.fullmatch(r'[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}',sys.argv[1]):
+    raise SystemExit('Invalid manual provisioning profile UUID.')
+if not re.fullmatch(r'[A-Fa-f0-9]{40}',sys.argv[2]):
+    raise SystemExit('Invalid verified distribution identity fingerprint.')
+PY
+    APPLE_SIGN_ARGS=(CODE_SIGN_STYLE=Manual "CODE_SIGN_IDENTITY=$FIREPRIVACY_SIGNING_IDENTITY" \
+      "PROVISIONING_PROFILE_SPECIFIER=$FIREPRIVACY_PROFILE_UUID" "PROVISIONING_PROFILE=$FIREPRIVACY_PROFILE_UUID")
+  elif [[ "$SIGNING_MODE" != automatic ]]; then
+    echo "SIGNING_MODE must be automatic or manual." >&2
+    exit 1
+  fi
+  export SIGNING_MODE
+}

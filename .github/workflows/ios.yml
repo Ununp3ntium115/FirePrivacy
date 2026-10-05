@@ -30,6 +30,7 @@ jobs:
       - name: Check portable analysis and privacy promises
         run: |
           swift test
+          python3 -m unittest discover -s Tests/CloudRelease -p 'test_*.py'
           bash Tests/PrivacyRegression/no-network-in-local-analysis.sh
           python3 scripts/validate-project.py
       - name: Compile universal app without signing
@@ -48,6 +49,7 @@ jobs:
             .build/apple/*.xcresult
             .build/apple/TestLog-*.txt
             .build/apple/Screenshots/*.png
+            .build/apple/Screenshots/*.jpg
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14

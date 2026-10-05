@@ -1,17 +1,20 @@
 # Release checklist
 
-All unchecked items are pending. This document does not claim that a build has
-been compiled on Apple platforms, uploaded, submitted, approved, or released.
-Use the actual command logs and App Store Connect statuses as evidence.
+All unchecked items are pending. Use the actual command logs and App Store
+Connect statuses as evidence. A native source build, passing test run, signed
+archive, uploaded/processed build, review submission, approval, and public
+release are separate results.
 
 ## Build and product
 
 - [x] Current-instance Linux/core build and 34 tests pass; see `VALIDATION.md`.
 - [x] Current-instance portable project, asset, plist, and privacy checks pass.
-- [ ] Xcode 26+ and iOS/iPadOS 26+ SDK are installed; verify current Apple minima
+- [x] Hosted Mac CI uses Xcode 26.2 and iOS/iPadOS 26.2 SDK; verify current Apple minima
       using [APPLE-REQUIREMENTS.md](APPLE-REQUIREMENTS.md).
-- [ ] `scripts/build-ios.sh` succeeds on a Mac with the installed Xcode.
-- [ ] `scripts/test-ios.sh iphone` and `scripts/test-ios.sh ipad` succeed.
+- [x] `scripts/build-ios.sh` succeeds on both hosted Mac jobs at `d44a996`.
+- [x] `scripts/test-ios.sh iphone` and `scripts/test-ios.sh ipad` succeed at `d44a996`;
+      the separate hardware-protection test is skipped in Simulator.
+- [ ] Final local lifecycle/accessibility/release-helper changes pass a new native run.
 - [ ] A real Apple-generated App Privacy Report from a current iPhone imports.
 - [ ] A real Apple-generated App Privacy Report from a current iPad imports.
 - [ ] No-activity, unsupported-record, malformed, oversized, truncated,
@@ -23,6 +26,10 @@ Use the actual command logs and App Store Connect statuses as evidence.
 - [ ] Delete removes the stored report and Keychain key, including after restart.
       It accurately explains that the original and already shared files remain.
 - [ ] The Keychain/encryption/file-protection behavior works on a physical device.
+- [ ] On passcode-protected physical iPhone and iPad, the report, device-only
+      Keychain key, and temporary exports respect the locked state and reopen
+      correctly after unlock. Verify complete file-protection metadata on those
+      devices; simulator filesystems cannot validate hardware Data Protection.
 - [ ] Device backup behavior matches the policy; stored report/key are not
       accidentally backed up or synced to iCloud.
 - [ ] No imported report content appears in production logs or crash annotations.
@@ -89,7 +96,7 @@ private key, provisioning profile, device identifier, or private personal data.
 | Check | Build/version | Date | Evidence/result |
 | --- | --- | --- | --- |
 | Core tests | Candidate 1.0 | October 5, 2026 | 34 XCTest cases, 0 failures; portable script exit 0 |
-| Apple-platform build and tests | Pending | Pending | Xcode log or CI run |
+| Apple-platform build and tests | `d44a996`, candidate 1.0 | October 5, 2026 | Both native build/test steps passed in run 37378242655; hardware protection skipped in Simulator; final local changes await rerun |
 | Real report compatibility | Pending | Pending | OS version and anonymized result |
 | Storage/delete/backup/device tests | Pending | Pending | Physical-device result |
 | Public policy/support reachability | Pending | Pending | Exact deployed HTTPS URLs/status |

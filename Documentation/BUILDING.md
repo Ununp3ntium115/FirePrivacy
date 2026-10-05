@@ -4,7 +4,10 @@ This repository contains a native SwiftUI app for iPhone and iPad, a portable
 Swift core package, generated Xcode project, local privacy/support website, and
 release scripts. Linux can validate the core and repository configuration. A
 Mac with Xcode is required to compile the native UI, run Apple-platform tests,
-sign, archive, and upload an iOS/iPadOS binary.
+sign, archive, and upload an iOS/iPadOS binary. That Mac can be the hosted GitHub
+Actions runner: see [CLOUD-RELEASE.md](CLOUD-RELEASE.md) to keep this session in the
+cloud and use browser-based release controls. The local-Mac commands below are
+an additional supported workflow.
 
 Use the existing checkout. Each cloud task already has an isolated environment;
 no additional Git worktree is needed unless explicitly requested.
@@ -20,8 +23,10 @@ The app uses system SwiftUI, Foundation, CryptoKit, and Security APIs and the
 in-repository `FirePrivacyCore` module. No CocoaPods, Carthage, external SwiftPM
 package, account backend, remote model, VPN entitlement, network service, or
 private SDK is required. The generator and validators use Python 3's standard
-library. App icons are committed; regenerating them is optional and requires
-Pillow 12.3.0.
+library. The approved flame artwork and opaque 1024-pixel app icon are committed.
+The optional `scripts/generate-app-icon.py` export helper uses ImageMagick or
+macOS `sips` to prepare the asset from `Design/FirePrivacy-icon-master.png`; it
+does not generate new artwork or require Pillow.
 
 ## Linux/core validation
 
@@ -36,6 +41,15 @@ From the repository root:
 ```sh
 bash scripts/install-swift-linux.sh
 bash scripts/check-portable.sh
+```
+
+The portable helper also runs 19 standard-library Python signing/cleanup tests.
+They use dummy credentials, owned temporary directories, and mocked Apple
+tools/frameworks; they do not prove actual certificate trust, signing, or upload.
+Run them independently with:
+
+```sh
+python3 -m unittest discover -s Tests/CloudRelease -p 'test_*.py' -v
 ```
 
 The portable script uses cache/config directories under ignored `.build/tooling/`,
@@ -66,7 +80,9 @@ bash scripts/test-ios.sh ipad
 bash scripts/capture-screenshots.sh
 ```
 
-Simulator builds are unsigned. Test result bundles and native screenshot
+Simulator test builds use ad-hoc signing so the test host has working Keychain
+entitlements; they do not require an Apple distribution identity. Test result
+bundles and native screenshot
 captures are written below ignored `.build/apple/`. The screenshot command
 launches the actual app with the clearly labeled synthetic demo. Capture
 additional views and verify accepted pixel dimensions using
@@ -189,7 +205,7 @@ public listing and download have been verified.
 
 | Result | Diagnosis and next action |
 | --- | --- |
-| “This step needs a Mac” | The Linux environment cannot run Apple SDKs. Continue core checks here and run the native scripts on macOS. |
+| “This step needs a Mac” | The Linux environment cannot run Apple SDKs. Keep this session in the cloud and use the macOS Actions runner described in `CLOUD-RELEASE.md`, or use the optional local-Mac workflow. |
 | Xcode/SDK below 26 | Select/install the required Xcode and SDK; do not lower the submission check to make upload pass. |
 | No iPhone/iPad simulator | Install an iOS Simulator runtime and the corresponding device types in Xcode. |
 | Provisioning or team error | Verify account role, registered bundle ID, team access, certificates, and profiles. The team ID alone does not authenticate. |

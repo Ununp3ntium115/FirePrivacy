@@ -185,6 +185,7 @@ final class AppModel: ObservableObject {
             savedReportUnavailable = false
         } catch {
             // A partial storage failure is visible; do not claim complete deletion.
+            savedReportUnavailable = true
             notice = AppNotice(title: "Deletion needs attention", message: "Deletion did not finish. Try again after unlocking your device.\n\n" + error.localizedDescription)
         }
     }

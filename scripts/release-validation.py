@@ -42,6 +42,10 @@ def app_details(archive):
         info = plistlib.load(file)
     if info["CFBundleIdentifier"] != os.environ["BUNDLE_ID"]:
         raise SystemExit("The archive bundle identifier differs from BUNDLE_ID.")
+    for variable, key in (("APP_VERSION", "CFBundleShortVersionString"), ("BUILD_NUMBER", "CFBundleVersion")):
+        expected = os.environ.get(variable)
+        if expected is not None and str(info.get(key, "")) != expected:
+            raise SystemExit(f"The archive {key} differs from the explicitly configured {variable}.")
     if int(str(info.get("DTSDKName", "iphoneos0")).removeprefix("iphoneos").split(".")[0]) < 26:
         raise SystemExit("The archive must be built with an iOS 26 or newer SDK.")
     if sorted(info.get("UIDeviceFamily", [])) != [1, 2]:
@@ -78,11 +82,13 @@ def main():
             summary = json.loads(subprocess.check_output(["xcrun", "xcresulttool", "get", "test-results", "summary", "--path", str(result)], text=True))
             if summary.get("result") != "Passed" or summary.get("totalTestCount", 0) < 1 or summary.get("failedTests", 1) != 0:
                 raise SystemExit(f"The {family} XCTest result must contain passed tests without failures.")
-            results[family] = str(result)
+            results[family] = {"path": str(result), "passedTests": summary.get("passedTests", 0),
+                               "skippedTests": summary.get("skippedTests", 0), "totalTests": summary.get("totalTestCount", 0)}
         stamp = {"timestampUTC": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                  "bundleIdentifier": info["CFBundleIdentifier"], "teamIdentifier": os.environ["TEAM_ID"],
                  "version": info["CFBundleShortVersionString"], "build": info["CFBundleVersion"],
                  "sdk": info["DTSDKName"], "hashes": hashes, "xctestResults": results,
+                 "physicalDeviceProtection": "requires physical device and locked-state QA; simulator cannot prove hardware Data Protection",
                  "coreTests": "passed", "privacyRegression": "passed"}
         stamp_path.write_text(json.dumps(stamp, indent=2) + "\n")
         return

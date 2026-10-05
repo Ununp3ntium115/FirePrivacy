@@ -190,6 +190,42 @@ final class EncryptedReportStoreTests: XCTestCase {
         XCTAssertNil(keys.currentKey)
     }
 
+    @MainActor
+    func testModelKeepsDeletionFailureVisibleUntilCompleteRetry() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager().removeItem(at: directory) }
+        let keys = MemoryReportKeys()
+        let store = EncryptedReportStore(directoryURL: directory, keyProvider: keys)
+        let report = testReport()
+        try await store.save(report)
+        let model = AppModel(store: store)
+        await model.load()
+        XCTAssertEqual(model.report, report)
+        XCTAssertTrue(model.hasSavedReport)
+        XCTAssertFalse(model.savedReportUnavailable)
+
+        keys.failDeletion = true
+        await model.deleteAll()
+        XCTAssertFalse(FileManager().fileExists(atPath: directory.path))
+        XCTAssertNotNil(keys.currentKey)
+        XCTAssertEqual(model.report, report)
+        XCTAssertTrue(model.hasSavedReport)
+        XCTAssertTrue(model.savedReportUnavailable)
+        XCTAssertNotNil(model.notice)
+
+        // Dismissing the error does not clear the saved-data warning. Only a
+        // fully successful deletion retry can report that no data remains.
+        model.notice = nil
+        XCTAssertTrue(model.savedReportUnavailable)
+        keys.failDeletion = false
+        await model.deleteAll()
+        XCTAssertNil(model.report)
+        XCTAssertFalse(model.hasSavedReport)
+        XCTAssertFalse(model.savedReportUnavailable)
+        XCTAssertNil(keys.currentKey)
+        XCTAssertNil(model.notice)
+    }
+
     func testBoundedReaderAcceptsLimitAndRejectsOversizedFile() throws {
         let directory = temporaryDirectory()
         defer { try? FileManager().removeItem(at: directory) }

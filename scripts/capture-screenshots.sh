@@ -24,6 +24,7 @@ for family in iphone ipad; do
   # Demo parsing is entirely local; allow the initial layout/animation to settle.
   sleep 3
   xcrun simctl io "$device" screenshot "$output/$family-overview.png"
+  python3 scripts/prepare-screenshot.py "$output/$family-overview.png"
   xcrun simctl status_bar "$device" clear
 done
 echo "Native overview screenshots: $output. XCTest result bundles contain additional navigation screenshots."

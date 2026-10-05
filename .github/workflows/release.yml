@@ -1,0 +1,98 @@
+name: Signed App Store build
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Build an archive or also upload the tested build to App Store Connect
+        type: choice
+        options: [archive, upload]
+        default: archive
+        required: true
+      version:
+        description: App Store marketing version
+        type: string
+        default: '1.0'
+        required: true
+      build_number:
+        description: Positive build number not previously uploaded for this version
+        type: string
+        default: '1'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-store-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 90
+    environment: app-store
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      RELEASE_MODE: ${{ inputs.mode }}
+      APP_VERSION: ${{ inputs.version }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      TEAM_ID: ${{ vars.APPLE_TEAM_ID || 'LYDVWU62G4' }}
+      BUNDLE_ID: ${{ vars.APP_BUNDLE_ID }}
+      PRIVACY_POLICY_URL: ${{ vars.PRIVACY_POLICY_URL || 'https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md' }}
+      SUPPORT_URL: ${{ vars.SUPPORT_URL || 'https://github.com/Ununp3ntium115/FirePrivacy/issues' }}
+    steps:
+      - name: Check out the selected reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Validate release identifiers
+        run: python3 scripts/release-validation.py configuration
+      - name: Prepare existing Apple signing credentials privately
+        env:
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APPLE_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.ASC_PRIVATE_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: python3 scripts/cloud-signing.py prepare
+      - name: Test both native families and make the signed device archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: bash scripts/archive-ios.sh
+      - name: Retain the validated signed archive before export
+        run: |
+          archive="$(cat .build/apple/LatestArchive.txt)"
+          ditto -c -k --sequesterRsrc --keepParent "$archive" .build/apple/FirePrivacy.xcarchive.zip
+      - name: Capture actual native demo screenshots
+        run: bash scripts/capture-screenshots.sh
+      - name: Export or upload the validated App Store build
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          archive="$(cat .build/apple/LatestArchive.txt)"
+          if [[ "$RELEASE_MODE" == upload ]]; then
+            bash scripts/upload-app-store.sh "$archive"
+          else
+            bash scripts/export-app-store.sh "$archive" export
+          fi
+      - name: Remove all private Apple signing files
+        if: always()
+        run: python3 scripts/cloud-signing.py cleanup
+      - name: Retain the signed build and native validation results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fireprivacy-${{ inputs.version }}-${{ inputs.build_number }}
+          path: |
+            .build/apple/FirePrivacy.xcarchive.zip
+            .build/apple/Export-*/*.ipa
+            .build/apple/*.xcresult
+            .build/apple/TestLog-*.txt
+            .build/apple/Screenshots/*.png
+            .build/apple/Screenshots/*.jpg
+            .build/apple/ReleaseSummary.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7

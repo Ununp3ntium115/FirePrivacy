@@ -27,9 +27,14 @@ swift test
 
 The app's UI, Keychain, CryptoKit storage, simulator checks, and signing require Apple platforms. A passing Linux suite does not validate those parts.
 
+You can keep development cloud based: this chat uses the Linux workspace, and
+GitHub Actions uses hosted Macs for the Apple toolchain. See
+[SESSION](Documentation/SESSION.md) for the durable handoff and
+[CLOUD-RELEASE](Documentation/CLOUD-RELEASE.md) for browser-driven signing and upload.
+
 ## Release
 
-[RELEASE-CHECKLIST](Documentation/RELEASE-CHECKLIST.md) records the checks required before submission. Draft metadata and review notes live in `AppStore/`; deployable privacy and support pages live in `website/`. Public page URLs must be hosted and checked before submission. App Store Connect handles uploads and review; the Apple Developer site handles developer resources and signing capabilities.
+[RELEASE-CHECKLIST](Documentation/RELEASE-CHECKLIST.md) records the checks required before submission. Draft metadata and review notes live in `AppStore/`; deployed privacy and support links are listed in [CLOUD-RELEASE](Documentation/CLOUD-RELEASE.md), and standalone website source lives in `website/`. App Store Connect handles uploads and review; the Apple Developer site handles developer resources and signing capabilities.
 
 Team `LYDVWU62G4` was supplied by the developer for signing. The proposed bundle identifier is a development default until it is registered for this app. Signing certificates, private keys, passwords, and App Store Connect API keys must never be committed.
 
