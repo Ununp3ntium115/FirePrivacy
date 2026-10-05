@@ -13,6 +13,10 @@ A native iPhone and iPad privacy report reader. Import an App Privacy Report exp
 
 A recorded domain contact does not reveal its payload or prove harm. Historical sensor events do not show current permissions. App identities are exported bundle identifiers, not an inventory of installed apps. This release does not block traffic, change other apps’ settings, classify tracking vendors, or use AI.
 
+The original repository described a broader product. [FEATURE-COVERAGE](Documentation/FEATURE-COVERAGE.md)
+maps those concepts to this candidate and records missing knowledge-base,
+versioned analysis/scoring, filtering, private-advisor, and managed-edition work.
+
 ## Develop
 
 Open `FirePrivacy.xcodeproj` in a supported Xcode on macOS. The app targets iOS/iPadOS 17 or later; App Store submission must use Apple's currently required SDK. See [BUILDING](Documentation/BUILDING.md) for simulator, device, archive, and upload commands.

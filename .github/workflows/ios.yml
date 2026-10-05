@@ -31,6 +31,7 @@ jobs:
         run: |
           swift test
           python3 -m unittest discover -s Tests/CloudRelease -p 'test_*.py'
+          python3 scripts/check-apple-signing-policy.py
           bash Tests/PrivacyRegression/no-network-in-local-analysis.sh
           python3 scripts/validate-project.py
       - name: Compile universal app without signing

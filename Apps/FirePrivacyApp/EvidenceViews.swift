@@ -242,11 +242,11 @@ struct ObservationCard: View {
                 if let domain = observation.domain {
                     DetailRow(label: "Domain", value: domain)
                 }
-                DetailRow(label: observation.category == .network ? "Recorded context" : "Recorded category", value: observation.accessType)
+                DetailRow(label: observation.category == .network ? "Record type" : "Recorded category", value: observation.accessType)
                 if observation.category == .network {
                     DetailRow(label: "Reported contacts", value: observation.count.formatted())
                     timestampRow(label: "First recorded", date: observation.firstTimestamp, original: observation.firstTimestampText)
-                    timestampRow(label: "Last recorded", date: observation.lastTimestamp, original: observation.lastTimestampText)
+                    timestampRow(label: "Last recorded", date: networkLastTimestamp, original: observation.lastTimestampText ?? observation.timestampText)
                 } else {
                     if let eventKind = observation.eventKind {
                         DetailRow(label: "Event kind", value: eventKind)
@@ -259,12 +259,23 @@ struct ObservationCard: View {
         }
     }
 
+    private var networkLastTimestamp: Date? {
+        if let last = observation.lastTimestamp { return last }
+        // The importer's representative timestamp can fall back to the first
+        // time. Use the canonical timeStamp only when it exists; a demo with
+        // no first/last fields may provide a representative Date directly.
+        if observation.timestampText != nil || observation.firstTimestamp == nil {
+            return observation.timestamp
+        }
+        return nil
+    }
+
     @ViewBuilder
     private func timestampRow(label: String, date: Date?, original: String?) -> some View {
-        if let date {
+        if let original {
+            DetailRow(label: date == nil ? label + " (unparsed)" : label, value: original)
+        } else if let date {
             DetailRow(label: label, value: date.formatted(date: .abbreviated, time: .standard))
-        } else if let original {
-            DetailRow(label: label + " (unparsed)", value: original)
         } else {
             DetailRow(label: label, value: "Not included")
         }

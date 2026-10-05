@@ -127,8 +127,9 @@ for signing is `LYDVWU62G4`; it is an identifier, not a legal verification.
 
 The public policy uses the product name **Fire Privacy** and does not invent a
 company address or email. The GitHub API verifies that this repository is public
-and its issue tracker is enabled; actual monitoring, policy hosting, and review
-contact details still need to be established. App Review 5.6.2 requires
+and its issue tracker is enabled. The public GitHub policy/support URLs are
+hosted and verified readable; actual support monitoring and review contact
+details still need to be established. App Review 5.6.2 requires
 verifiable, current developer identity and contact information. Guideline
 5.1.1(ix) also says apps requiring sensitive user information should be submitted
 by a legal entity. Record the enrolled account type and evaluate that provision

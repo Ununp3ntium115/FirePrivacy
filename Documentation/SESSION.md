@@ -13,12 +13,12 @@ branch includes the native iPhone/iPad app, approved charcoal-and-ember
 design, privacy documentation, and release helpers. GitHub stores committed
 source; it does not preserve uncommitted cloud files or chat context.
 
-GitHub authentication began failing with HTTP 401 during this session. The
-cloud signing workflow and final lifecycle/accessibility corrections were
-prepared locally after the last successful push. Check `git status` and
+GitHub authentication temporarily failed with HTTP 401 and has now recovered.
+The cloud signing workflow and final lifecycle/accessibility corrections were
+prepared locally after the approved-design push. Check `git status` and
 `git log origin/codex/fireprivacy-app-mvp..HEAD` before assuming the public PR
-contains every change. Refresh the existing platform GitHub connection to
-publish the remaining commits; do not request or paste a personal token.
+contains every change. If access fails again, refresh the existing platform GitHub connection; do
+not request or paste a personal token.
 
 [GitHub Actions](https://github.com/Ununp3ntium115/FirePrivacy/actions) runs
 Apple builds on hosted Macs. Linux runs the portable Swift analysis tests;

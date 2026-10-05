@@ -121,7 +121,7 @@ The GitHub macOS 26/Xcode 26.2 runner compiled the approved-design native source
 and passed the storage/UI test steps for both iPhone and iPad at `d44a996`.
 Hardware Data Protection is a separately skipped simulator check. Final local
 lifecycle/accessibility/release-helper changes await another native run; GitHub
-authentication began returning HTTP 401 during this session. A distributable
+authentication temporarily returned HTTP401 and has now recovered. A distributable
 archive and upload remain unverified. The dated results belong in
 [VALIDATION.md](VALIDATION.md).
 
