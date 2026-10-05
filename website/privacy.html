@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How the Fire Privacy local report app handles imported reports, encrypted storage, sharing, and deletion.">
+  <title>Privacy policy — Fire Privacy</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header><nav class="shell" aria-label="Main navigation">
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true">f</span>Fire Privacy</a>
+    <div class="links"><a href="privacy.html" aria-current="page">Privacy policy</a><a href="support.html">Support</a></div>
+  </nav></header>
+  <main class="shell" id="main"><article class="document">
+    <p class="eyebrow">Your local workspace</p>
+    <h1>Privacy policy.</h1>
+    <p class="date">Policy version: October 5, 2026 · Applies to the Fire Privacy local report app, version 1.0.</p>
+    <p>Fire Privacy lets you import and explore an App Privacy Report that you export from iPhone or iPad Settings. Your report is processed and stored on your device. The app does not send report contents to its developer or a server.</p>
+
+    <h2>What the app reads</h2>
+    <p>The app reads the file you explicitly select in the system file picker. A report may include app identifiers, domain names, recorded sensor access, and event times. Fire Privacy organizes supported observations into a normalized report. It does not retain a separate copy of the original raw imported file.</p>
+    <p>The synthetic demo contains fictional activity. No account, advertising identifier, analytics SDK, remote model, VPN, tracking filter, or developer-operated network service is used by this app. The app does not read other apps’ current permissions or enumerate installed apps.</p>
+
+    <h2>Storage and protection</h2>
+    <p>Fire Privacy stores one normalized report at a time inside its private application storage. The stored report is encrypted with AES-GCM through Apple’s CryptoKit. Its randomly generated key is stored in the device Keychain, accessible while the device is unlocked and configured not to synchronize to iCloud or migrate to another device. Report storage uses complete file protection and is excluded from device backup.</p>
+    <p>Importing a new report replaces the saved report after a successful import and save. A report remains until you replace or delete it; there is no automatic expiry. The app does not sell, license, train a model on, or send your report to a third party.</p>
+
+    <h2>Sharing is your choice</h2>
+    <p>Export creates a readable JSON file containing the normalized report and opens the system share sheet. This export is not encrypted by Fire Privacy. Choose recipients carefully: the report can reveal your app and domain activity. A receiving app or service handles the shared copy under its own policies.</p>
+    <p>The temporary export uses file protection, is excluded from backup, and is removed after sharing or cancellation. The app also cleans up temporary exports when it next launches and when you delete all local data. Copies saved or received elsewhere remain outside the app’s control.</p>
+
+    <h2>Deleting your data</h2>
+    <p>Use the app’s delete action to remove its saved report, temporary exports, and encryption key. If removal fails, the app reports the failure so you can try again. Deletion does not remove the original report in Files, the App Privacy Report history in Settings, or a copy you previously shared. Delete those separately in the app or service that holds them.</p>
+    <p>There is no online account to close and no developer-held report database to erase. The source file remains yours; selecting it does not give the developer access to it.</p>
+
+    <h2>Report limitations</h2>
+    <p>A recorded domain contact does not reveal a payload or prove harm. A sensor event does not establish that sensor data was sent elsewhere. Reports are historical, may be incomplete, and depend on the operating system’s reporting and your settings. Fire Privacy describes the available evidence rather than claiming a security or legal conclusion.</p>
+
+    <h2>Support and this website</h2>
+    <p>You may voluntarily share information when requesting support. The <a href="support.html">support page</a> explains how to use a public project issue without disclosing a personal report. Information posted there is handled by GitHub under its own privacy policy and is visible to other people. Use a synthetic example and omit personal activity, credentials, and device identifiers.</p>
+    <p>This static website includes no analytics script, advertising, embedded third-party content, or cookies set by the page itself. Its hosting provider may process ordinary connection information such as IP addresses and server logs under the provider’s policy. Opening a support link also connects to that destination.</p>
+
+    <h2>Questions and changes</h2>
+    <p>For a question about this policy, use the <a href="support.html">support route</a> and keep sensitive information out of public messages. This policy describes the local report app. If the app’s data handling changes, the policy and App Store privacy answers must be updated before that change is released.</p>
+  </article></main>
+  <footer><div class="shell">Fire Privacy · <a href="index.html">Home</a> · <a href="support.html">Support</a></div></footer>
+</body>
+</html>
