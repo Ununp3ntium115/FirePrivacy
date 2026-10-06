@@ -52,6 +52,13 @@ Provisioning access: Apple requires an authorized **team API key** for
 Provisioning endpoints; individual keys cannot use them. Supply missing values
 through GitHub Actions Secrets, never chat or normal workflow inputs.
 
+Actual [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
+ran at `a42b009` on hosted macOS. All 18 token/request-boundary tests passed.
+The live account check then returned `missingBindings` for all three ASC names;
+no Apple API request was made. Those credentials are unavailable to this
+`app-store` workflow, rather than merely unknown from metadata. Signing P12 and
+profile bindings remain untested because the archive preflight stopped earlier.
+
 ## Supported registration routes
 
 Apple's official OpenAPI **v4.5**, retrieved with normal TLS on October 6, 2026,

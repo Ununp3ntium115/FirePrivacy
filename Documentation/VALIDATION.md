@@ -56,6 +56,15 @@ request method/host, redirects, response bounds and sanitized errors. Mock HTTP
 results do not establish real Apple account access; the manual account workflow
 checks existing secure bindings separately. No app/runtime source changed.
 
+Actual [Apple account preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
+at `a42b009d7253a4a5725dba7647982f5135981019` passed all 18 new tests on macOS,
+then failed with `missingBindings`: `ASC_PRIVATE_KEY_BASE64`, `ASC_KEY_ID` and
+`ASC_ISSUER_ID` were unavailable to environment `app-store`. No authenticated
+Apple API request, registration or upload was attempted. The official shared
+browser launcher also failed activation due to unprovisioned platform
+`NODE_REPL_AUTH_TOKEN`; no shared browser/sign-in session exists. These are
+external access prerequisites, not failing native app tests.
+
 - Retain the passing final run/results. Any later production-code, trust-anchor,
   target/capability or dependency change needs matching checks before release.
   Subsequent documentation-only records do not alter the tested production tree.

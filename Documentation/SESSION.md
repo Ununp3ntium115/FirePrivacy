@@ -39,6 +39,11 @@ because the platform has not provisioned `NODE_REPL_AUTH_TOKEN`. No shared
 sign-in window exists yet; the local Apple tab is not accessible here. Enable
 the platform browser capability rather than sharing passwords or runtime tokens.
 
+Account [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
+passed its 18 helper tests on macOS, then reported all three ASC bindings missing
+in environment `app-store`. API fallback is blocked too; no Apple request or
+registration was made. The full Python release-tool suite now passes 129 tests.
+
 An initial signed TestFlight upload can precede physical QA and supplies the
 installable build. Finish real iPhone/iPad report import, evidence/export/delete,
 protection activation/removal, advisor availability, accessibility, locked-state

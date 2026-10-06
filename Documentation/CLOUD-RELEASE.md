@@ -50,6 +50,12 @@ inputs or ordinary variables. This integration's secret/variable metadata
 requests returned HTTP 403: bindings remain unknown until actual runtime evidence.
 Reuse usable existing bindings rather than assuming absence.
 
+Subsequent read-only account [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
+passed its 18 genuine-token/request-boundary tests on macOS, then confirmed all
+three ASC bindings unavailable to the `app-store` workflow. No Apple request or
+registration occurred. P12/profile availability remains untested; the earlier
+archive preflight stopped before signing preparation.
+
 | Secret | Purpose |
 | --- | --- |
 | `APPLE_DISTRIBUTION_P12_BASE64` | Base64 password-protected `.p12` with private key |
