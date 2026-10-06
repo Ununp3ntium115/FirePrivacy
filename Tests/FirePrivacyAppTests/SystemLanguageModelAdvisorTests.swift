@@ -7,8 +7,9 @@ import FoundationModels
 #endif
 
 /// Native integration with the actual Apple adapter, using only synthetic imported evidence.
-/// Simulator checks exercise the observed unavailable state; they cannot establish that
-/// eligible hardware with downloaded model assets can complete guided generation.
+/// Simulator checks exercise availability and actual coordinator fallback. A simulator
+/// can report ready while its generation assets are missing; physical guided generation
+/// remains a separate check on eligible hardware with downloaded model assets.
 final class SystemLanguageModelAdvisorTests: XCTestCase {
     @MainActor
     func testActualAdapterReportsTypedSystemAvailability() async {
@@ -52,23 +53,38 @@ final class SystemLanguageModelAdvisorTests: XCTestCase {
     }
 
     @MainActor
-    func testActualCoordinatorRetainsDeterministicFallbackWhenSystemModelUnavailable() async throws {
+    func testActualCoordinatorKeepsGroundedResultsAcrossSystemRuntimeStates() async throws {
         let advisor = SystemLanguageModelAdvisor()
         let availability = await advisor.availability()
-        guard availability != .available else {
-            throw XCTSkip("This environment has a ready model; the unavailable-runtime fallback needs an unavailable system model.")
-        }
         let fixture = try makeFixture()
         let baseline = try await OfflineAdvisor().assess(fixture.input)
         let result = try await AdvisorCoordinator.assess(fixture.input, preferred: advisor)
-        XCTAssertEqual(result.mode, .offline)
-        XCTAssertEqual(result.fallback, .unavailable(availability))
-        XCTAssertEqual(result.assessment, baseline)
+        if availability != .available {
+            XCTAssertEqual(result.mode, .offline)
+            XCTAssertEqual(result.fallback, .unavailable(availability))
+            XCTAssertEqual(result.assessment, baseline)
+        } else if result.mode == .appleOnDevice {
+            XCTAssertNil(result.fallback)
+        } else {
+            // This invokes the actual model even when advertised availability is
+            // optimistic. Framework errors remain closed, sanitized typed reasons.
+            XCTAssertEqual(result.mode, .offline)
+            let fallback = try XCTUnwrap(result.fallback)
+            switch fallback {
+            case .unavailable(let state): XCTAssertNotEqual(state, .available)
+            case .failed(let failure):
+                if case .unavailable(let state) = failure { XCTAssertNotEqual(state, .available) }
+            }
+            XCTAssertEqual(result.assessment, baseline)
+        }
         assertGrounded(result.assessment, in: fixture.analysis, input: fixture.input)
     }
 
     @MainActor
-    func testRealGuidedGenerationOnEligibleDeviceWithReadyAssets() async throws {
+    func testRealGuidedGenerationOnEligiblePhysicalDeviceWithReadyAssets() async throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("Physical guided-generation QA requires eligible Apple Intelligence hardware and ready model assets. Simulator availability can report ready without usable generation assets; its actual coordinator fallback is tested separately.")
+        #else
         let advisor = SystemLanguageModelAdvisor()
         let availability = await advisor.availability()
         guard availability == .available else {
@@ -78,6 +94,7 @@ final class SystemLanguageModelAdvisorTests: XCTestCase {
         // No network, model download, permission change or arbitrary readiness delay is attempted.
         let assessment = try await advisor.assess(fixture.input)
         assertGrounded(assessment, in: fixture.analysis, input: fixture.input)
+        #endif
     }
 
     @MainActor

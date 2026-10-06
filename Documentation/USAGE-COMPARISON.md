@@ -7,12 +7,14 @@ It cannot establish that Apple or an app misreported activity, that sensor data
 was transmitted, or that an app acted improperly.
 
 The Core comparison, file import and native editor/comparison controls are
-implemented. Their matching hosted native runtime validation is pending.
+implemented. Their private persistence, report binding and comparison UI tests
+passed on both simulator families in native run37399180093. Overall native
+status and separate model/hardware gates are recorded in [VALIDATION](VALIDATION.md).
 This guide separates their data contract from platform access and device QA;
 it does not claim an installed automatic Screen Time collector. The dated
 [source record](USAGE-COMPARISON-SOURCES.json) contains response hashes, status,
-availability and extracted official text. Existing native results do not cover
-these subsequent additions.
+availability and extracted official text. Simulator results do not authenticate
+real-device usage inputs or establish the separate automatic data-access route.
 
 ## What can be compared
 
@@ -180,8 +182,9 @@ logging workflow.
 ## Reference JSON interchange
 
 The Core reference importer accepts schema 1 with `references`. This is
-app-defined interchange, not an Apple export format. Native UI/runtime
-verification is pending. The [resource schema](../Sources/FirePrivacyCore/Resources/UsageTimeline/usage-timeline.schema.json),
+app-defined interchange, not an Apple export format. Its local persistence and
+comparison controls have matching native tests; current real-report/log
+compatibility still requires physical-device QA. The [resource schema](../Sources/FirePrivacyCore/Resources/UsageTimeline/usage-timeline.schema.json),
 [format notes](../Sources/FirePrivacyCore/Resources/UsageTimeline/USAGE-FORMAT.md)
 and implementation tests are the authority for the integrated source.
 
