@@ -78,6 +78,10 @@ final class FirePrivacyUITests: XCTestCase {
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.tap()
 
+        // Confirmation starts asynchronous deletion; an existing sidebar row
+        // stays disabled behind the working overlay until that operation ends.
+        XCTAssertTrue(app.staticTexts["No report saved"].waitForExistence(timeout: 15), "Deletion must reach the empty saved-report state before navigating.")
+        XCTAssertFalse(app.alerts["Deletion needs attention"].exists)
         let evidence = navigationItem(in: app, identifier: "evidence-tab", label: "Evidence")
         XCTAssertTrue(evidence.waitForExistence(timeout: 10))
         evidence.tap()
@@ -91,14 +95,37 @@ final class FirePrivacyUITests: XCTestCase {
         // A SwiftUI Label can propagate an identifier to its decorative image.
         // Tap the tab button or an actionable sidebar element instead.
         let tab = app.tabBars.buttons[label].firstMatch
-        if tab.waitForExistence(timeout: 2) { return tab }
+        if tab.waitForExistence(timeout: 2) {
+            XCTAssertTrue(waitUntilActionable(tab), "The \(label) tab must be enabled and hittable.")
+            return tab
+        }
         let candidates = app.descendants(matching: .any).matching(identifier: identifier).allElementsBoundByIndex
+        // Keep a live query for the sidebar button even while an async operation
+        // temporarily disables it; existence alone does not make a row tappable.
+        if candidates.contains(where: { $0.elementType == .button }) {
+            let button = app.buttons[identifier].firstMatch
+            XCTAssertTrue(waitUntilActionable(button), "The \(label) sidebar button must be enabled and hittable.")
+            return button
+        }
         if let accessibleRow = candidates.first(where: { $0.elementType != .image && $0.isHittable }) {
+            XCTAssertTrue(waitUntilActionable(accessibleRow), "The \(label) navigation row must be enabled and hittable.")
             return accessibleRow
         }
         let cell = app.cells.containing(.staticText, identifier: label).firstMatch
-        if cell.exists { return cell }
-        return app.staticTexts[label].firstMatch
+        if cell.exists {
+            XCTAssertTrue(waitUntilActionable(cell), "The \(label) sidebar cell must be enabled and hittable.")
+            return cell
+        }
+        let text = app.staticTexts[label].firstMatch
+        XCTAssertTrue(waitUntilActionable(text), "The \(label) navigation label must be enabled and hittable.")
+        return text
+    }
+
+    @MainActor
+    private func waitUntilActionable(_ element: XCUIElement) -> Bool {
+        let predicate = NSPredicate(format: "exists == true AND enabled == true AND hittable == true")
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: 15) == .completed
     }
 
     @MainActor
