@@ -101,5 +101,9 @@
 	</dict>
 	<key>FirePrivacyDistributionEdition</key>
 	<string>managed</string>
+	<key>FirePrivacyKnowledgeBasePublicKeysJSON</key>
+	<string>$(FIREPRIVACY_KB_PUBLIC_KEYS_JSON)</string>
+	<key>FirePrivacyFilterPublicKeysJSON</key>
+	<string>$(FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON)</string>
 </dict>
 </plist>

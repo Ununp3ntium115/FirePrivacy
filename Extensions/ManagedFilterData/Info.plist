@@ -34,5 +34,9 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).FilterDataProvider</string>
 	</dict>
+	<key>FirePrivacyKnowledgeBasePublicKeysJSON</key>
+	<string>$(FIREPRIVACY_KB_PUBLIC_KEYS_JSON)</string>
+	<key>FirePrivacyFilterPublicKeysJSON</key>
+	<string>$(FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON)</string>
 </dict>
 </plist>

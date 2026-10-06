@@ -32,6 +32,9 @@ final class AppModel: ObservableObject {
     @Published var notice: AppNotice?
     @Published var sharedReport: SharedReport?
     @Published private(set) var analysis: FindingAnalysis?
+    @Published private(set) var lifecycle: FindingLifecycleResult?
+    @Published private(set) var latestAnalysisRevision: AnalysisHistoryRecord?
+    @Published private(set) var analysisHistoryCapacityExceeded = false
     @Published private(set) var sessions: [ReportSessionDescriptor] = []
     @Published private(set) var comparison: ReportComparison?
     @Published private(set) var weeklySummary: LocalWeeklySummary?
@@ -45,6 +48,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var pendingSystemCleanup: Set<ConsentFeature> = []
     @Published private(set) var unavailableSessionIDs: Set<UUID> = []
     @Published private(set) var keyRotationStatus = ReportKeyRotationStatus.idle
+    @Published private(set) var retention = WorkspaceRetentionPolicy()
+    @Published private(set) var pendingStorageCleanupCount = 0
+    @Published private(set) var credentialCleanupRequired = false
+    @Published private(set) var datasetTrustConfigurationFailure = false
+    @Published private(set) var knowledgeTrustKeyIDs: [String] = []
+    @Published private(set) var filterTrustKeyIDs: [String] = []
     @Published var retainEncryptedSourceForNextImport = false
 
     private let store: EncryptedReportStore
@@ -159,7 +168,8 @@ final class AppModel: ObservableObject {
             hasSavedReport = true
             savedReportUnavailable = false
         } catch {
-            notice = AppNotice(title: "Report was not imported", message: "The current report was kept.\n\n" + error.localizedDescription)
+            await syncEngine()
+            notice = AppNotice(title: "Import needs attention", message: "Import could not finish. Reopen saved history to check its status.\n\n" + error.localizedDescription)
         }
     }
 
@@ -247,6 +257,18 @@ final class AppModel: ObservableObject {
         await performFeatureAction("Removing system protection") { try await engine.retrySystemCleanup() }
     }
 
+    func retainAdvisorCredential(_ token: String) async {
+        await performFeatureAction("Saving the endpoint credential in Keychain") { try await engine.retainAdvisorCredential(token) }
+    }
+
+    func forgetAdvisorCredentials() async {
+        await performFeatureAction("Removing saved endpoint credentials") { try await engine.forgetAdvisorCredentials() }
+    }
+
+    func retryCredentialCleanup() async {
+        await performFeatureAction("Removing saved endpoint credentials") { try await engine.retryCredentialCleanup() }
+    }
+
     func scheduleReminder(weekday: Int, hour: Int, minute: Int) async {
         await performFeatureAction("Scheduling a local reminder") {
             try await engine.scheduleReminder(weekday: weekday, hour: hour, minute: minute)
@@ -294,6 +316,9 @@ final class AppModel: ObservableObject {
     func syncEngine() async {
         report = engine.report
         analysis = engine.analysis
+        lifecycle = engine.lifecycle
+        latestAnalysisRevision = engine.latestAnalysisRevision
+        analysisHistoryCapacityExceeded = engine.analysisHistoryCapacityExceeded
         sessions = engine.sessions
         comparison = engine.comparison
         weeklySummary = engine.weeklySummary
@@ -306,6 +331,12 @@ final class AppModel: ObservableObject {
         knowledgeBaseFailure = engine.knowledgeBaseFailure
         pendingSystemCleanup = engine.pendingSystemCleanup
         unavailableSessionIDs = engine.unavailableSessionIDs
+        retention = engine.retention
+        pendingStorageCleanupCount = engine.pendingStorageCleanupCount
+        credentialCleanupRequired = engine.credentialCleanupRequired
+        datasetTrustConfigurationFailure = engine.datasetTrustConfigurationFailure
+        knowledgeTrustKeyIDs = engine.knowledgeTrustKeyIDs
+        filterTrustKeyIDs = engine.filterTrustKeyIDs
         do { keyRotationStatus = try await store.rotationStatus() }
         catch { showFailure("Storage status unavailable", error) }
         hasSavedReport = !sessions.isEmpty

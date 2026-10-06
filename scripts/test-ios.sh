@@ -3,6 +3,7 @@ set -euo pipefail
 source "$(dirname "$0")/apple-common.sh"
 cd "$FIREPRIVACY_ROOT"
 require_apple_toolchain
+configure_dataset_trust
 family="${1:-iphone}"
 device="$(select_simulator "$family")"
 result="$FIREPRIVACY_BUILD/Tests-$family-$(date +%Y%m%dT%H%M%S)-$$.xcresult"
@@ -11,7 +12,7 @@ set +e
 xcodebuild -project FirePrivacy.xcodeproj -scheme FirePrivacy -configuration Debug \
   -destination "platform=iOS Simulator,id=$device" -destination-timeout 120 \
   -derivedDataPath "$FIREPRIVACY_BUILD/DerivedData-$family" -resultBundlePath "$result" \
-  -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- test 2>&1 | tee "$log"
+  -parallel-testing-enabled NO "${DATASET_TRUST_ARGS[@]}" CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- test 2>&1 | tee "$log"
 statuses=("${PIPESTATUS[@]}")
 set -e
 if [[ "${statuses[0]}" -ne 0 ]]; then

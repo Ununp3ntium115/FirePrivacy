@@ -4,6 +4,7 @@ set -euo pipefail
 source "$(dirname "$0")/apple-common.sh"
 cd "$FIREPRIVACY_ROOT"
 require_apple_toolchain
+configure_dataset_trust
 configure_bundle_identifiers
 TEAM_ID="${TEAM_ID:-LYDVWU62G4}"
 APP_VERSION="${APP_VERSION:-1.0}"
@@ -25,6 +26,7 @@ archive_args=(-project FirePrivacy.xcodeproj -scheme "$FIREPRIVACY_SCHEME" -conf
   APP_BASE_BUNDLE_ID="$APP_BASE_BUNDLE_ID" FIREPRIVACY_APP_GROUP_ID="$FIREPRIVACY_APP_GROUP_ID" \
   MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   FIREPRIVACY_PRIVACY_URL="${PRIVACY_POLICY_URL:-}" FIREPRIVACY_SUPPORT_URL="${SUPPORT_URL:-}")
+archive_args+=("${DATASET_TRUST_ARGS[@]}")
 if [[ "$APP_EDITION" == url-filter ]]; then
   archive_args+=("FIREPRIVACY_PIR_SERVER_URL=${FIREPRIVACY_PIR_SERVER_URL:-}" \
     "FIREPRIVACY_PRIVACY_PASS_ISSUER_URL=${FIREPRIVACY_PRIVACY_PASS_ISSUER_URL:-}" \

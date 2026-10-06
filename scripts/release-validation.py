@@ -22,6 +22,9 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / ".build/apple"
 DEFAULT_GROUP = "group.com.firesoftwaresolutions.FirePrivacy.protection"
+PUBLIC_KEYS_SPEC = importlib.util.spec_from_file_location("fireprivacy_dataset_public_keys", ROOT / "scripts/dataset-public-keys.py")
+PUBLIC_KEYS = importlib.util.module_from_spec(PUBLIC_KEYS_SPEC)
+PUBLIC_KEYS_SPEC.loader.exec_module(PUBLIC_KEYS)
 UUID_PATTERN = r"[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}"
 TARGETS = {
     "app": ("FirePrivacy", "", set(), None),
@@ -106,7 +109,8 @@ def check_configuration():
     return {"edition": edition, "bundleIdentifier": bundle, "teamIdentifier": team, "appGroupIdentifier": group,
             "version": version, "build": build, "signingMode": mode,
             "signingIdentity": identity, "provisioningProfiles": profiles,
-            "publishedURLs": urls, "pirConfiguration": pir}
+            "publishedURLs": urls, "pirConfiguration": pir,
+            "datasetPublicKeys": PUBLIC_KEYS.environment_keys()}
 
 
 def digest(path):
@@ -277,6 +281,9 @@ def archive_details(archive, config):
             for target in EDITIONS[config["edition"]][1]:
                 bundle = paths[target]
                 info = read_plist(bundle / "Info.plist")
+                dataset_keys = PUBLIC_KEYS.bundle_keys(info)
+                if dataset_keys != config["datasetPublicKeys"]:
+                    raise SystemExit(f"The {target} public dataset trust keys differ from the configured reviewed app/provider keys.")
                 expected_id = config["bundleIdentifier"] + TARGETS[target][1]
                 if info.get("CFBundleIdentifier") != expected_id:
                     raise SystemExit(f"The {target} bundle identifier differs from APP_BASE_BUNDLE_ID and its target suffix.")
@@ -336,6 +343,7 @@ def archive_details(archive, config):
                                    "teamIdentifier": signature_team[1], "version": str(info["CFBundleShortVersionString"]),
                                    "build": str(info["CFBundleVersion"]), "sdk": sdk, "deviceFamilies": sorted(info["UIDeviceFamily"]),
                                    "signingIdentity": identity, "signedEntitlements": entitlements, "provisioningProfile": profile,
+                                   "datasetPublicKeys": dataset_keys,
                                    "hashes": {name: digest(bundle / name) for name in files}}
             if len({value["signingIdentity"] for value in details.values()}) != 1:
                 raise SystemExit("The app and its selected edition extensions must use the same distribution signing identity.")

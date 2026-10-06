@@ -930,6 +930,10 @@ actor EncryptedReportStore {
             guard marker.bindingID == journal.bindingID, marker.generationID != journal.transactionID else {
                 throw ReportStoreError.rotationRecoveryRequired
             }
+            // A verified stage may be the only intact copy after a storage
+            // fault. Authenticate all original evidence before discarding it.
+            do { _ = try rotationFiles(in: directory, key: journal.oldKey) }
+            catch { throw ReportStoreError.rotationRecoveryRequired }
             do {
                 try removeRotationPathIfPresent(stage)
                 try provider.cancelRotation(transactionID: journal.transactionID)
@@ -985,9 +989,16 @@ actor EncryptedReportStore {
         }
         do {
             if fileManager.fileExists(atPath: retired.path) {
-                let oldMarker = try readGenerationMarker(in: retired, key: journal.oldKey)
-                guard oldMarker.bindingID == journal.bindingID, oldMarker.generationID != journal.transactionID else {
-                    throw ReportStoreError.rotationRecoveryRequired
+                try ensureDirectoryIsRegular(retired)
+                // The committed phase follows authentication of this unique
+                // retired generation. An interrupted recursive unlink may
+                // already have removed its marker; the complete active proof
+                // above remains mandatory before continuing cleanup.
+                if fileManager.fileExists(atPath: retired.appendingPathComponent(Self.markerName).path) {
+                    let oldMarker = try readGenerationMarker(in: retired, key: journal.oldKey)
+                    guard oldMarker.bindingID == journal.bindingID, oldMarker.generationID != journal.transactionID else {
+                        throw ReportStoreError.rotationRecoveryRequired
+                    }
                 }
                 try removeRotationPathIfPresent(retired)
             }

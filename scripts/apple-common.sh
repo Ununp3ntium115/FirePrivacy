@@ -30,6 +30,14 @@ select_simulator() {
   xcrun simctl list devices available --json | python3 "$FIREPRIVACY_ROOT/scripts/select-simulator.py" "$family"
 }
 
+configure_dataset_trust() {
+  export FIREPRIVACY_KB_PUBLIC_KEYS_JSON="${FIREPRIVACY_KB_PUBLIC_KEYS_JSON-}"
+  export FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON="${FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON-}"
+  python3 "$FIREPRIVACY_ROOT/scripts/dataset-public-keys.py" validate
+  DATASET_TRUST_ARGS=("FIREPRIVACY_KB_PUBLIC_KEYS_JSON=$FIREPRIVACY_KB_PUBLIC_KEYS_JSON"
+    "FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON=$FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON")
+}
+
 configure_bundle_identifiers() {
   if [[ -n "${APP_BASE_BUNDLE_ID:-}" && -n "${BUNDLE_ID:-}" && "$APP_BASE_BUNDLE_ID" != "$BUNDLE_ID" ]]; then
     echo "APP_BASE_BUNDLE_ID and its legacy BUNDLE_ID alias must match when both are set." >&2

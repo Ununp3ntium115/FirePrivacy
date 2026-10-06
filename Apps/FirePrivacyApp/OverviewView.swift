@@ -62,7 +62,7 @@ struct OverviewView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 16)], alignment: .leading, spacing: 16) {
                 PromiseCard(symbol: "doc.text.magnifyingglass", title: "Evidence, clearly", detail: "Explore domain contacts and recorded sensor events. See exactly what each observation supports.")
                 PromiseCard(symbol: "hand.raised", title: "You stay in control", detail: "Follow practical steps in Apple Settings. Fire Privacy does not change another app’s permissions.")
-                PromiseCard(symbol: "lock", title: "Local by design", detail: "Saved reports are encrypted on this device. Sharing happens only when you choose to export.")
+                PromiseCard(symbol: "lock", title: "Local by design", detail: "History is encrypted here. Optional network features require separate consent and an exact request preview.")
             }
         }
     }
@@ -84,6 +84,31 @@ struct OverviewView: View {
             MetricCard(value: domains.count, title: "Domains", symbol: "globe", color: FireStyle.ember)
             MetricCard(value: report.totalContacts, title: "Reported contacts", symbol: "arrow.up.right", color: FireStyle.gold)
             MetricCard(value: report.observations.filter { $0.category == .sensor }.count, title: "Sensor event records", symbol: "sensor", color: FireStyle.gold)
+        }
+
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 14)], alignment: .leading, spacing: 14) {
+            NavigationLink { ReportHistoryView() } label: {
+                FireCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SymbolBadge(symbol: "clock")
+                        Text("Your encrypted notebook").font(.headline).foregroundStyle(FireStyle.text)
+                        Text("\(model.sessions.count) saved snapshots. Compare recorded totals with the uncertainty kept in view.").foregroundStyle(FireStyle.muted)
+                        Label("History & local weekly review", systemImage: "arrow.right").foregroundStyle(FireStyle.ember)
+                    }
+                }
+            }.buttonStyle(.plain)
+            if let analysis = model.analysis {
+                NavigationLink { PostureView(scores: analysis.scores) } label: {
+                    FireCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            SymbolBadge(symbol: "chart.bar.xaxis")
+                            Text("Observed dimensions").font(.headline).foregroundStyle(FireStyle.text)
+                            Text("Exposure, repetition and review coverage. Unknown relationships remain unknown.").foregroundStyle(FireStyle.muted)
+                            Label("Explore the definitions", systemImage: "arrow.right").foregroundStyle(FireStyle.ember)
+                        }
+                    }
+                }.buttonStyle(.plain)
+            }
         }
 
         if apps.isEmpty {
@@ -150,6 +175,7 @@ struct OverviewView: View {
         }
 
         QuietButton(title: "Import another report", symbol: "square.and.arrow.down") { model.requestImport() }
+        NavigationLink { ProtectionSettingsView() } label: { Label("Review real protection status", systemImage: "shield").foregroundStyle(FireStyle.ember).padding(.vertical, 12) }
     }
 }
 
@@ -280,7 +306,7 @@ struct ImportGuideView: View {
             FireCard {
                 VStack(alignment: .leading, spacing: 10) {
                     Label("Your original file stays where it is", systemImage: "doc").font(.headline).foregroundStyle(FireStyle.text)
-                    Text("Fire Privacy does not keep a raw copy or modify your original. One normalized report is saved in encrypted app storage. If your original is in iCloud Drive or another provider, that provider’s storage and download behavior applies.")
+                    Text("Fire Privacy does not modify your original. Normalized snapshots are saved in bounded encrypted local history. Original bytes are retained only after separate consent and your explicit choice for that import. If the original is in iCloud Drive or another provider, that provider’s policies apply.")
                         .foregroundStyle(FireStyle.muted).fixedSize(horizontal: false, vertical: true)
                 }
             }

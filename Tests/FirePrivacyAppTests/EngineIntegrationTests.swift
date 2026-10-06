@@ -42,7 +42,9 @@ final class EngineIntegrationTests: XCTestCase {
         // The store owns its directory for its lifetime. A fresh engine reads
         // persisted state through that same store rather than opening a rival.
         let restored = FirePrivacyEngine(store: harness.store, transport: restoredTransport,
-            cleanupPlan: ProtectionCleanupPlan(directory: harness.cleanupDirectory))
+            cleanupPlan: ProtectionCleanupPlan(directory: harness.cleanupDirectory),
+            credentialStore: AdvisorCredentialStore(provider: harness.credentials),
+            credentialCleanupMarker: CredentialCleanupMarker(directory: harness.credentialCleanupDirectory))
         let workspace = try await restored.restore()
 
         XCTAssertEqual(workspace.selectedReport, first)
@@ -161,6 +163,10 @@ final class EngineIntegrationTests: XCTestCase {
         let harness = makeHarness(transport: transport)
         defer { harness.removeTemporaryFiles() }
         try await configure(harness.engine)
+        let configuration = try XCTUnwrap(harness.engine.preferences.selfHostedConfiguration)
+        let credentialGeneration = await harness.credentialStore.currentGeneration()
+        try await harness.credentialStore.retain("delete-all-fixture-token", for: configuration,
+            expectedGeneration: credentialGeneration)
         let prepared = try await harness.engine.prepareSelfHostedAssessment()
         try await grantExactAdvisorConsent(harness.engine, prepared: prepared)
         let operation = Task { @MainActor in try await harness.engine.send(prepared) }
@@ -184,6 +190,8 @@ final class EngineIntegrationTests: XCTestCase {
         let generationAfterDeletion = await harness.store.currentStorageGeneration()
         XCTAssertNotEqual(generationAfterDeletion, prepared.storageGeneration)
         XCTAssertNil(harness.keys.currentKey)
+        let credentialCountAfterDeletion = await harness.credentials.entryCount()
+        XCTAssertEqual(credentialCountAfterDeletion, 0)
         XCTAssertFalse(FileManager().fileExists(atPath: harness.storageDirectory.path))
         XCTAssertNil(harness.engine.report)
         XCTAssertNil(harness.engine.advisorResult)
@@ -207,6 +215,10 @@ final class EngineIntegrationTests: XCTestCase {
         XCTAssertFalse(hasLocalData)
         XCTAssertNil(harness.keys.currentKey)
         XCTAssertEqual(harness.keys.creationCount, createdKeys, "A late callback must not mint a replacement key.")
+        let finalCredentialCount = await harness.credentials.entryCount()
+        let credentialWrites = await harness.credentials.writeCount()
+        XCTAssertEqual(finalCredentialCount, 0)
+        XCTAssertEqual(credentialWrites, 1, "A late callback must not retain replacement credentials.")
         XCTAssertFalse(FileManager().fileExists(atPath: harness.storageDirectory.path))
         XCTAssertNil(harness.engine.analysis)
         XCTAssertNil(harness.engine.comparison)
@@ -224,6 +236,67 @@ final class EngineIntegrationTests: XCTestCase {
         let finalEvents = await harness.engine.gate.ledger.snapshot(), calls = await transport.callCount()
         XCTAssertTrue(finalEvents.isEmpty)
         XCTAssertEqual(calls, 1)
+    }
+
+    @MainActor
+    func testSuspendedCredentialDeletionRejectsConcurrentRetentionAndRestore() async throws {
+        let transport = EngineFixtureTransport()
+        let harness = makeHarness(transport: transport, pauseCredentialDeletion: true)
+        defer { harness.removeTemporaryFiles() }
+        try await configure(harness.engine)
+        let configuration = try XCTUnwrap(harness.engine.preferences.selfHostedConfiguration)
+        try await harness.engine.retainAdvisorCredential("saved-before-deletion")
+        let deletion = Task { @MainActor in try await harness.engine.deleteAll() }
+        let started = await harness.credentials.waitUntilDeletionStarted()
+        guard started else {
+            await harness.credentials.completeDeletion()
+            _ = await deletion.result
+            XCTFail("Credential deletion did not start within its bounded wait.")
+            return
+        }
+
+        let markerDuringDeletion: Bool
+        do { markerDuringDeletion = try await harness.credentialCleanupMarker.isRequired() }
+        catch {
+            await harness.credentials.completeDeletion()
+            _ = await deletion.result
+            throw error
+        }
+        XCTAssertTrue(markerDuringDeletion, "Cleanup intent must be durable before the provider suspends.")
+        do {
+            try await harness.engine.retainAdvisorCredential("rejected-during-deletion")
+            XCTFail("A suspended deletion must not allow a concurrent token save.")
+        } catch {
+            if case .unavailable? = error as? EngineError {} else {
+                XCTFail("Expected credential retention to be unavailable during deletion.")
+            }
+        }
+        do {
+            _ = try await harness.engine.restore()
+            XCTFail("Restore must not re-enable credentials while deletion is suspended.")
+        } catch { assertStaleOperation(error) }
+        let writesDuringDeletion = await harness.credentials.writeCount()
+        XCTAssertEqual(writesDuringDeletion, 1)
+
+        await harness.credentials.completeDeletion()
+        try await deletion.value
+        let entries = await harness.credentials.entryCount()
+        let writes = await harness.credentials.writeCount()
+        let markerAfterDeletion = try await harness.credentialCleanupMarker.isRequired()
+        XCTAssertEqual(entries, 0)
+        XCTAssertEqual(writes, 1)
+        XCTAssertFalse(markerAfterDeletion)
+        XCTAssertNil(harness.keys.currentKey)
+        XCTAssertFalse(FileManager().fileExists(atPath: harness.storageDirectory.path))
+        XCTAssertNil(harness.engine.report)
+        XCTAssertNil(harness.engine.advisorResult)
+        let credentialGeneration = await harness.credentialStore.currentGeneration()
+        do {
+            _ = try await harness.credentialStore.token(for: configuration, expectedGeneration: credentialGeneration)
+            XCTFail("Successful deletion must keep credential access disabled until explicit setup.")
+        } catch { XCTAssertEqual(error as? AdvisorCredentialError, .cleanupPending) }
+        let calls = await transport.callCount()
+        XCTAssertEqual(calls, 0)
     }
 
     @MainActor
@@ -245,15 +318,23 @@ final class EngineIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    private func makeHarness(transport: any ApprovedRequestTransport) -> EngineTestHarness {
+    private func makeHarness(transport: any ApprovedRequestTransport,
+                             pauseCredentialDeletion: Bool = false) -> EngineTestHarness {
         let root = FileManager().temporaryDirectory.appendingPathComponent("FirePrivacyEngineTests-\(UUID().uuidString)", isDirectory: true)
         let storage = root.appendingPathComponent("private-store", isDirectory: true)
         let cleanup = root.appendingPathComponent("cleanup-plan", isDirectory: true)
+        let credentialCleanup = root.appendingPathComponent("credential-cleanup", isDirectory: true)
         let keys = EngineMemoryKeys()
+        let credentials = EngineMemoryAdvisorCredentials(pauseDeletion: pauseCredentialDeletion)
+        let credentialStore = AdvisorCredentialStore(provider: credentials)
+        let credentialCleanupMarker = CredentialCleanupMarker(directory: credentialCleanup)
         let store = EncryptedReportStore(directoryURL: storage, keyProvider: keys)
         return EngineTestHarness(root: root, storageDirectory: storage, cleanupDirectory: cleanup,
-            keys: keys, store: store, engine: FirePrivacyEngine(store: store, transport: transport,
-                cleanupPlan: ProtectionCleanupPlan(directory: cleanup)))
+            credentialCleanupDirectory: credentialCleanup,
+            keys: keys, credentials: credentials, credentialStore: credentialStore, store: store,
+            engine: FirePrivacyEngine(store: store, transport: transport,
+                cleanupPlan: ProtectionCleanupPlan(directory: cleanup), credentialStore: credentialStore,
+                credentialCleanupMarker: credentialCleanupMarker), credentialCleanupMarker: credentialCleanupMarker)
     }
 
     private func modelConfiguration() throws -> SelfHostedAdvisorConfiguration {
@@ -286,9 +367,13 @@ private struct EngineTestHarness {
     let root: URL
     let storageDirectory: URL
     let cleanupDirectory: URL
+    let credentialCleanupDirectory: URL
     let keys: EngineMemoryKeys
+    let credentials: EngineMemoryAdvisorCredentials
+    let credentialStore: AdvisorCredentialStore
     let store: EncryptedReportStore
     let engine: FirePrivacyEngine
+    let credentialCleanupMarker: CredentialCleanupMarker
 
     func removeTemporaryFiles() { try? FileManager().removeItem(at: root) }
 }
@@ -308,6 +393,62 @@ private final class EngineMemoryKeys: ReportKeyProvider, @unchecked Sendable {
         }
     }
     func deleteKey() throws { lock.withLock { key = nil } }
+}
+
+/// Credential state is isolated too; these integration tests never operate on
+/// the app's Keychain service, including during restoration and Delete All.
+private actor EngineMemoryAdvisorCredentials: AdvisorCredentialProvider {
+    private var entries: [String: Data] = [:]
+    private var writes = 0
+    private let pauseDeletion: Bool
+    private var deletionStarted = false
+    private var deletionReleased = false
+    private var deletionContinuation: CheckedContinuation<Void, Never>?
+    private var deletionWaiters: [UUID: CheckedContinuation<Bool, Never>] = [:]
+
+    init(pauseDeletion: Bool = false) { self.pauseDeletion = pauseDeletion }
+
+    func read(identity: String) async throws -> Data? { entries[identity] }
+    func store(_ token: Data, identity: String) async throws { entries[identity] = token; writes += 1 }
+    func delete(identity: String) async throws { entries.removeValue(forKey: identity) }
+    func deleteAll() async throws {
+        deletionStarted = true
+        if pauseDeletion && !deletionReleased {
+            await withCheckedContinuation { continuation in
+                deletionContinuation = continuation
+                notifyDeletionStarted()
+            }
+        } else { notifyDeletionStarted() }
+        entries.removeAll()
+    }
+    func entryCount() -> Int { entries.count }
+    func writeCount() -> Int { writes }
+
+    func waitUntilDeletionStarted() async -> Bool {
+        if deletionStarted { return true }
+        let id = UUID()
+        return await withCheckedContinuation { continuation in
+            deletionWaiters[id] = continuation
+            Task.detached { [weak self] in
+                try? await Task.sleep(for: .seconds(5))
+                await self?.expireDeletionWaiter(id)
+            }
+        }
+    }
+
+    func completeDeletion() {
+        deletionReleased = true
+        let continuation = deletionContinuation
+        deletionContinuation = nil
+        continuation?.resume()
+    }
+
+    private func notifyDeletionStarted() {
+        let waiters = Array(deletionWaiters.values)
+        deletionWaiters.removeAll()
+        for continuation in waiters { continuation.resume(returning: true) }
+    }
+    private func expireDeletionWaiter(_ id: UUID) { deletionWaiters.removeValue(forKey: id)?.resume(returning: false) }
 }
 
 private enum EngineFixtureError: Error { case invalidPermit, invalidPayload, oversizedResponse }

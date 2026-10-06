@@ -3,6 +3,7 @@ set -euo pipefail
 source "$(dirname "$0")/apple-common.sh"
 cd "$FIREPRIVACY_ROOT"
 require_apple_toolchain
+configure_dataset_trust
 python3 scripts/validate-project.py
 plutil -lint FirePrivacy.xcodeproj/project.pbxproj Apps/FirePrivacyApp/*.plist \
   Apps/FirePrivacyApp/*.entitlements Apps/FirePrivacyApp/PrivacyInfo.xcprivacy \
@@ -12,5 +13,5 @@ plutil -lint FirePrivacy.xcodeproj/project.pbxproj Apps/FirePrivacyApp/*.plist \
 for edition_scheme in FirePrivacy FirePrivacyURL FirePrivacyManaged; do
   xcodebuild -project FirePrivacy.xcodeproj -scheme "$edition_scheme" -configuration Debug \
     -destination 'generic/platform=iOS Simulator' -derivedDataPath "$FIREPRIVACY_BUILD/GenericSimulator-$edition_scheme" \
-    CODE_SIGNING_ALLOWED=NO build
+    "${DATASET_TRUST_ARGS[@]}" CODE_SIGNING_ALLOWED=NO build
 done

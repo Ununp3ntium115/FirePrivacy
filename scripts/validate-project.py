@@ -81,6 +81,11 @@ def validate():
     objects = project["objects"]
     check(project["objectVersion"] == "77", "synchronized groups need the current project format")
     check(objects[project["rootObject"]]["isa"] == "PBXProject", "project root is invalid")
+    project_configs = objects[objects[project["rootObject"]]["buildConfigurationList"]]["buildConfigurations"]
+    for config in project_configs:
+        settings = objects[config]["buildSettings"]
+        for variable in ("FIREPRIVACY_KB_PUBLIC_KEYS_JSON", "FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON"):
+            check(settings.get(variable) == "", "operator public trust maps must be configurable with empty development defaults")
     for reference in re.findall(r"\b[A-F0-9]{24}\b", source):
         check(reference in objects, "unknown project reference " + reference)
     targets = {value["name"]: value for value in objects.values() if value["isa"] == "PBXNativeTarget"}
@@ -130,6 +135,9 @@ def validate():
             check(embedded[name + ".appex"] == (("16", "$(EXTENSIONS_FOLDER_PATH)") if name == "URLFilterControl" else ("13", "")), "incorrect edition-specific extension embedding")
         with (ROOT / "Apps/FirePrivacyApp" / info_file).open("rb") as file:
             edition_info = plistlib.load(file)
+        for field, variable in (("FirePrivacyKnowledgeBasePublicKeysJSON", "FIREPRIVACY_KB_PUBLIC_KEYS_JSON"),
+                                ("FirePrivacyFilterPublicKeysJSON", "FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON")):
+            check(edition_info.get(field) == f"$({variable})", "every app edition must use the configurable public-key JSON field")
         check(edition_info["FirePrivacyDistributionEdition"] == edition, "runtime edition guard differs")
         with (ROOT / "Apps/FirePrivacyApp" / entitlement_file).open("rb") as file:
             edition_entitlements = plistlib.load(file)
@@ -168,6 +176,8 @@ def validate():
                 extension_info = plistlib.load(file)
             check(extension_info["FirePrivacyAppGroup"] == info["FirePrivacyAppGroup"], "extension/App Group configuration differs")
             check(extension_info["FirePrivacyFilterTrustKeys"] == info["FirePrivacyFilterTrustKeys"], "all processes must use the same reviewed filter trust roots")
+            for field in ("FirePrivacyKnowledgeBasePublicKeysJSON", "FirePrivacyFilterPublicKeysJSON"):
+                check(extension_info.get(field) == info.get(field), "every provider must receive the same configured public-key JSON fields")
             if name == "URLFilterControl":
                 check(extension_info["EXAppExtensionAttributes"]["EXExtensionPointIdentifier"] == "com.apple.networkextension.url-filter-control", "URL filter must use the verified ExtensionKit point")
                 check("NSExtension" not in extension_info, "URL ExtensionKit provider must not use a legacy principal class")

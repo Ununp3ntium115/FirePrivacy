@@ -20,6 +20,7 @@ struct EvidenceView: View {
             PageHeader(eyebrow: "The report, unpacked", title: "Look closer.", subtitle: "Browse the app identifiers, domains, and event records Apple exported. Every detail comes back to an imported observation.")
             if let report = model.report {
                 evidencePicker
+                NavigationLink { EvidenceTimingView(report: report) } label: { Label("Recorded timing & sensor intervals", systemImage: "clock.arrow.circlepath").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
                 if kind != .notes {
                     HStack(spacing: 12) {
                         Image(systemName: "magnifyingglass").foregroundStyle(FireStyle.muted).accessibilityHidden(true)
@@ -84,7 +85,7 @@ struct EvidenceView: View {
             }
         case .domains:
             let domains = report.domains.filter { search.isEmpty || $0.domain.localizedCaseInsensitiveContains(search) }
-            SectionHeading(title: "\(domains.count.formatted()) domains", detail: "Contact counts are historical frequency. Domain ownership and purpose are not verified in this build.")
+            SectionHeading(title: "\(domains.count.formatted()) domains", detail: "Contact counts are historical frequency. Open a domain to separate reported metadata, signed classification and your local notes.")
             if domains.isEmpty {
                 EmptyState(symbol: "globe", title: "No matching domains", message: "This report may contain only sensor events, or your search may not match a recorded domain.")
             } else {
@@ -159,6 +160,7 @@ struct DomainSummaryRow: View {
 }
 
 struct AppEvidenceView: View {
+    @EnvironmentObject private var model: AppModel
     let app: AppSummary
     let report: PrivacyReport
 
@@ -172,6 +174,11 @@ struct AppEvidenceView: View {
                     DetailRow(label: "Distinct domains", value: app.domains.count.formatted())
                     DetailRow(label: "Sensor event records", value: app.sensorAccesses.formatted())
                 }
+            }
+            NavigationLink { ManualPermissionAuditView() } label: { Label("Record a manual permission review", systemImage: "checklist").foregroundStyle(FireStyle.ember).padding(.vertical, 12) }
+            if let findings = model.analysis?.findings.filter({ if case .app(let identifier) = $0.subject { return identifier == app.bundleID }; return false }), !findings.isEmpty {
+                SectionHeading(title: "Linked findings", detail: "Versioned interpretations are separate from the records below.")
+                ForEach(findings) { finding in NavigationLink { RuleFindingDetailView(finding: finding, report: report) } label: { RuleFindingRow(finding: finding) }.buttonStyle(.plain) }
             }
             if !app.domains.isEmpty {
                 SectionHeading(title: "Contacted domains", detail: "A domain contact does not reveal request contents or establish harm.")
@@ -196,19 +203,26 @@ struct AppEvidenceView: View {
 }
 
 struct DomainEvidenceView: View {
+    @EnvironmentObject private var model: AppModel
     let domain: DomainSummary
     let report: PrivacyReport
 
     var body: some View {
         FirePage {
             ReportStatusBanner()
-            PageHeader(eyebrow: "Recorded destination", title: domain.domain, subtitle: "The hostname was recorded in the report. Fire Privacy does not visit it, verify its owner, or classify it as a tracker.")
+            PageHeader(eyebrow: "Recorded destination", title: domain.domain, subtitle: "The hostname was recorded in the report. Report metadata, signed knowledge and your opinions remain separate; none proves what was transmitted.")
             FireCard {
                 VStack(spacing: 14) {
                     DetailRow(label: "Reported contacts", value: domain.contacts.formatted())
                     DetailRow(label: "App identifiers", value: domain.apps.count.formatted())
-                    DetailRow(label: "Owner / purpose", value: "Not verified")
+                    DetailRow(label: "Contact content", value: "Not included in the report")
                 }
+            }
+            DomainKnowledgeCard(host: domain.domain)
+            NavigationLink { DomainOverridesView(initialHost: domain.domain) } label: { Label("Record a local choice for this domain", systemImage: "pencil").foregroundStyle(FireStyle.ember).padding(.vertical, 12) }
+            if let findings = model.analysis?.findings.filter({ if case .domain(let host) = $0.subject { return host == domain.domain }; return false }), !findings.isEmpty {
+                SectionHeading(title: "Linked findings")
+                ForEach(findings) { finding in NavigationLink { RuleFindingDetailView(finding: finding, report: report) } label: { RuleFindingRow(finding: finding) }.buttonStyle(.plain) }
             }
             SectionHeading(title: "Contributing apps")
             LazyVStack(spacing: 12) {
@@ -243,6 +257,16 @@ struct ObservationCard: View {
                     DetailRow(label: "Domain", value: domain)
                 }
                 DetailRow(label: observation.category == .network ? "Record type" : "Recorded category", value: observation.accessType)
+                if let context = observation.context { DetailRow(label: "Reported context", value: context) }
+                if let owner = observation.domainOwner { DetailRow(label: "Reported owner", value: owner) }
+                if let type = observation.domainType { DetailRow(label: "Reported domain type", value: type.displayValue) }
+                if let initiated = observation.initiatedType { DetailRow(label: "Reported initiation type", value: initiated.displayValue) }
+                if let classification = observation.domainClassification { DetailRow(label: "Reported classification", value: classification.displayValue) }
+                if let sensor = observation.sensorIdentifier { DetailRow(label: "Reported sensor identifier", value: sensor) }
+                if let provenance = observation.provenance {
+                    DetailRow(label: "Source line", value: provenance.sourceLine.formatted())
+                    DetailRow(label: "Source-line SHA-256", value: provenance.sourceSHA256)
+                }
                 if observation.category == .network {
                     DetailRow(label: "Reported contacts", value: observation.count.formatted())
                     timestampRow(label: "First recorded", date: observation.firstTimestamp, original: observation.firstTimestampText)
@@ -279,5 +303,60 @@ struct ObservationCard: View {
         } else {
             DetailRow(label: label, value: "Not included")
         }
+    }
+}
+
+struct DomainKnowledgeCard: View {
+    @EnvironmentObject private var model: AppModel
+    let host: String
+    private var matches: [DomainMatch] {
+        guard let knowledge = model.engine.knowledgeBase else { return [] }
+        return DomainMatcher(snapshot: knowledge).matches(for: host)
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeading(title: "Signed classification", detail: "Documented business or infrastructure is distinct from observed conduct. A classification does not establish the relationship to the contacting app.")
+            if matches.isEmpty {
+                EmptyState(symbol: "questionmark.circle", title: "No usable classification for this hostname", message: "The current verified knowledge does not cover this destination. Unknown does not mean harmful.")
+            }
+            ForEach(matches, id: \.classification.id) { match in
+                FireCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        DetailRow(label: "Documented organization", value: match.classification.organization ?? "Unknown")
+                        DetailRow(label: "Documented categories", value: match.classification.categories.map(\.displayName).joined(separator: ", "))
+                        DetailRow(label: "Pattern", value: match.classification.pattern)
+                        DetailRow(label: "Pattern kind", value: match.classification.patternKind.rawValue)
+                        DetailRow(label: "Review status", value: match.classification.reviewStatus.rawValue)
+                        DetailRow(label: "Reviewed", value: match.classification.lastReviewed.formatted(date: .abbreviated, time: .omitted))
+                        DetailRow(label: "Knowledge version", value: model.knowledgeBaseVersion ?? "Unavailable")
+                        if match.isStale { Text("This classification may be outdated. It should not be treated as current verified context.").foregroundStyle(FireStyle.gold) }
+                        if !match.classification.notes.isEmpty { Text(verbatim: match.classification.notes).font(.footnote).foregroundStyle(FireStyle.muted) }
+                        ForEach(match.sources) { source in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(verbatim: source.title).font(.headline).foregroundStyle(FireStyle.text)
+                                Text(verbatim: source.excerpt).font(.footnote).foregroundStyle(FireStyle.muted)
+                                if let url = sourceURL(source.url) {
+                                    Link(destination: url) { Label("Open cited source in browser", systemImage: "arrow.up.right.square").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if let identity = DomainIdentity(host), let choice = model.preferences.overrides.override(for: identity) {
+                FireCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SectionHeading(title: "Your local opinion")
+                        DetailRow(label: "Choice", value: choice.disposition.displayName)
+                        if let note = choice.note { Text(verbatim: note).foregroundStyle(FireStyle.muted) }
+                        Text("This is your private choice, not a signed classification or a system activation result.").font(.footnote).foregroundStyle(FireStyle.muted)
+                    }
+                }
+            }
+        }
+    }
+    private func sourceURL(_ value: String) -> URL? {
+        guard let url = URL(string: value), url.scheme?.lowercased() == "https", url.host?.isEmpty == false, url.user == nil, url.password == nil else { return nil }
+        return url
     }
 }

@@ -111,11 +111,11 @@ struct FirePrivacyRootView: View {
         .fileImporter(isPresented: $model.showImporter, allowedContentTypes: [.json, .plainText, .data], allowsMultipleSelection: false) { result in
             Task { await model.handleImport(result) }
         }
-        .confirmationDialog("Replace your saved report?", isPresented: $model.showReplaceConfirmation, titleVisibility: .visible) {
-            Button("Import replacement report") { model.confirmImport() }
+        .confirmationDialog("Add another saved snapshot?", isPresented: $model.showReplaceConfirmation, titleVisibility: .visible) {
+            Button("Import another report") { model.confirmImport() }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("One report is saved at a time. Your existing report is replaced only after the new report is read and saved successfully.")
+            Text("The new report is added to encrypted local history after validation. Older imports may be removed to fit your retention limits. Source bytes are retained only if you separately chose that option.")
         }
         .alert(item: $model.notice) { notice in
             Alert(title: Text(notice.title), message: Text(verbatim: notice.message), dismissButton: .default(Text("OK")))

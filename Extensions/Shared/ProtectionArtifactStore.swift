@@ -35,11 +35,7 @@ struct ProtectionArtifactStore: Sendable {
             throw ProtectionConfigurationError.appGroupUnavailable
         }
         directory = container.appendingPathComponent("ProtectionRules", isDirectory: true)
-        let encoded = bundle.object(forInfoDictionaryKey: "FirePrivacyFilterTrustKeys") as? [String: String] ?? [:]
-        trustedKeys = encoded.compactMapValues { value in
-            guard let data = Data(base64Encoded: value), data.count == 32 else { return nil }
-            return data
-        }
+        trustedKeys = try DatasetPublicKeyConfiguration.loadFilterKeys(bundle: bundle)
     }
 
     func write<T: Encodable>(_ value: T, named name: String) throws {

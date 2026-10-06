@@ -745,6 +745,124 @@ final class WorkspaceStoreTests: XCTestCase {
         XCTAssertNil(keys.currentJournal)
     }
 
+    func testStagingRecoveryPreservesVerifiedCopyWhenOriginalEvidenceIsDamaged() async throws {
+        for damagedKind in ["report", "source", "feature"] {
+            let directory = temporaryDirectory()
+            defer { try? FileManager().removeItem(at: directory) }
+            let keys = WorkspaceRotatingKeys()
+            let fault = RotationTestFault(.stagedGenerationVerified)
+            var initial: EncryptedReportStore? = EncryptedReportStore(directoryURL: directory, keyProvider: keys,
+                rotationCheckpoint: { try fault.check($0) })
+            let report = try makeReport(1)
+            _ = try await initial!.appendSession(report, encryptedSource: rawSource(1))
+            try await initial!.saveFeatureState(VersionPin(version: 41), key: "pin")
+            do { try await initial!.rotateKey(); XCTFail("Expected interruption after complete stage verification.") }
+            catch { }
+            XCTAssertTrue(fault.wasTriggered)
+            let journal = try XCTUnwrap(keys.currentJournal)
+            XCTAssertEqual(journal.phase, .staging)
+            let stage = directory.deletingLastPathComponent().appendingPathComponent(directory.lastPathComponent + ".rotation-stage-" + journal.transactionID.uuidString)
+            let stagedReportURL = reportURL(report, directory: stage)
+            let stagedCiphertext = try Data(contentsOf: stagedReportURL)
+            let damagedURL: URL
+            switch damagedKind {
+            case "source": damagedURL = directory.appendingPathComponent("history/\(report.id.uuidString).source.encrypted")
+            case "feature": damagedURL = directory.appendingPathComponent("features/pin.encrypted")
+            default: damagedURL = reportURL(report, directory: directory)
+            }
+            let damagedCiphertext = try tamperEnvelope(at: damagedURL)
+            weak var released = initial
+            initial = nil
+            XCTAssertNil(released)
+
+            let recovered = EncryptedReportStore(directoryURL: directory, keyProvider: keys)
+            do { _ = try await recovered.loadWorkspace(); XCTFail("Recovery must preserve all copies when original evidence no longer authenticates.") }
+            catch { XCTAssertEqual(error as? ReportStoreError, .rotationRecoveryRequired) }
+            XCTAssertEqual(keys.currentKey, journal.oldKey)
+            XCTAssertEqual(keys.currentJournal, journal)
+            XCTAssertEqual(try Data(contentsOf: damagedURL), damagedCiphertext)
+            XCTAssertEqual(try Data(contentsOf: stagedReportURL), stagedCiphertext)
+            let stagedReport = try JSONDecoder().decode(PrivacyReport.self, from: decryptEnvelope(stagedCiphertext,
+                key: journal.newKey, context: "FirePrivacy/HistoryReport/v2/\(report.id.uuidString)"))
+            XCTAssertEqual(stagedReport, report)
+            let stagedSource = try JSONDecoder().decode(Data.self, from: decryptEnvelope(
+                Data(contentsOf: stage.appendingPathComponent("history/\(report.id.uuidString).source.encrypted")),
+                key: journal.newKey, context: "FirePrivacy/RawSource/v2/\(report.id.uuidString)"))
+            XCTAssertEqual(stagedSource, rawSource(1))
+            let stagedFeature = try JSONDecoder().decode(VersionPin.self, from: decryptEnvelope(
+                Data(contentsOf: stage.appendingPathComponent("features/pin.encrypted")),
+                key: journal.newKey, context: "FirePrivacy/Feature/v2/pin"))
+            XCTAssertEqual(stagedFeature, VersionPin(version: 41))
+            try await recovered.deleteAll()
+            XCTAssertNil(keys.currentKey)
+            XCTAssertNil(keys.currentJournal)
+        }
+    }
+
+    func testCommittedCleanupRetriesAfterRecursiveRemovalHasDeletedRetiredMarker() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager().removeItem(at: directory) }
+        let keys = WorkspaceRotatingKeys()
+        let partialRemoval = WorkspacePartialRetiredRemoval()
+        let store = EncryptedReportStore(directoryURL: directory, keyProvider: keys,
+            fileRemoval: { try partialRemoval.remove($0) })
+        let report = try makeReport(1)
+        _ = try await store.appendSession(report, encryptedSource: rawSource(1))
+        do { try await store.rotateKey(); XCTFail("Partial recursive removal must leave visible pending cleanup.") }
+        catch { XCTAssertEqual(error as? ReportStoreError, .rotationCleanupPending) }
+        XCTAssertTrue(partialRemoval.wasTriggered)
+        let journal = try XCTUnwrap(keys.currentJournal)
+        XCTAssertEqual(journal.phase, .committed)
+        let retired = directory.deletingLastPathComponent().appendingPathComponent(directory.lastPathComponent + ".rotation-retired-" + journal.transactionID.uuidString)
+        XCTAssertFalse(FileManager().fileExists(atPath: retired.appendingPathComponent("generation.encrypted").path))
+        XCTAssertTrue(FileManager().fileExists(atPath: reportURL(report, directory: retired).path))
+        let activeCiphertext = try Data(contentsOf: reportURL(report, directory: directory))
+        let activeReport = try JSONDecoder().decode(PrivacyReport.self, from: decryptEnvelope(activeCiphertext,
+            key: journal.newKey, context: "FirePrivacy/HistoryReport/v2/\(report.id.uuidString)"))
+        XCTAssertEqual(activeReport, report)
+
+        try await store.retryKeyRotationCleanup()
+        XCTAssertEqual(keys.currentKey, journal.newKey)
+        XCTAssertNil(keys.currentJournal)
+        XCTAssertFalse(FileManager().fileExists(atPath: retired.path))
+        XCTAssertEqual(try Data(contentsOf: reportURL(report, directory: directory)), activeCiphertext)
+        let restored = try await store.loadWorkspace()
+        XCTAssertEqual(restored.selectedReport, report)
+        XCTAssertTrue(restored.sessions[0].retainsEncryptedSource)
+    }
+
+    func testCommittedCleanupRejectsSymbolicLinkAtRetiredGeneration() async throws {
+        let directory = temporaryDirectory()
+        let target = temporaryDirectory()
+        defer {
+            try? FileManager().removeItem(at: directory)
+            try? FileManager().removeItem(at: target)
+        }
+        let keys = WorkspaceRotatingKeys()
+        let fault = RotationTestFault(.committedJournalPersisted)
+        let store = EncryptedReportStore(directoryURL: directory, keyProvider: keys, rotationCheckpoint: { try fault.check($0) })
+        let report = try makeReport(1)
+        _ = try await store.appendSession(report)
+        do { try await store.rotateKey(); XCTFail("Expected interruption before retired cleanup.") }
+        catch { }
+        XCTAssertTrue(fault.wasTriggered)
+        let journal = try XCTUnwrap(keys.currentJournal)
+        let retired = directory.deletingLastPathComponent().appendingPathComponent(directory.lastPathComponent + ".rotation-retired-" + journal.transactionID.uuidString)
+        try FileManager().moveItem(at: retired, to: target)
+        try FileManager().createSymbolicLink(at: retired, withDestinationURL: target)
+        let preserved = try Data(contentsOf: reportURL(report, directory: target))
+
+        do { try await store.retryKeyRotationCleanup(); XCTFail("Retired cleanup must not follow a symbolic link.") }
+        catch { XCTAssertEqual(error as? ReportStoreError, .rotationCleanupPending) }
+        XCTAssertEqual(keys.currentKey, journal.newKey)
+        XCTAssertEqual(keys.currentJournal, journal)
+        XCTAssertEqual(try Data(contentsOf: reportURL(report, directory: target)), preserved)
+        try FileManager().removeItem(at: retired)
+        try FileManager().moveItem(at: target, to: retired)
+        try await store.retryKeyRotationCleanup()
+        XCTAssertNil(keys.currentJournal)
+    }
+
     private func decryptEnvelope(_ bytes: Data, key: Data, context: String) throws -> Data {
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
         let combined = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(object["sealedReport"] as? String)))
@@ -783,6 +901,26 @@ private final class WorkspaceRemovalFailures: @unchecked Sendable {
     func allowAll() { lock.withLock { rejected.removeAll() } }
     func remove(_ url: URL) throws {
         if lock.withLock({ rejected.contains(url.path) }) { throw ReportStoreError.deletionFailed }
+        try FileManager.default.removeItem(at: url)
+    }
+}
+
+/// Simulates a recursive unlink that removes one child and then reports failure.
+private final class WorkspacePartialRetiredRemoval: @unchecked Sendable {
+    private let lock = NSLock()
+    private var triggered = false
+    var wasTriggered: Bool { lock.withLock { triggered } }
+
+    func remove(_ url: URL) throws {
+        let interrupt = lock.withLock {
+            guard !triggered, url.lastPathComponent.contains(".rotation-retired-") else { return false }
+            triggered = true
+            return true
+        }
+        if interrupt {
+            try FileManager.default.removeItem(at: url.appendingPathComponent("generation.encrypted"))
+            throw ReportStoreError.deletionFailed
+        }
         try FileManager.default.removeItem(at: url)
     }
 }
