@@ -9,6 +9,14 @@ certificate/private key, profile, capability grant or upload credential.
 IDs, shared-browser provisioning blocker, read-only cloud account check and
 Apple's supported registration routes.
 
+The owner has now reported creating [App Store Connect app 6819892589](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight)
+for `com.firesoftwaresolutions.FirePrivacy`. This main ID is the consumer
+workflow fallback; registered Actions overrides still take precedence. Other
+editions continue to require their exact registered ID in Actions variables.
+The app record alone does not supply distribution credentials, extension/group
+registration or profile capability grants. The report is not an authenticated
+account verification by this cloud session.
+
 Keep browser tabs for [PR #2](https://github.com/Ununp3ntium115/FirePrivacy/pull/2),
 [Actions](https://github.com/Ununp3ntium115/FirePrivacy/actions) and
 [App Store Connect](https://appstoreconnect.apple.com/). The existing public
@@ -114,7 +122,7 @@ signatures and embedded profiles as required by Apple.
 
 | Non-secret Actions variable | Value |
 | --- | --- |
-| `APP_BASE_BUNDLE_ID` | Required exact registered base ID; legacy `APP_BUNDLE_ID` workflow alias supported |
+| `APP_BASE_BUNDLE_ID` | Exact registered base ID override; consumer defaults to owner-confirmed `com.firesoftwaresolutions.FirePrivacy`; URL/managed require this or legacy `APP_BUNDLE_ID` |
 | `APPLE_TEAM_ID` | Optional override; default LYDVWU62G4 |
 | `FIREPRIVACY_APP_GROUP_ID` | Actual registered group; provisional default `group.com.firesoftwaresolutions.FirePrivacy.protection` |
 | `FIREPRIVACY_PIR_SERVER_URL` | Actual service URL; URL edition only |

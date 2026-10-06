@@ -1,17 +1,28 @@
 # Apple account registration
 
 Prepared October 6, 2026. The user authorized registration under team
-`LYDVWU62G4`; these are proposed values until Apple confirms registration.
-Do not set the release variable merely to bypass validation.
+`LYDVWU62G4` and subsequently reported creating the App Store Connect record
+after receiving the main bundle ID below. Record ID: **6819892589**.
+[Owner-provided app version page](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight).
+This is owner confirmation; no authenticated Apple API/browser verification has
+occurred in this cloud session. Safari/App Group registration, capabilities and
+distribution profiles remain unconfirmed.
 
-| Item | Proposed consumer value |
+| Item | Consumer value |
 | --- | --- |
 | Main explicit App ID | `com.firesoftwaresolutions.FirePrivacy` |
+| App Store Connect app ID | `6819892589` (owner-reported) |
 | Safari explicit App ID | `com.firesoftwaresolutions.FirePrivacy.SafariContentBlocker` |
 | Shared App Group | `group.com.firesoftwaresolutions.FirePrivacy.protection` |
 | Team | `LYDVWU62G4` |
 | App Store app name | Fire Privacy, subject to availability |
 | Platform | iOS, with the existing universal iPhone/iPad target |
+
+The release workflow now uses the owner-confirmed main ID as its consumer
+fallback, so the GitHub variable is optional for this consumer app. Existing
+Actions identifier overrides take precedence. URL/managed editions still need
+their separately registered ID; no fallback is inferred for them. Apple app ID
+`6819892589` is a numeric record reference, not a bundle identifier or credential.
 
 The Safari suffix comes from `scripts/release-validation.py`; use the same base
 and actual registered group in the build. The app needs App Groups and the

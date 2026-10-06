@@ -11,6 +11,13 @@ three edition targets, coordinator/storage integration, policies and cloud
 release helpers. Source existence does not prove native availability. GitHub
 preserves commits, not uncommitted workspace files or chat context.
 
+The owner reports the main App Store Connect record is now created:
+[app 6819892589](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight),
+using `com.firesoftwaresolutions.FirePrivacy`. The release workflow uses that
+confirmed consumer ID by default while preserving registered Actions overrides.
+Safari/App Group registration, profile grants and signing/upload credentials
+remain separate prerequisites; the cloud session has not authenticated to Apple.
+
 Current portable/native results and their exact source revisions are tracked in
 [VALIDATION](VALIDATION.md). Final run 37401191529 passed both families at
 `6f66780` (277 Core / 111 Python; all three builds;109 native passes/3 skips and 3 UI

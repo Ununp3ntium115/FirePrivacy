@@ -50,8 +50,10 @@ jobs:
       APP_VERSION: ${{ inputs.version }}
       BUILD_NUMBER: ${{ inputs.build_number }}
       TEAM_ID: ${{ vars.APPLE_TEAM_ID || 'LYDVWU62G4' }}
-      APP_BASE_BUNDLE_ID: ${{ vars.APP_BASE_BUNDLE_ID || vars.APP_BUNDLE_ID }}
-      BUNDLE_ID: ${{ vars.APP_BASE_BUNDLE_ID || vars.APP_BUNDLE_ID }}
+      # Consumer ID confirmed by the owner when creating ASC app 6819892589.
+      # Other editions still require their separately registered Actions ID.
+      APP_BASE_BUNDLE_ID: ${{ vars.APP_BASE_BUNDLE_ID || vars.APP_BUNDLE_ID || (inputs.edition == 'consumer' && 'com.firesoftwaresolutions.FirePrivacy') || '' }}
+      BUNDLE_ID: ${{ vars.APP_BASE_BUNDLE_ID || vars.APP_BUNDLE_ID || (inputs.edition == 'consumer' && 'com.firesoftwaresolutions.FirePrivacy') || '' }}
       FIREPRIVACY_APP_GROUP_ID: ${{ vars.FIREPRIVACY_APP_GROUP_ID || 'group.com.firesoftwaresolutions.FirePrivacy.protection' }}
       FIREPRIVACY_PIR_SERVER_URL: ${{ vars.FIREPRIVACY_PIR_SERVER_URL }}
       FIREPRIVACY_PRIVACY_PASS_ISSUER_URL: ${{ vars.FIREPRIVACY_PRIVACY_PASS_ISSUER_URL }}
