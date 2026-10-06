@@ -1,0 +1,32 @@
+name: Apple account preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_id:
+        description: Proposed consumer base ID to inspect; this workflow never registers anything
+        type: string
+        default: com.firesoftwaresolutions.FirePrivacy
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: macos-26
+    timeout-minutes: 10
+    environment: app-store
+    steps:
+      - name: Check out the selected revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify token signing and read-only request boundaries
+        run: python3 -m unittest discover -s Tests/CloudRelease -p 'test_apple_account_preflight.py'
+      - name: Inspect existing Apple API bindings and consumer identifiers without changes
+        env:
+          APP_BASE_BUNDLE_ID: ${{ inputs.bundle_id }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID || 'LYDVWU62G4' }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.ASC_PRIVATE_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: python3 scripts/apple-account-preflight.py

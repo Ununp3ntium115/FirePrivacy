@@ -33,6 +33,12 @@ own capability/operator/deployment prerequisites. Keep signing and API-key
 material in secure settings, outside chat/source. HTTP403 metadata access means
 existing secret bindings are unknown, not absent.
 
+[APPLE-REGISTRATION](APPLE-REGISTRATION.md) describes the authorized Apple account
+setup. The official shared-browser launcher was found, but activation failed
+because the platform has not provisioned `NODE_REPL_AUTH_TOKEN`. No shared
+sign-in window exists yet; the local Apple tab is not accessible here. Enable
+the platform browser capability rather than sharing passwords or runtime tokens.
+
 An initial signed TestFlight upload can precede physical QA and supplies the
 installable build. Finish real iPhone/iPad report import, evidence/export/delete,
 protection activation/removal, advisor availability, accessibility, locked-state

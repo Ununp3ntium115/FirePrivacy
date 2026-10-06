@@ -48,6 +48,14 @@ was not disabled.
 
 ## Remaining runtime and release checks
 
+Apple account tooling added after the final app-source validation passed all
+129 Python release-tool tests on Linux, including 18 new read-only account
+preflight cases. The new cases verify genuine P256 JWT signatures, private key
+permissions/cleanup, missing bindings before HTTP, exact IDs/prefix distinctions,
+request method/host, redirects, response bounds and sanitized errors. Mock HTTP
+results do not establish real Apple account access; the manual account workflow
+checks existing secure bindings separately. No app/runtime source changed.
+
 - Retain the passing final run/results. Any later production-code, trust-anchor,
   target/capability or dependency change needs matching checks before release.
   Subsequent documentation-only records do not alter the tested production tree.

@@ -130,12 +130,12 @@ identity. App Review 5.1.1(ix) addresses services in regulated fields or requiri
 sensitive user information; evaluate actual optional report/service behavior and
 enrolled type. A repository company name does not prove legal ownership.
 
-The existing policy/support URLs returned public HTTP 200 on October 5, 2026.
-The live policy describes the earlier MVP and must be republished with the new
-matching policy before expanded distribution. GitHub Pages source exists but
-standalone Pages hosting was not enabled by this integration. The readable
-GitHub policy/support route remains usable; active support monitoring and private
-review contact still need real operator facts.
+The expanded consumer policy/support URLs returned public HTTP 200 on October
+6, 2026, including the matching usage-comparison policy. GitHub Pages reports a
+built standalone deployment; this instance's direct connection was blocked by
+proxy CONNECT403. Use the verified readable GitHub routes until standalone
+reachability is checked. Active support monitoring and private review contact
+still need real operator facts.
 
 Portable source tests do not prove native SDK availability, OS activation,
 hardware protection, signing, upload or review. Initial TestFlight upload can
