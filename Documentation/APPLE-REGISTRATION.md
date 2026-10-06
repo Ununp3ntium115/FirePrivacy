@@ -56,8 +56,14 @@ Actual [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/act
 ran at `a42b009` on hosted macOS. All 18 token/request-boundary tests passed.
 The live account check then returned `missingBindings` for all three ASC names;
 no Apple API request was made. Those credentials are unavailable to this
-`app-store` workflow, rather than merely unknown from metadata. Signing P12 and
-profile bindings remain untested because the archive preflight stopped earlier.
+`app-store` workflow, rather than merely unknown from metadata. Subsequent
+upload-mode [run 37540319978](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37540319978)
+passed all 39 signing-helper tests on macOS, then confirmed the base ID,
+distribution P12/password, main/Safari profile and all three ASC bindings
+unavailable to this runner. No aggregate extension-profile alternative was
+provided. Signing and upload were skipped. Exact secure settings are in
+[CLOUD-RELEASE](CLOUD-RELEASE.md); the presence check does not decode credentials
+or certify registration, capability grants or Apple account authority.
 
 ## Supported registration routes
 

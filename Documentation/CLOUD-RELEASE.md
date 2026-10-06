@@ -52,6 +52,25 @@ does not establish valid credentials, registered identifiers or upload access.
 The existing configuration, native-test, profile/signature and archive/export
 checks remain required before upload.
 
+Actual consumer **upload-mode** [run 37540319978](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37540319978)
+at `018902e7e4c3b766aad18343d94b5381914180d4` passed all 39 signing-helper tests
+on macOS, then reported eight unavailable bindings together:
+`APP_BASE_BUNDLE_ID`, `APPLE_DISTRIBUTION_P12_BASE64`,
+`APPLE_DISTRIBUTION_P12_PASSWORD`, `APPLE_PROVISION_PROFILE_BASE64`,
+`APPLE_SAFARI_PROVISION_PROFILE_BASE64`, `ASC_PRIVATE_KEY_BASE64`, `ASC_KEY_ID`,
+`ASC_ISSUER_ID`. No aggregate extension-profile alternative was available.
+Configuration, signing, native archive and export/upload steps were skipped;
+cleanup passed. No signed archive, IPA or Apple upload was produced. These are
+observed runner prerequisites, rather than an inference from metadata HTTP403.
+
+Configure the exact registered `APP_BASE_BUNDLE_ID` in GitHub Actions Variables
+and the seven signing/API bindings above in Secrets, either at repository level
+or in environment `app-store`. Verify the actual registered group, matching
+capability profiles and App Store Connect app record described in
+[APPLE-REGISTRATION](APPLE-REGISTRATION.md). Then rerun the workflow in `upload`
+mode with the intended marketing version and an unused build number. A logged-in
+Apple browser tab alone does not bind credentials to GitHub Actions.
+
 Use repository Settings → Secrets and variables → Actions or environment `app-store`.
 Existing environment protections are honored; the workflow adds no invented
 approval gate. Never put secrets in chat/commits/issues/screenshots/workflow

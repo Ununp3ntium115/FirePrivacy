@@ -56,6 +56,19 @@ all 3 UI cases. Screenshots were skipped. The skip conditions are the same
 physical Data Protection/guided-generation and unavailable-only adapter cases
 documented above. The actual Apple coordinator fallback was exercised.
 
+The subsequent upload-preflight change passed all **137** Python release-tool
+tests on Linux, including eight new binding-inventory tests that forbid entering
+credential preparation, decoding, external tools, keychain access or private-file
+creation. Existing signing preparation/cleanup tests continue to pass. No native
+app/runtime code changed after the verified `a42b009` native run.
+
+Actual consumer upload-mode [run 37540319978](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37540319978)
+at `018902e7e4c3b766aad18343d94b5381914180d4` passed all 39 signing-helper cases
+on hosted macOS, then failed the presence check for `APP_BASE_BUNDLE_ID`, P12/
+password, main/Safari profiles and all three ASC bindings. The exact names are
+listed in [CLOUD-RELEASE](CLOUD-RELEASE.md). Signing/archive/export/upload were
+skipped; cleanup passed. No Apple request or signed build was produced.
+
 Apple account tooling added after the final app-source validation passed all
 129 Python release-tool tests on Linux, including 18 new read-only account
 preflight cases. The new cases verify genuine P256 JWT signatures, private key

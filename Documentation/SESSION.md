@@ -42,7 +42,20 @@ the platform browser capability rather than sharing passwords or runtime tokens.
 Account [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
 passed its 18 helper tests on macOS, then reported all three ASC bindings missing
 in environment `app-store`. API fallback is blocked too; no Apple request or
-registration was made. The full Python release-tool suite now passes 129 tests.
+registration was made. Subsequent native run 37403396390 passed both families
+at `a42b009`, including 277 Core/129 Python and 109 native passes/3 skips plus
+3 UI passes per family. The app/runtime source has not changed since that run.
+
+The upload workflow now checks all required bindings before identifier
+validation or credential preparation. Full Python tooling passes 137 tests.
+Actual consumer upload-mode [run 37540319978](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37540319978)
+passed all 39 signing-helper cases on macOS, then reported eight missing
+bindings: registered base ID, distribution P12/password, app/Safari profiles,
+and the three ASC bindings. Exact names and secure setup are in
+[CLOUD-RELEASE](CLOUD-RELEASE.md). No signing, archive or upload occurred. Browser
+token/socket/control tools are still absent; a desktop Apple tab is not shared
+with this cloud agent. Resume from the real settings rather than invented IDs
+or guessed credentials.
 
 An initial signed TestFlight upload can precede physical QA and supplies the
 installable build. Finish real iPhone/iPad report import, evidence/export/delete,
