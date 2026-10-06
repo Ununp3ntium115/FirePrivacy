@@ -719,6 +719,32 @@ final class WorkspaceStoreTests: XCTestCase {
         XCTAssertNil(try provider.readRotationJournal())
     }
 
+    func testCommittedRotationRejectsDamagedNewGenerationBeforeRetiringOldCiphertext() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager().removeItem(at: directory) }
+        let keys = WorkspaceRotatingKeys()
+        let fault = RotationTestFault(.committedJournalPersisted)
+        let store = EncryptedReportStore(directoryURL: directory, keyProvider: keys, rotationCheckpoint: { try fault.check($0) })
+        let report = try makeReport(1)
+        _ = try await store.appendSession(report)
+        do { try await store.rotateKey(); XCTFail("Expected interruption before retired cleanup.") } catch { }
+        let pending = try XCTUnwrap(keys.currentJournal)
+        XCTAssertEqual(pending.phase, .committed)
+        let retired = directory.deletingLastPathComponent().appendingPathComponent(directory.lastPathComponent + ".rotation-retired-" + pending.transactionID.uuidString)
+        _ = try tamperEnvelope(at: reportURL(report, directory: directory))
+        do { try await store.retryKeyRotationCleanup(); XCTFail("A damaged active generation must not destroy the remaining authenticated old evidence.") }
+        catch { XCTAssertEqual(error as? ReportStoreError, .rotationRecoveryRequired) }
+        XCTAssertEqual(keys.currentJournal, pending)
+        XCTAssertTrue(FileManager().fileExists(atPath: retired.path))
+        let oldCiphertext = try Data(contentsOf: retired.appendingPathComponent("history/\(report.id.uuidString).encrypted"))
+        let recovered = try JSONDecoder().decode(PrivacyReport.self, from: decryptEnvelope(oldCiphertext, key: pending.oldKey,
+            context: "FirePrivacy/HistoryReport/v2/\(report.id.uuidString)"))
+        XCTAssertEqual(recovered, report)
+        try await store.deleteAll()
+        XCTAssertNil(keys.currentKey)
+        XCTAssertNil(keys.currentJournal)
+    }
+
     private func decryptEnvelope(_ bytes: Data, key: Data, context: String) throws -> Data {
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
         let combined = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(object["sealedReport"] as? String)))

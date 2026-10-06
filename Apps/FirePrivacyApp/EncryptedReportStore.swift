@@ -565,6 +565,8 @@ actor EncryptedReportStore {
             do {
                 if fileManager.fileExists(atPath: path.path) { try fileRemoval(path) }
                 guard !fileManager.fileExists(atPath: path.path) else { throw ReportStoreError.cleanupPending }
+                let parent = path.deletingLastPathComponent()
+                try RotationDurability.synchronizeDirectory(at: fileManager.fileExists(atPath: parent.path) ? parent : directory)
             } catch { remaining.append(task) }
         }
         index.pendingCleanup = remaining
@@ -974,6 +976,13 @@ actor EncryptedReportStore {
         let activeMarker = try readGenerationMarker(in: directory, key: journal.newKey)
         guard activeMarker.bindingID == journal.bindingID, activeMarker.generationID == journal.transactionID,
               !fileManager.fileExists(atPath: stage.path) else { throw ReportStoreError.rotationRecoveryRequired }
+        // Until cleanup completes no ordinary writes are permitted, so the
+        // staged proof must still describe the active generation exactly.
+        if fileManager.fileExists(atPath: directory.appendingPathComponent(Self.inventoryName).path) {
+            try verifyStagedGeneration(directory, journal: journal)
+        } else if fileManager.fileExists(atPath: retired.path) {
+            throw ReportStoreError.rotationRecoveryRequired
+        }
         do {
             if fileManager.fileExists(atPath: retired.path) {
                 let oldMarker = try readGenerationMarker(in: retired, key: journal.oldKey)
