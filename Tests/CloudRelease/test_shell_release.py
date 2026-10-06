@@ -76,8 +76,13 @@ class ShellReleaseTests(unittest.TestCase):
         self.root = Path(temporary.name)
         self.scripts = self.root / "scripts"
         self.scripts.mkdir()
-        for name in ("apple-common.sh", "archive-ios.sh", "export-app-store.sh"):
+        for name in ("apple-common.sh", "archive-ios.sh", "export-app-store.sh", "dataset-public-keys.py"):
             shutil.copy2(ROOT / "scripts" / name, self.scripts / name)
+        for relative in ("Sources/FirePrivacyCore/KnowledgeBaseResources.swift",
+                         "Sources/FirePrivacyCore/Resources/Protection/filter-trust-roots.json"):
+            destination = self.root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, destination)
         shutil.copy2(ROOT / "scripts/release-validation.py", self.scripts / "release-validation-real.py")
         (self.scripts / "release-validation.py").write_text(MOCK_VALIDATOR)
         (self.scripts / "validate-project.py").write_text("print('Mock structural gate')\n")
@@ -222,6 +227,22 @@ class ShellReleaseTests(unittest.TestCase):
                 args = next(call["args"] for call in calls if call["tool"] == "xcodebuild" and "archive" in call["args"])
                 for variable in (*PIR, "FIREPRIVACY_PRIVACY_PASS_ISSUER_URL"):
                     self.assertEqual(variable + "=" + values[variable] in args, edition == "url-filter")
+
+    def test_archive_preserves_public_json_as_single_literal_build_setting_arguments(self):
+        knowledge = json.dumps({"operator-knowledge": "1" * 64}, indent=2)
+        filters = json.dumps({"operator-filter": "2" * 64}, separators=(",", ":"))
+        values = {**self.configuration(), "FIREPRIVACY_KB_PUBLIC_KEYS_JSON": knowledge,
+                  "FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON": filters}
+        calls = self.run_script("archive-ios.sh", values)
+        args = next(call["args"] for call in calls if call["tool"] == "xcodebuild" and "archive" in call["args"])
+        self.assertIn("FIREPRIVACY_KB_PUBLIC_KEYS_JSON=" + knowledge, args)
+        self.assertIn("FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON=" + filters, args)
+
+    def test_invalid_public_key_binding_stops_before_build_or_signing(self):
+        values = {**self.configuration(), "FIREPRIVACY_KB_PUBLIC_KEYS_JSON": "not public JSON"}
+        calls = self.run_script("archive-ios.sh", values, success=False)
+        self.assertFalse(any(call["tool"] in ("codesign", "swift") for call in calls))
+        self.assertFalse(any(call["tool"] == "xcodebuild" and "archive" in call["args"] for call in calls))
 
     def test_url_archive_rejects_missing_or_unsafe_pir_configuration(self):
         invalid = [("FIREPRIVACY_PIR_SERVER_URL", ""), ("FIREPRIVACY_PIR_SERVER_URL", "http://pir.example.org"),

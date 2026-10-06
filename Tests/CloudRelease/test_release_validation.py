@@ -74,7 +74,8 @@ class ArchiveFixture:
             info = {"CFBundleIdentifier": bundle_id, "CFBundleExecutable": name,
                     "CFBundlePackageType": "APPL" if target == "app" else "XPC!",
                     "CFBundleShortVersionString": "1.0", "CFBundleVersion": "1", "DTSDKName": "iphoneos26.0",
-                    "UIDeviceFamily": [1, 2], "FirePrivacyAppGroup": GROUP}
+                    "UIDeviceFamily": [1, 2], "FirePrivacyAppGroup": GROUP,
+                    "FirePrivacyKnowledgeBasePublicKeysJSON": "", "FirePrivacyFilterPublicKeysJSON": ""}
             if target == "app":
                 info.update(FirePrivacyDistributionEdition=edition, FirePrivacyPrivacyURL=self.environment["PRIVACY_POLICY_URL"],
                             FirePrivacySupportURL=self.environment["SUPPORT_URL"])
@@ -197,6 +198,44 @@ def archive_fixture(edition="consumer"):
 
 
 class ReleaseValidationTests(unittest.TestCase):
+    def test_all_editions_bind_configured_public_dataset_keys_to_each_target(self):
+        maps = {"knowledgeBase": {"operator-knowledge": "1" * 64}, "filter": {"operator-filter": "2" * 64}}
+        for edition in RELEASE.EDITIONS:
+            with self.subTest(edition=edition), archive_fixture(edition) as fixture:
+                fixture.manual()
+                for family in maps:
+                    raw = json.dumps(maps[family])
+                    fixture.environment[RELEASE.PUBLIC_KEYS.VARIABLES[family]] = raw
+                    for target in fixture.bundles:
+                        fixture.modify_info(target, RELEASE.PUBLIC_KEYS.INFO_FIELDS[family], raw)
+                stamp = fixture.stamp()
+                fixture.invoke("verify")
+                expected = stamp["configuration"]["datasetPublicKeys"]
+                for target in fixture.bundles:
+                    self.assertEqual(stamp["targets"][target]["datasetPublicKeys"], expected)
+                    field = RELEASE.PUBLIC_KEYS.INFO_FIELDS["filter"]
+                    fixture.modify_info(target, field, json.dumps({"different-filter": "3" * 64}))
+                    with self.assertRaises(SystemExit):
+                        fixture.invoke("stamp")
+                    fixture.modify_info(target, field, json.dumps(maps["filter"]))
+                fixture.invoke("verify")
+
+    def test_release_public_key_reformatting_is_equivalent_but_new_keys_invalidate_archive(self):
+        with archive_fixture() as fixture:
+            fixture.manual()
+            raw = '{"operator-knowledge":"' + "1" * 64 + '"}'
+            variable = RELEASE.PUBLIC_KEYS.VARIABLES["knowledgeBase"]
+            field = RELEASE.PUBLIC_KEYS.INFO_FIELDS["knowledgeBase"]
+            fixture.environment[variable] = raw
+            for target in fixture.bundles:
+                fixture.modify_info(target, field, raw)
+            fixture.stamp()
+            fixture.environment[variable] = json.dumps(json.loads(raw), indent=4)
+            fixture.invoke("verify")
+            fixture.environment[variable] = json.dumps({"different-knowledge": "2" * 64})
+            with self.assertRaises(SystemExit):
+                fixture.invoke("verify")
+
     def test_runner_temporary_symlink_alias_uses_canonical_fixture_paths(self):
         for edition in RELEASE.EDITIONS:
             with self.subTest(edition=edition), tempfile.TemporaryDirectory(prefix="release-path-alias-") as directory:
