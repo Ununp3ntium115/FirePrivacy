@@ -63,6 +63,22 @@ jobs:
     steps:
       - name: Check out the selected reviewed revision
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify signing and prerequisite-check contracts
+        run: python3 -m unittest discover -s Tests/CloudRelease -p 'test_cloud_signing.py'
+      - name: Check required upload and signing bindings without opening credentials
+        env:
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APPLE_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
+          APPLE_SAFARI_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_SAFARI_PROVISION_PROFILE_BASE64 }}
+          APPLE_URL_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_URL_PROVISION_PROFILE_BASE64 }}
+          APPLE_MANAGED_DATA_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_MANAGED_DATA_PROVISION_PROFILE_BASE64 }}
+          APPLE_MANAGED_CONTROL_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_MANAGED_CONTROL_PROVISION_PROFILE_BASE64 }}
+          APPLE_EXTENSION_PROFILES_BASE64: ${{ secrets.APPLE_EXTENSION_PROFILES_BASE64 }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.ASC_PRIVATE_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: python3 scripts/cloud-signing.py check-bindings
       - name: Validate release identifiers
         run: python3 scripts/release-validation.py configuration
       - name: Prepare existing Apple signing credentials privately

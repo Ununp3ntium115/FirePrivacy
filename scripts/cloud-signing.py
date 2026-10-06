@@ -62,6 +62,41 @@ class SigningError(Exception):
     """A safe, authored error message containing no credential values."""
 
 
+def check_bindings(environment=None) -> dict:
+    """Inventory presence only; never decode, sign, create files or call tools.
+
+    Keep this before release identifier validation so an unconfigured bundle
+    does not hide absent credentials. Existing prepare/configuration gates
+    remain responsible for validity, registration and exact profile coverage.
+    """
+    environment = os.environ if environment is None else environment
+    summary = {"schemaVersion": 1, "readOnly": True,
+        "credentialValidityVerified": False, "identifierRegistrationVerified": False,
+        "note": "Presence only. Existing release gates validate identifiers, credentials and profiles. "
+                "APPLE_EXTENSION_PROFILES_BASE64 can replace selected individual extension profiles; "
+                "its target coverage is not checked here."}
+    mode = environment.get("RELEASE_MODE", "")
+    edition = environment.get("APP_EDITION") or "consumer"
+    if mode not in ("archive", "upload"):
+        return {**summary, "status": "invalidMode", "invalidBindingNames": ["RELEASE_MODE"]}
+    if edition not in EDITION_EXTENSIONS:
+        return {**summary, "status": "invalidEdition", "invalidBindingNames": ["APP_EDITION"]}
+    required_bindings = []
+    if not (environment.get("APP_BASE_BUNDLE_ID") or environment.get("BUNDLE_ID")):
+        required_bindings.append("APP_BASE_BUNDLE_ID")
+    required_bindings.extend(("APPLE_DISTRIBUTION_P12_BASE64", "APPLE_DISTRIBUTION_P12_PASSWORD",
+                              "APPLE_PROVISION_PROFILE_BASE64"))
+    if not environment.get("APPLE_EXTENSION_PROFILES_BASE64"):
+        required_bindings.extend(EXTENSION_BINDINGS[target][0] for target in EDITION_EXTENSIONS[edition])
+    if mode == "upload" or any(environment.get(name) for name in ASC_BINDINGS):
+        required_bindings.extend(ASC_BINDINGS)
+    if edition == "url-filter":
+        required_bindings.extend(("FIREPRIVACY_PIR_SERVER_URL", "FIREPRIVACY_PIR_CONFIGURATION_IDENTITY"))
+    missing = [name for name in required_bindings if not environment.get(name)]
+    return {**summary, "mode": mode, "edition": edition, "missingBindings": missing,
+            "status": "missingBindings" if missing else "bindingsPresent"}
+
+
 def require_runner() -> Path:
     if sys.platform != "darwin" or os.environ.get("GITHUB_ACTIONS") != "true":
         raise SigningError("Cloud signing requires an isolated GitHub macOS runner.")
@@ -585,8 +620,12 @@ def cleanup() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("operation", choices=("prepare", "cleanup"))
+    parser.add_argument("operation", choices=("check-bindings", "prepare", "cleanup"))
     operation = parser.parse_args().operation
+    if operation == "check-bindings":
+        summary = check_bindings()
+        print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
+        return 0 if summary["status"] == "bindingsPresent" else 1
     try:
         if operation == "prepare":
             prepare()

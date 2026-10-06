@@ -48,6 +48,14 @@ was not disabled.
 
 ## Remaining runtime and release checks
 
+Subsequent [native run 37403396390](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403396390)
+passed at `a42b009d7253a4a5725dba7647982f5135981019` on both families. Each job
+passed 277 Core cases and 129 Python cases, compiled all three unsigned edition
+schemes, passed 109 of 112 native cases with 3 skips and no failures, and passed
+all 3 UI cases. Screenshots were skipped. The skip conditions are the same
+physical Data Protection/guided-generation and unavailable-only adapter cases
+documented above. The actual Apple coordinator fallback was exercised.
+
 Apple account tooling added after the final app-source validation passed all
 129 Python release-tool tests on Linux, including 18 new read-only account
 preflight cases. The new cases verify genuine P256 JWT signatures, private key

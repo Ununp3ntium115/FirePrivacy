@@ -540,5 +540,122 @@ class CloudSigningTests(unittest.TestCase):
             self.assertEqual(list((root / "profiles").iterdir()), [])
 
 
+class CloudBindingInventoryTests(unittest.TestCase):
+    """Presence inventories cannot enter any signing/preparation path."""
+
+    def inspect(self, environment):
+        output = io.StringIO()
+        with mock.patch.dict(os.environ, environment, clear=True), \
+                mock.patch.object(SIGNING.sys, "argv", ["cloud-signing.py", "check-bindings"]), \
+                mock.patch.object(SIGNING, "require_runner", side_effect=AssertionError("runner access forbidden")), \
+                mock.patch.object(SIGNING, "prepare", side_effect=AssertionError("preparation forbidden")), \
+                mock.patch.object(SIGNING, "cleanup", side_effect=AssertionError("cleanup forbidden")), \
+                mock.patch.object(SIGNING, "decode_base64_value", side_effect=AssertionError("credential decoding forbidden")), \
+                mock.patch.object(SIGNING, "run", side_effect=AssertionError("external tools forbidden")), \
+                mock.patch.object(SIGNING, "private_write", side_effect=AssertionError("private files forbidden")), \
+                mock.patch.object(SIGNING.tempfile, "mkdtemp", side_effect=AssertionError("temporary files forbidden")), \
+                redirect_stdout(output):
+            code = SIGNING.main()
+        return code, json.loads(output.getvalue()), output.getvalue()
+
+    def complete(self, mode="upload", edition="consumer"):
+        # Intentionally malformed values demonstrate presence is not validity.
+        environment = {"RELEASE_MODE": mode, "APP_EDITION": edition,
+            "APP_BASE_BUNDLE_ID": "private-placeholder-app-id",
+            "APPLE_DISTRIBUTION_P12_BASE64": "private-placeholder-p12",
+            "APPLE_DISTRIBUTION_P12_PASSWORD": "private-placeholder-password",
+            "APPLE_PROVISION_PROFILE_BASE64": "private-placeholder-app-profile"}
+        for target in SIGNING.EDITION_EXTENSIONS[edition]:
+            environment[SIGNING.EXTENSION_BINDINGS[target][0]] = "private-placeholder-extension-profile"
+        if mode == "upload":
+            environment.update({name: "private-placeholder-" + name for name in SIGNING.ASC_BINDINGS})
+        if edition == "url-filter":
+            environment.update(FIREPRIVACY_PIR_SERVER_URL="private-placeholder-pir-url",
+                               FIREPRIVACY_PIR_CONFIGURATION_IDENTITY="private-placeholder-pir-identity")
+        return environment
+
+    def test_all_consumer_upload_missing_bindings_reported_together(self):
+        code, result, output = self.inspect({"RELEASE_MODE": "upload"})
+        self.assertEqual(code, 1)
+        self.assertEqual(result["status"], "missingBindings")
+        self.assertEqual(result["missingBindings"], ["APP_BASE_BUNDLE_ID",
+            "APPLE_DISTRIBUTION_P12_BASE64", "APPLE_DISTRIBUTION_P12_PASSWORD",
+            "APPLE_PROVISION_PROFILE_BASE64", "APPLE_SAFARI_PROVISION_PROFILE_BASE64",
+            *SIGNING.ASC_BINDINGS])
+        self.assertTrue(result["readOnly"])
+        self.assertFalse(result["credentialValidityVerified"])
+        self.assertFalse(result["identifierRegistrationVerified"])
+
+    def test_archive_requires_asc_only_when_partially_supplied(self):
+        environment = self.complete(mode="archive")
+        code, result, output = self.inspect(environment)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["missingBindings"], [])
+        for supplied in SIGNING.ASC_BINDINGS:
+            with self.subTest(supplied=supplied):
+                partial = {**environment, supplied: "private-partial-asc-value"}
+                code, result, output = self.inspect(partial)
+                self.assertEqual(code, 1)
+                self.assertEqual(result["missingBindings"], [name for name in SIGNING.ASC_BINDINGS if name != supplied])
+                self.assertTrue("private-partial-asc-value" not in output)
+
+    def test_empty_declared_asc_archive_bindings_remain_optional(self):
+        environment = self.complete(mode="archive")
+        environment.update({name: "" for name in SIGNING.ASC_BINDINGS})
+        code, result, output = self.inspect(environment)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["missingBindings"], [])
+
+    def test_missing_or_invalid_mode_and_edition_fail_without_echoing_values(self):
+        cases = (({}, "invalidMode", "RELEASE_MODE"),
+                 ({"RELEASE_MODE": "private-invalid-mode"}, "invalidMode", "RELEASE_MODE"),
+                 ({"RELEASE_MODE": "upload", "APP_EDITION": "private-invalid-edition"}, "invalidEdition", "APP_EDITION"))
+        for environment, status, name in cases:
+            with self.subTest(status=status):
+                code, result, output = self.inspect(environment)
+                self.assertEqual(code, 1)
+                self.assertEqual(result["status"], status)
+                self.assertEqual(result["invalidBindingNames"], [name])
+                self.assertTrue("private-invalid-" not in output)
+
+    def test_aggregate_extension_profile_map_is_presence_alternative_only(self):
+        environment = self.complete()
+        environment.pop("APPLE_SAFARI_PROVISION_PROFILE_BASE64")
+        environment["APPLE_EXTENSION_PROFILES_BASE64"] = "private-not-json-or-profiles"
+        code, result, output = self.inspect(environment)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["status"], "bindingsPresent")
+        self.assertFalse(result["credentialValidityVerified"])
+        self.assertIn("target coverage is not checked here", result["note"])
+        self.assertTrue("private-not-json-or-profiles" not in output)
+
+    def test_existing_bundle_alias_satisfies_presence_without_registration_claim(self):
+        environment = self.complete()
+        environment["BUNDLE_ID"] = environment.pop("APP_BASE_BUNDLE_ID")
+        code, result, output = self.inspect(environment)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["missingBindings"], [])
+        self.assertFalse(result["identifierRegistrationVerified"])
+
+    def test_each_edition_requires_only_its_selected_profile_bindings(self):
+        for edition, targets in SIGNING.EDITION_EXTENSIONS.items():
+            with self.subTest(edition=edition):
+                environment = self.complete(edition=edition)
+                for target in targets:
+                    environment.pop(SIGNING.EXTENSION_BINDINGS[target][0])
+                code, result, output = self.inspect(environment)
+                self.assertEqual(code, 1)
+                self.assertEqual(result["missingBindings"], [SIGNING.EXTENSION_BINDINGS[target][0] for target in targets])
+                self.assertTrue("private-placeholder-" not in output)
+
+    def test_url_edition_collects_missing_pir_service_variables(self):
+        environment = self.complete(edition="url-filter")
+        environment.pop("FIREPRIVACY_PIR_SERVER_URL")
+        environment.pop("FIREPRIVACY_PIR_CONFIGURATION_IDENTITY")
+        code, result, output = self.inspect(environment)
+        self.assertEqual(code, 1)
+        self.assertEqual(result["missingBindings"], ["FIREPRIVACY_PIR_SERVER_URL", "FIREPRIVACY_PIR_CONFIGURATION_IDENTITY"])
+
+
 if __name__ == "__main__":
     unittest.main()

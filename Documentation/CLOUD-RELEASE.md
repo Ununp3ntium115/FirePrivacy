@@ -43,6 +43,15 @@ ASC `.p8`, key ID and issuer ID for upload. A certificate without its private ke
 sign. Each profile must be unexpired, explicit App Store distribution, match the
 team/ID/group/capabilities, and share the selected valid signing certificate.
 
+The release workflow first runs `cloud-signing.py check-bindings`. This reports
+all missing binding names together without opening keys/profiles, creating
+private files, signing, or contacting Apple. It accepts the existing aggregate
+extension-profile alternative as present; the later signing preparation still
+validates its exact selected-target coverage and credential contents. Presence
+does not establish valid credentials, registered identifiers or upload access.
+The existing configuration, native-test, profile/signature and archive/export
+checks remain required before upload.
+
 Use repository Settings → Secrets and variables → Actions or environment `app-store`.
 Existing environment protections are honored; the workflow adds no invented
 approval gate. Never put secrets in chat/commits/issues/screenshots/workflow
