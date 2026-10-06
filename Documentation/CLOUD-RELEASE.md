@@ -50,7 +50,7 @@ Reuse usable existing bindings rather than assuming absence.
 | --- | --- |
 | `APPLE_DISTRIBUTION_P12_BASE64` | Base64 password-protected `.p12` with private key |
 | `APPLE_DISTRIBUTION_P12_PASSWORD` | Matching password |
-| `APPLE_PROVISION_PROFILE_BASE64` | Base64 selected main-app `.mobileprovision` |
+| `APPLE_PROVISION_PROFILE_BASE64` | Base64 selected main-app `.mobileprovision ` |
 | `APPLE_SAFARI_PROVISION_PROFILE_BASE64` | Base64 Safari profile; every edition |
 | `APPLE_URL_PROVISION_PROFILE_BASE64` | Base64 URL provider profile; URL edition |
 | `APPLE_MANAGED_DATA_PROVISION_PROFILE_BASE64` | Base64 managed data profile; managed edition |
@@ -78,7 +78,7 @@ signatures and embedded profiles as required by Apple.
 | --- | --- |
 | `APP_BASE_BUNDLE_ID` | Required exact registered base ID; legacy `APP_BUNDLE_ID` workflow alias supported |
 | `APPLE_TEAM_ID` | Optional override; default LYDVWU62G4 |
-| `FIREPRIVACY_APP_GROUP_ID` | Actual registered group; provisional default `group.com.firesoftwaresolutions.FirePrivacy.protection` |
+| `FIREPRIVACY_APP_GROUP_ID` | Actual registered group; provisional default `group.com.firesoftwaresolutions.FirePrivacy.protection ` |
 | `FIREPRIVACY_PIR_SERVER_URL` | Actual service URL; URL edition only |
 | `FIREPRIVACY_PRIVACY_PASS_ISSUER_URL` | Actual issuer URL; URL edition only |
 | `FIREPRIVACY_PIR_CONFIGURATION_IDENTITY` | Exact approved configuration identity; URL edition only |
@@ -90,24 +90,27 @@ These dataset values are public build authority, not Apple signing secrets or
 private dataset keys. Empty maps preserve bootstrap data for consumer use;
 maintained operator updates need the publisher's actual matching public key
 deployed before the download is accepted. The publisher emits exact public
-variable names/JSON in `public-key-reference.json`; see
+variable names/JSON in `public-key-reference.json `; see
 [DATASET-PUBLISHING](DATASET-PUBLISHING.md). No key is learned from a download.
 Build/preflight/archive checks reject duplicate IDs, malformed maps, changed
 pins, knowledge/filter ID collisions or different app/provider filter maps.
 
 ## Manual archive or upload
 
-The workflow `.github/workflows/release.yml` is named **Signed App Store build**.
-GitHub must register a workflow definition before its browser exposes Run
-workflow; normally the definition needs the default branch. Verify registration
-and the selected tested revision rather than assuming a branch file proves it.
+The [Signed App Store build](https://github.com/Ununp3ntium115/FirePrivacy/actions/workflows/release.yml) workflow is registered and active on main after PR #2 merged.
+The final native run 37401191529 passed both families at `6f66780`; merge commit
+`c66f2a5` has the same tree. Actual consumer archive preflight 37402216199 stopped
+at identifier validation because `APP_BASE_BUNDLE_ID` was empty. Signing and
+upload stages were not reached, so their bindings remain unknown. Configure the
+exact registered identifier in Actions variables, verify selected-edition
+profiles/credentials, then rerun on the reviewed production source.
 
 In Actions → Signed App Store build → Run workflow:
 
-1. Choose the tested source branch/revision and `edition` (default `consumer`).
+1. Choose the tested source branch/revision and `edition ` (default `consumer`).
 2. Choose `mode`: `archive` creates/exports the signed build; `upload` also sends
    it to App Store Connect.
-3. Set numeric `version` (default 1.0) and a positive unique `build_number`
+3. Set numeric `version ` (default 1.0) and a positive unique `build_number`
    (default 1; increment for a newly accepted upload).
 4. Leave `capture_screenshots=false` while core functionality/native controls are
    being validated. Later enable only to capture actual synthetic build screens.

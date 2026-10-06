@@ -83,7 +83,7 @@ same Family Sharing group. [Distribution permission](https://developer.apple.com
 is requested by the account holder for the app and relevant Screen Time
 extensions. Adding entitlement text does not establish that permission.
 
-`DeviceActivityAuthorization` is documented from iOS/iPadOS 17. Its authorization
+`DeviceActivityAuthorization ` is documented from iOS/iPadOS 17. Its authorization
 checks/client identifiers do not themselves expose a usage timeline. It must
 not be confused with the special data-access API below.
 
@@ -114,7 +114,7 @@ that is not worldwide customer eligibility. Check actual authorization/API
 results; a locale setting or location guess is not an entitlement/eligibility
 check. Request no extra location permission just to infer eligibility.
 
-The exported structure includes application `totalActivityDuration` within
+The exported structure includes application `totalActivityDuration ` within
 activity segments. The documented segment cases are hourly, daily and weekly.
 [hourly(during:)](https://developer.apple.com/documentation/deviceactivity/deviceactivityfilter/segmentinterval-swift.enum/hourly(during:))
 aggregates into hours and disregards smaller date components. Querying a
@@ -215,7 +215,7 @@ and implementation tests are the authority for the integrated source.
 
 - Required reference fields are `bundleID`, `provenance`, `coverage`,
   `claimsCompleteForegroundWindows` and `foregroundWindows`.
-- Provenance is exactly `userRecollection`, `userTranscribedSystemUsage` or
+- Provenance is exactly `userRecollection `, `userTranscribedSystemUsage` or
   `importedUsageLog`; none is independently verified telemetry.
 - `deviceScope` is `sameDeviceAsReport`, `otherDeviceOrCombined` or `unspecified`;
   omission is unspecified, which cannot establish same-device review signals.

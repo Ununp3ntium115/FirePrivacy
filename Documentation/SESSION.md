@@ -5,23 +5,25 @@ chat URL in a browser to continue. If Orca Desktop can open it, that is another
 view; no session-transfer integration has been verified. Cloning/downloading
 source does not transfer this workspace or conversation.
 
-The durable candidate source is [PR #2](https://github.com/Ununp3ntium115/FirePrivacy/pull/2),
-branch `codex/fireprivacy-app-mvp`. It now includes the expanded core architecture,
+The durable app source is on `main`, merged in [PR #2](https://github.com/Ununp3ntium115/FirePrivacy/pull/2).
+It includes the expanded core architecture,
 three edition targets, coordinator/storage integration, policies and cloud
 release helpers. Source existence does not prove native availability. GitHub
 preserves commits, not uncommitted workspace files or chat context.
 
 Current portable/native results and their exact source revisions are tracked in
-[VALIDATION](VALIDATION.md). Both expanded simulator families passed at
-`b9fa051`; later source changes need their own hosted run. Actual device controls,
-signing, upload and review must be recorded separately. Screenshot work is
+[VALIDATION](VALIDATION.md). Final run 37401191529 passed both families at
+`6f66780` (277 Core / 111 Python; all three builds;109 native passes/3 skips and 3 UI
+passes per family). Merge commit `c66f2a5` has the identical tree. Actual device
+controls, signing, upload and review remain separate. Screenshot work is
 paused while the requested underlying functionality is engineered and validated.
 
 [GitHub Actions](https://github.com/Ununp3ntium115/FirePrivacy/actions) supplies
 hosted macOS/Xcode runners. [CLOUD-RELEASE](CLOUD-RELEASE.md) describes selected
 edition profiles, secure signing settings and archive/upload execution without
-moving this chat to a local Mac. Source on a branch does not prove a registered
-Run workflow button or successful release job.
+moving this chat to a local Mac. Signed App Store build is registered/active
+with archive/upload choices. Its actual archive preflight 37402216199 stopped
+on empty `APP_BASE_BUNDLE_ID` before credentials/signing; no upload is asserted.
 
 Team `LYDVWU62G4` and provisional base ID
 `com.firesoftwaresolutions.FirePrivacy` must match real registered identifiers,

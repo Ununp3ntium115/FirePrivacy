@@ -1,9 +1,9 @@
 # Validation record — October 6, 2026
 
-The expanded privacy architecture has passing portable tests and a successful
-hosted iPhone/iPad native run. Later source changes still need their own results.
-This record distinguishes the revision tested from the working source; earlier
-local-report MVP results do not establish readiness of the expanded app.
+The expanded source, including usage controls and actual Apple advisor fallback,
+passed the final hosted iPhone/iPad run at `6f66780` and was merged in PR #2.
+Merge commit `c66f2a54589485e9b1d91f483da568b718887798` has the exact same tree.
+This record distinguishes unsigned tests from external device/signing/review gates.
 
 No signed distribution archive, App Store Connect upload, Apple review approval
 or public App Store release has been demonstrated. Screenshots remain deferred
@@ -27,13 +27,13 @@ OS protection, hardware security, operator deployment or legal compliance.
 | Native public-anchor parser source | All 11 native parser/real-signature/provider cases passed on each family in run 37396159587. Downloads cannot install a new trusted key. |
 | Hosted expanded iPhone/iPad run | [Run 37394131493](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37394131493), commit `b9fa05113fd1b764d302b8d13fd5d3528e437027`, completed successfully. Each family passed 196 Swift package tests and 107 Python tests; all three unsigned edition builds (`FirePrivacy`, `FirePrivacyURL`, `FirePrivacyManaged`) compiled. Each consumer simulator ran 79 native cases: 78 passed, 1 hardware-only protection case skipped, 0 failed; 2 additional UI cases passed. Screenshot capture was skipped on both. |
 | Expanded rules/AI/cleanup native validation | [Run 37396159587](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37396159587), commit `a77b57475e87e04baf1fd71597a5fcbcb8e8a55e`, passed both families: 240 package tests, 111 Python tests, all three edition builds, 109 native tests (107 passed, two skipped, zero failed), and two UI tests. Skips are physical-device Data Protection and real guided model generation; the actual model reported Apple Intelligence disabled. The three runtime availability/rejection/fallback cases passed. Screenshots were skipped. |
-| Usage comparison native validation | [Run37399180093](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37399180093), commit`5c1ef80f9e4237b542ed399bbd0ab59509baea72`: both families passed277 Core/111 Python, all three builds, all nine EngineIntegration cases (including three new usage persistence/binding/clear/DeleteAll cases) and all three UI cases (including the new sample-boundary comparison screen). iPhone passed112 app cases with two skips. iPad executed112 with three skips and one failure: real guided Apple generation reported available but its simulator lacked UAF model assets. Usage/product/UI cases passed. Physical guided generation and always-exercised runtime fallback are being distinguished before final rerun. |
+| Final native and usage validation | [Run 37401191529](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37401191529), commit `6f66780179771152441ef99a40c65e9aa76baca6`, passed both families: 277 Core XCTest,111 Python cases, all three edition builds,112 native app cases (109 passed,3 skipped,0 failed), and 3 UI cases. The three new usage engine cases and usage UI case passed on both. The actual Apple coordinator ran and passed even when the simulator advertised readiness but generation assets were missing. Skips are physical Data Protection, physical guided generation, and unavailable-only rejection because each simulator advertised availability. Screenshots were skipped. |
 | Privacy source guard | The current full workflow checked 56 production Swift files. It forbids app-created networking outside the single approved HTTPS worker, plus tracking/web-view APIs. Optional approved requests and OS-managed DNS/filtering exist; this is not a claim that the whole app never networks. A structural check is not a runtime traffic trace. |
-| Required-reason API audit | Current rotation durability code uses `Darwin.fstat` for owned app-container file/directory metadata. The app manifest declares FileTimestamp reason `C617.1`; the current Apple text and source-path audit are in [REQUIRED-REASON-API-AUDIT](REQUIRED-REASON-API-AUDIT.md). Final archive/Xcode privacy reporting and App Store processing remain separate checks. |
+| Required-reason API audit | Current rotation durability code uses `Darwin.fstat ` for owned app-container file/directory metadata. The app manifest declares FileTimestamp reason `C617.1`; the current Apple text and source-path audit are in [REQUIRED-REASON-API-AUDIT](REQUIRED-REASON-API-AUDIT.md). Final archive/Xcode privacy reporting and App Store processing remain separate checks. |
 | Apple requirement sources | Official Apple sources were retrieved with normal TLS and dated/digested evidence. See [APPLE-REQUIREMENTS](APPLE-REQUIREMENTS.md), [base retrieval record](APPLE-SOURCE-VERIFICATION.json) and [optional-feature/current API record](APPLE-OPTIONAL-SOURCE-VERIFICATION.json). Retrieval is not Apple approval or legal certification. |
 | Public policy/support | The GitHub-rendered expanded consumer policy and public issue tracker returned unauthenticated HTTPS 200 on October 6. The matching usage-comparison disclosure was published in gh-pages commit `5f35c563`; its GitHub-rendered route returned HTTPS 200 with the section visible. GitHub Pages metadata reports a built deployment at `https://ununp3ntium115.github.io/FirePrivacy/`; a direct HTTPS check from this cloud instance was blocked by proxy CONNECT 403, so standalone reachability is not asserted. |
 | Visual direction/screenshots | The owner approved the charcoal/ember concept and flame icon; source styling exists. Earlier MVP demo captures are historical evidence only. Expanded screenshots are deferred, and no new store-ready capture is asserted. |
-| Signed archive/upload | Not demonstrated. Team `LYDVWU62G4` is configured; registered IDs/App Group, edition-matching capabilities/profiles, Apple signing credentials, ASC authorization/app record and actual results remain to be verified. HTTP 403 on secret/variable metadata means bindings are unknown, not absent. |
+| Signed archive/upload | The manual [Signed App Store build](https://github.com/Ununp3ntium115/FirePrivacy/actions/workflows/release.yml) is registered and active on main. Actual consumer archive [preflight 37402216199](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37402216199) failed at release-identifier validation because `APP_BASE_BUNDLE_ID` was empty. Signing preparation, native archive, export/upload were skipped; no signed build/upload was produced. Cleanup passed. Apple signing/ASC bindings remain unknown because their stage was not reached; metadata403 does not establish absence. The exact registered ID, matching profiles/capabilities and ASC record remain external requirements. |
 
 The XCTest counts above are actual executed cases. A separate Swift Testing
 runner may print zero Swift Testing cases; it does not replace the XCTest
@@ -48,9 +48,9 @@ was not disabled.
 
 ## Remaining runtime and release checks
 
-- Run the full portable workflow and both native families on the final committed
-  source, preserving the revision, logs and result bundles. Verify all included
-  editions with the intended public anchors and target/capability configuration.
+- Retain the passing final run/results. Any later production-code, trust-anchor,
+  target/capability or dependency change needs matching checks before release.
+  Subsequent documentation-only records do not alter the tested production tree.
 - Use current physical iPhone/iPad Apple exports to check parsing, evidence,
   history/comparison, retention, export/redaction, consent/revocation and deletion
   failures/recovery. Simulator fixtures are not current real-report compatibility.

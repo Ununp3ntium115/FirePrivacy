@@ -17,8 +17,11 @@ expanded architecture. Screenshots are paused until functionality is verified.
       on gh-pages. GitHub-rendered policy/support routes returned HTTPS 200.
 - [x] Expanded rules/AI/cleanup checkpoint `a77b574` passed all three edition builds
       and both consumer simulator families. Later usage source needs its own run.
-- [ ] Final source, including usage controls, passes all three native edition
-      builds and consumer storage/coordinator/UI tests on iPhone and iPad.
+- [x] Final source `6f66780` passed all three native edition builds and consumer
+      storage/coordinator/UI tests on both families in run 37401191529.
+- [x] PR #2 merged on main; Signed App Store build is registered/active with
+      archive/upload modes. Actual preflight 37402216199 stopped on the empty
+      registered-bundle variable before signing. Upload is not demonstrated.
 
 ## Actual product and privacy behavior
 
