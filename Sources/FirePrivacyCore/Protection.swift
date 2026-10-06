@@ -160,16 +160,27 @@ public struct DNSResolverConfiguration: Codable, Equatable, Sendable {
 public struct SafariRuleConfiguration: Codable, Equatable, Sendable {
     public let blockedDomains: [String]
     public let allowedDomains: [String]
+    public let userBlockedDomains: [String]
     public let datasetVersion: UInt64
-    public init(blockedDomains: [String], allowedDomains: [String] = [], datasetVersion: UInt64) {
+    public let manifestDigest: String?
+    public init(blockedDomains: [String], allowedDomains: [String] = [], userBlockedDomains: [String] = [],
+                datasetVersion: UInt64, manifestDigest: String? = nil) {
         self.blockedDomains = blockedDomains; self.allowedDomains = allowedDomains; self.datasetVersion = datasetVersion
+        self.userBlockedDomains = userBlockedDomains
+        self.manifestDigest = manifestDigest
     }
     public func validate() throws {
-        guard datasetVersion > 0, blockedDomains.count <= 50_000, allowedDomains.count <= 5_000 else {
+        guard datasetVersion > 0, blockedDomains.count <= 50_000, allowedDomains.count <= 5_000,
+              userBlockedDomains.count <= 5_000 else {
             throw ProtectionConfigurationError.excessiveRules
         }
-        for domain in blockedDomains + allowedDomains { _ = try ProtectionCanonicalization.domain(domain) }
+        for domain in blockedDomains + allowedDomains + userBlockedDomains { _ = try ProtectionCanonicalization.domain(domain) }
         guard !blockedDomains.isEmpty else { throw ProtectionConfigurationError.missingDataset }
+        if let manifestDigest {
+            guard manifestDigest.count == 64, manifestDigest.utf8.allSatisfy({ ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102) }) else {
+                throw ProtectionConfigurationError.missingDataset
+            }
+        }
     }
     public var scopeIdentity: String { get throws {
         try validate()
@@ -193,12 +204,20 @@ public enum SafariRuleCompiler {
         try configuration.validate()
         let allowed = Set(try configuration.allowedDomains.map(ProtectionCanonicalization.domain))
         let blocked = Set(try configuration.blockedDomains.map(ProtectionCanonicalization.domain))
+        let custom = Set(try configuration.userBlockedDomains.map(ProtectionCanonicalization.domain))
         let domains = blocked.filter { candidate in
             !allowed.contains { candidate == $0 || candidate.hasSuffix("." + $0) }
         }.sorted()
         var rules = domains.map { domain in
             Rule(trigger: .init(urlFilter: "^https?://([^/]+\\.)?" +
                                 NSRegularExpression.escapedPattern(for: domain) + "[:/]",
+                                loadType: ["third-party"]), action: .init(type: "block"))
+        }
+        let customDomains = custom.filter { candidate in
+            !allowed.contains { candidate == $0 || candidate.hasSuffix("." + $0) }
+        }.sorted()
+        rules += customDomains.map { domain in
+            Rule(trigger: .init(urlFilter: "^https?://" + NSRegularExpression.escapedPattern(for: domain) + "[:/]",
                                 loadType: ["third-party"]), action: .init(type: "block"))
         }
         // A child allow entry must not whitelist the parent or its other children.

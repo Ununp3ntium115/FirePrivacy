@@ -11,13 +11,17 @@ final class URLFilterService {
     init(bundle: Bundle = .main) { self.bundle = bundle }
 
     func enable(dataset: ValidatedFilterDataset, authenticationToken: String,
+                revocationList: ValidatedFilterRevocationList? = nil,
                 authorization: ConsentAuthorization,
                 checker: any ConsentAuthorizationChecking) async throws -> ProtectionComponentState {
         guard bundle.object(forInfoDictionaryKey: "FirePrivacyDistributionEdition") as? String == "url-filter" else {
             throw ProtectionConfigurationError.unapprovedDeployment
         }
         let store = try ProtectionArtifactStore(bundle: bundle)
-        let verified = try FilterDatasetVerifier.verify(dataset.signedDataset, trustedKeys: store.trustedKeys)
+        if let revocationList { try store.installRevocations(revocationList) }
+        let revoked = try store.currentRevocationList(for: .appleURLBloomV1)
+        let verified = try FilterDatasetVerifier.verify(dataset.signedDataset, trustedKeys: store.trustedKeys,
+            revocations: revoked?.document.revocations ?? .init())
         let identifier = (bundle.bundleIdentifier ?? "") + ".URLFilterControl"
         let configuration = try verified.urlConfiguration(controlProviderBundleIdentifier: identifier)
         let declaration = bundle.object(forInfoDictionaryKey: "NSPIRConfiguration") as? [String: String]
@@ -37,7 +41,7 @@ final class URLFilterService {
         }
         try await manager.loadFromPreferences()
         try store.write(ProtectionArtifactStore.URLFilterEnvelope(signedDataset: verified.signedDataset,
-                                                                  allowedUntil: verified.expiresAt), named: "url-prefilter.json")
+            allowedUntil: min(verified.expiresAt, revoked?.expiresAt ?? verified.expiresAt), revocationList: revoked?.signedDataset), named: "url-prefilter.json")
         try manager.setConfiguration(pirServerURL: configuration.pirServerURL,
                                      pirPrivacyPassIssuerURL: configuration.privacyPassIssuerURL,
                                      pirAuthenticationToken: authenticationToken,
@@ -47,7 +51,8 @@ final class URLFilterService {
         // Availability failure does not interrupt unrelated networking. A prefilter match
         // is only a potential match; Apple's PIR server must supply the final verdict.
         manager.shouldFailClosed = false
-        manager.reportEndpoint = nil // Consumer filtering never enables managed traffic reporting.
+        // Do not configure managed traffic reporting. SDK 26.2 exposes no
+        // reportEndpoint setter; reporting is absent from this app's configuration.
         manager.isEnabled = true
         do {
             try await manager.saveToPreferences()
@@ -89,11 +94,19 @@ final class URLFilterService {
                          "Configuration is installed; iOS has not confirmed a running filter. Approve it in Settings and verify the registered PIR/OHTTP service.",
                          verifiedAt: Date(), datasetVersion: dataset.manifest.version)
         } catch let error as FilterDatasetError {
-            try? await remove()
+            do { try await remove() }
+            catch {
+                return .init(component: .systemURLFilter, phase: .failed,
+                    detail: "The dataset is unusable and iOS did not confirm configuration removal. Disable URL filtering in Settings and retry.", verifiedAt: Date())
+            }
             return .init(component: .systemURLFilter, phase: error == .expired ? .staleDataset : error == .revoked ? .revokedDataset : .failed,
-                         detail: "URL filtering was removed because its signed dataset is unavailable, expired or revoked.", verifiedAt: Date())
+                         systemConfirmed: true, detail: "iOS accepted removal because the signed dataset is unavailable, expired or revoked.", verifiedAt: Date())
         } catch {
-            try? await remove()
+            do { try await remove() }
+            catch {
+                return .init(component: .systemURLFilter, phase: .failed,
+                    detail: "iOS did not confirm removal of an unverifiable URL-filter configuration. Disable it in Settings and retry.", verifiedAt: Date())
+            }
             return .init(component: .systemURLFilter, phase: .needsConfiguration,
                          detail: "A trusted current Apple-format prefilter, registered PIR/OHTTP service, entitled signing and user authorization are required.", verifiedAt: Date())
         }
@@ -103,8 +116,11 @@ final class URLFilterService {
         guard bundle.object(forInfoDictionaryKey: "FirePrivacyDistributionEdition") as? String == "url-filter" else { return }
         // Remove the local prefilter first, so future extension requests refuse activation
         // even if the system removal fails and needs a user-visible retry.
-        try ProtectionArtifactStore(bundle: bundle).remove(named: "url-prefilter.json")
+        var localFailure: (any Error)?
+        do { try ProtectionArtifactStore(bundle: bundle).remove(named: "url-prefilter.json") }
+        catch { localFailure = error }
         try await manager.loadFromPreferences()
         try await manager.removeFromPreferences()
+        if let localFailure { throw localFailure }
     }
 }

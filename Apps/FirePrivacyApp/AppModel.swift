@@ -42,6 +42,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var networkEvents: [NetworkEvent] = []
     @Published private(set) var knowledgeBaseVersion: String?
     @Published private(set) var knowledgeBaseFailure = false
+    @Published private(set) var pendingSystemCleanup: Set<ConsentFeature> = []
+    @Published private(set) var unavailableSessionIDs: Set<UUID> = []
+    @Published private(set) var keyRotationStatus = ReportKeyRotationStatus.idle
     @Published var retainEncryptedSourceForNextImport = false
 
     private let store: EncryptedReportStore
@@ -216,6 +219,78 @@ final class AppModel: ObservableObject {
         catch { showFailure("Advisor unavailable", error) }
     }
 
+    private func performFeatureAction(_ message: String, action: () async throws -> Void) async {
+        guard !isWorking else { return }
+        beginWork(message)
+        defer { finishWork() }
+        do { try await action(); await syncEngine() }
+        catch { await syncEngine(); showFailure("Action needs attention", error) }
+    }
+
+    func updateRetention(_ policy: WorkspaceRetentionPolicy) async {
+        await performFeatureAction("Updating encrypted history") { try await engine.updateRetention(policy) }
+    }
+
+    func deleteReport(_ id: UUID) async {
+        await performFeatureAction("Deleting this report") { try await engine.deleteReport(id) }
+    }
+
+    func rotateEncryptionKey() async {
+        await performFeatureAction("Rotating the encryption key") { try await engine.rotateEncryptionKey() }
+    }
+
+    func retryStorageCleanup() async {
+        await performFeatureAction("Finishing storage cleanup") { try await engine.retryStorageCleanup() }
+    }
+
+    func retrySystemCleanup() async {
+        await performFeatureAction("Removing system protection") { try await engine.retrySystemCleanup() }
+    }
+
+    func scheduleReminder(weekday: Int, hour: Int, minute: Int) async {
+        await performFeatureAction("Scheduling a local reminder") {
+            try await engine.scheduleReminder(weekday: weekday, hour: hour, minute: minute)
+        }
+    }
+
+    func prepareSelfHostedAssessment(bearerToken: String? = nil) async -> PreparedEngineRequest? {
+        do { return try await engine.prepareSelfHostedAssessment(bearerToken: bearerToken) }
+        catch { showFailure("Preview unavailable", error); return nil }
+    }
+
+    func prepareUpdate(endpoint: URL, purpose: NetworkPurpose, operatorRetention: String) async -> PreparedEngineRequest? {
+        do { return try await engine.prepareUpdate(endpoint: endpoint, purpose: purpose, operatorRetention: operatorRetention) }
+        catch { showFailure("Preview unavailable", error); return nil }
+    }
+
+    @discardableResult
+    func sendPreparedRequest(_ prepared: PreparedEngineRequest) async -> Bool {
+        guard !isWorking else { return false }
+        beginWork("Sending your approved request")
+        defer { finishWork() }
+        do { _ = try await engine.send(prepared); await syncEngine(); return true }
+        catch { await syncEngine(); showFailure("Request was not completed", error); return false }
+    }
+
+    func enableSafari(_ dataset: ValidatedFilterDataset) async {
+        await performFeatureAction("Installing verified Safari rules") { try await engine.enableSafari(dataset) }
+    }
+
+    func enableDNS() async {
+        await performFeatureAction("Installing your DNS configuration") { try await engine.enableDNS() }
+    }
+
+    @available(iOS 26.0, *)
+    func enableURLFilter(_ dataset: ValidatedFilterDataset, authenticationToken: String) async {
+        await performFeatureAction("Configuring private URL filtering") {
+            try await engine.enableURLFilter(dataset, authenticationToken: authenticationToken)
+        }
+    }
+
+    func enableManaged(_ dataset: ValidatedFilterDataset) async {
+        await performFeatureAction("Configuring managed protection") { try await engine.enableManaged(dataset) }
+    }
+
     func syncEngine() async {
         report = engine.report
         analysis = engine.analysis
@@ -229,6 +304,11 @@ final class AppModel: ObservableObject {
         networkEvents = await engine.gate.ledger.snapshot()
         knowledgeBaseVersion = engine.knowledgeBase?.version
         knowledgeBaseFailure = engine.knowledgeBaseFailure
+        pendingSystemCleanup = engine.pendingSystemCleanup
+        unavailableSessionIDs = engine.unavailableSessionIDs
+        do { keyRotationStatus = try await store.rotationStatus() }
+        catch { showFailure("Storage status unavailable", error) }
+        hasSavedReport = !sessions.isEmpty
     }
 
     private func showFailure(_ title: String, _ error: any Error) {
@@ -295,6 +375,9 @@ final class AppModel: ObservableObject {
             notice = nil
         } catch {
             // A partial storage failure is visible; do not claim complete deletion.
+            await syncEngine()
+            hasSavedReport = !sessions.isEmpty
+            isDemo = report?.metadata?.isSyntheticDemo == true
             savedReportUnavailable = true
             notice = AppNotice(title: "Deletion needs attention", message: "Deletion did not finish. Try again after unlocking your device.\n\n" + error.localizedDescription)
         }

@@ -41,14 +41,34 @@ public struct ManagedPolicy: Codable, Equatable, Sendable {
     /// Explicit allows take priority. Unknown attribution cannot satisfy an app-scoped rule.
     /// Expired/unavailable policy permits the flow, while activation is refused by the app.
     public func decision(host: String?, sourceAppIdentifier: String?, now: Date = Date()) -> Action {
-        guard Double(expiresAtSeconds) > now.timeIntervalSince1970,
-              let host, let domain = try? ProtectionCanonicalization.domain(host),
-              (try? validate()) != nil else { return .allow }
-        let matching = rules.filter { rule in
-            (rule.appIdentifier == nil || rule.appIdentifier == sourceAppIdentifier) &&
-            (domain == rule.domain || (rule.includeSubdomains && domain.hasSuffix("." + rule.domain)))
+        (try? ManagedPolicyIndex(policy: self).decision(host: host, sourceAppIdentifier: sourceAppIdentifier, now: now)) ?? .allow
+    }
+}
+
+/// Build once at provider start or rules-changed. A lookup visits the host's
+/// suffixes rather than revalidating or scanning every rule on every connection.
+public struct ManagedPolicyIndex: Sendable {
+    private let rulesByDomain: [String: [ManagedPolicy.Rule]]
+    private let expiresAt: Date
+    public init(policy: ManagedPolicy, authorizationExpiresAt: Date? = nil) throws {
+        try policy.validate()
+        rulesByDomain = Dictionary(grouping: policy.rules, by: \.domain)
+        let policyExpiry = Date(timeIntervalSince1970: Double(policy.expiresAtSeconds))
+        expiresAt = authorizationExpiresAt.map { min($0, policyExpiry) } ?? policyExpiry
+    }
+    public func decision(host: String?, sourceAppIdentifier: String?, now: Date = Date()) -> ManagedPolicy.Action {
+        guard expiresAt > now, let host, let domain = try? ProtectionCanonicalization.domain(host) else { return .allow }
+        let labels = domain.split(separator: ".")
+        var matchedDrop = false
+        for offset in labels.indices {
+            let candidate = labels[offset...].joined(separator: ".")
+            for rule in rulesByDomain[candidate] ?? [] {
+                guard (offset == 0 || rule.includeSubdomains),
+                      rule.appIdentifier == nil || rule.appIdentifier == sourceAppIdentifier else { continue }
+                if rule.action == .allow { return .allow }
+                matchedDrop = true
+            }
         }
-        if matching.contains(where: { $0.action == .allow }) { return .allow }
-        return matching.contains(where: { $0.action == .drop }) ? .drop : .allow
+        return matchedDrop ? .drop : .allow
     }
 }

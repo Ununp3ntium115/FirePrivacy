@@ -11,7 +11,7 @@ final class URLFilterControlProvider: NEURLFilterControlProvider {
     func fetchPrefilter(existingPrefilterTag: String?) async throws -> NEURLFilterPrefilter? {
         let dataset = try ProtectionArtifactStore().validatedURLFilter()
         let manifest = dataset.manifest
-        let tag = "\(manifest.version)-\(manifest.payloadSHA256)"
+        let tag = "\(manifest.version)-\(try dataset.manifestDigest)"
         if existingPrefilterTag == tag { return nil }
         guard let bits = manifest.bitCount, let hashes = manifest.hashCount, let seed = manifest.murmurSeed else {
             throw FilterDatasetError.incompatibleBloomFilter

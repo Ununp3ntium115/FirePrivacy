@@ -57,6 +57,23 @@ final class ProtectionTests: XCTestCase {
             XCTAssertEqual(regex.firstMatch(in: url, range: NSRange(url.startIndex..., in: url)) != nil, allowed)
         }
     }
+    func testUserSafariBlockIsSeparateScopeBoundAndAllowWins() throws {
+        let dataset = try BundledProtectionDataset.safariStarter()
+        let baseline = try dataset.safariConfiguration()
+        let custom = try dataset.safariConfiguration(userBlockedDomains: ["user-chosen.example.org"])
+        XCTAssertEqual(custom.blockedDomains, baseline.blockedDomains)
+        XCTAssertEqual(custom.userBlockedDomains, ["user-chosen.example.org"])
+        XCTAssertNotEqual(try custom.scopeIdentity, try baseline.scopeIdentity)
+        let rules = try JSONSerialization.jsonObject(with: SafariRuleCompiler.compile(custom)) as! [[String: Any]]
+        let exactPattern = (rules.last!["trigger"] as! [String: Any])["url-filter"] as! String
+        let regex = try NSRegularExpression(pattern: exactPattern)
+        let subdomain = "https://child.user-chosen.example.org/a"
+        XCTAssertNil(regex.firstMatch(in: subdomain, range: NSRange(subdomain.startIndex..., in: subdomain)))
+        let allowed = try dataset.safariConfiguration(allowedDomains: ["user-chosen.example.org"],
+                                                    userBlockedDomains: ["user-chosen.example.org"])
+        XCTAssertEqual(try SafariRuleCompiler.compile(allowed), try SafariRuleCompiler.compile(baseline))
+        XCTAssertThrowsError(try SafariRuleCompiler.compile(dataset.safariConfiguration(userBlockedDomains: ["https://bad.example.org"])))
+    }
     func testDNSConfigurationBindsDestinationAndOperatorDisclosure() throws {
         let a = DNSResolverConfiguration(transport: .https, servers: ["1.1.1.1", "2606:4700:4700::1111"],
             serverURL: URL(string: "https://resolver.example.org/dns-query")!, operatorName: "Test operator",
@@ -140,6 +157,31 @@ final class ProtectionTests: XCTestCase {
             XCTAssertEqual($0 as? FilterDatasetError, .malformedManifest)
         }
     }
+    func testSignedRevocationsApplyAndCannotRollbackOrUnrevoke() throws {
+        let payload = try JSONEncoder().encode(FilterRevocationDocument(targetKind: .safariDomainsV1,
+                                                                       revocations: .init(versions: [10])))
+        let (signedList, keys) = try signed(payload, kind: .revocationsV1, version: 3)
+        let list = try FilterDatasetVerifier.verifyRevocationList(signedList, trustedKeys: keys, now: now)
+        XCTAssertEqual(list.document.targetKind, .safariDomainsV1)
+        XCTAssertEqual(list.document.revocations.versions, [10])
+        XCTAssertThrowsError(try FilterDatasetVerifier.verifyRevocationList(signedList, trustedKeys: keys,
+            highestAcceptedVersion: 4, now: now)) { XCTAssertEqual($0 as? FilterDatasetError, .rollback) }
+        XCTAssertThrowsError(try FilterDatasetVerifier.verifyRevocationList(signedList, trustedKeys: keys,
+            previousRevocations: .init(versions: [9, 10]), now: now)) { XCTAssertEqual($0 as? FilterDatasetError, .rollback) }
+        XCTAssertThrowsError(try FilterDatasetVerifier.verifyRevocationList(signedList, trustedKeys: keys,
+            now: now.addingTimeInterval(90_000))) { XCTAssertEqual($0 as? FilterDatasetError, .expired) }
+        let (rollback, rollbackKeys) = try signed(payload, kind: .revocationsV1, version: 3, rollback: 4)
+        XCTAssertThrowsError(try FilterDatasetVerifier.verifyRevocationList(rollback, trustedKeys: rollbackKeys, now: now))
+    }
+    func testChangedSignedManifestChangesSafariConsentIdentity() throws {
+        let payload = try JSONEncoder().encode(["tracker.example.org"])
+        let (first, firstKeys) = try signed(payload, expires: 1_790_086_400)
+        let (second, secondKeys) = try signed(payload, expires: 1_790_172_800)
+        let a = try FilterDatasetVerifier.verify(first, trustedKeys: firstKeys, now: now)
+        let b = try FilterDatasetVerifier.verify(second, trustedKeys: secondKeys, now: now)
+        XCTAssertNotEqual(try a.manifestDigest, try b.manifestDigest)
+        XCTAssertNotEqual(try a.safariConfiguration().scopeIdentity, try b.safariConfiguration().scopeIdentity)
+    }
     func testManagedAllowsOverrideDropAndUnknownAttributionCannotMatchScopedRule() throws {
         let policy = ManagedPolicy(version: 1, deploymentMode: .supervisedDevice,
             rules: [.init(domain: "tracker.example.org", action: .drop),
@@ -153,5 +195,17 @@ final class ProtectionTests: XCTestCase {
         XCTAssertEqual(policy.decision(host: "scoped.example.org", sourceAppIdentifier: "com.example.Blocked", now: now), .drop)
         XCTAssertEqual(policy.decision(host: "tracker.example.org", sourceAppIdentifier: nil,
                                       now: now.addingTimeInterval(90_000)), .allow)
+    }
+    func testManagedIndexRespectsExactRulesAndShorterAuthorizationExpiry() throws {
+        let policy = ManagedPolicy(version: 1, deploymentMode: .mdmPerApp,
+            rules: [.init(domain: "exact.example.org", includeSubdomains: false, action: .drop),
+                    .init(domain: "parent.example.org", action: .drop),
+                    .init(domain: "needed.parent.example.org", action: .allow)], expiresAtSeconds: 1_790_086_400)
+        let index = try ManagedPolicyIndex(policy: policy, authorizationExpiresAt: now.addingTimeInterval(10))
+        XCTAssertEqual(index.decision(host: "exact.example.org", sourceAppIdentifier: nil, now: now), .drop)
+        XCTAssertEqual(index.decision(host: "child.exact.example.org", sourceAppIdentifier: nil, now: now), .allow)
+        XCTAssertEqual(index.decision(host: "other.parent.example.org", sourceAppIdentifier: nil, now: now), .drop)
+        XCTAssertEqual(index.decision(host: "needed.parent.example.org", sourceAppIdentifier: nil, now: now), .allow)
+        XCTAssertEqual(index.decision(host: "parent.example.org", sourceAppIdentifier: nil, now: now.addingTimeInterval(11)), .allow)
     }
 }

@@ -24,14 +24,20 @@ final class ProtectionService {
     }
 
     func enableSafari(dataset: ValidatedFilterDataset, allowedDomains: [String] = [],
+                      userBlockedDomains: [String] = [],
+                      revocationList: ValidatedFilterRevocationList? = nil,
                       authorization: ConsentAuthorization,
                       checker: any ConsentAuthorizationChecking) async throws -> ProtectionComponentState {
         let store = try ProtectionArtifactStore(bundle: bundle)
-        let current = try FilterDatasetVerifier.verify(dataset.signedDataset, trustedKeys: store.trustedKeys)
-        let configuration = try current.safariConfiguration(allowedDomains: allowedDomains)
+        if let revocationList { try store.installRevocations(revocationList) }
+        let revoked = try store.currentRevocationList(for: .safariDomainsV1)
+        let current = try FilterDatasetVerifier.verify(dataset.signedDataset, trustedKeys: store.trustedKeys,
+            revocations: revoked?.document.revocations ?? .init())
+        let configuration = try current.safariConfiguration(allowedDomains: allowedDomains, userBlockedDomains: userBlockedDomains)
         try await require(authorization, feature: .safariProtection, scope: configuration.scopeIdentity, checker: checker)
         try store.write(ProtectionArtifactStore.SafariEnvelope(configuration: configuration,
-                        signedDataset: current.signedDataset, allowedUntil: current.expiresAt), named: "safari-rules.json")
+                        signedDataset: current.signedDataset, allowedUntil: min(current.expiresAt, revoked?.expiresAt ?? current.expiresAt),
+                        revocationList: revoked?.signedDataset), named: "safari-rules.json")
         do { try await reloadSafari() }
         catch { try? store.remove(named: "safari-rules.json"); throw error }
         guard await checker.validateAuthorization(authorization) else {
@@ -39,6 +45,10 @@ final class ProtectionService {
             throw ProtectionConfigurationError.consentRevoked
         }
         return await safariState()
+    }
+
+    func applyRevocations(_ list: ValidatedFilterRevocationList) throws {
+        try ProtectionArtifactStore(bundle: bundle).installRevocations(list)
     }
 
     func safariState() async -> ProtectionComponentState {
@@ -57,13 +67,22 @@ final class ProtectionService {
                          "Rules are installed. Enable Fire Privacy in Settings → Apps → Safari → Extensions.",
                          verifiedAt: Date(), datasetVersion: configuration.datasetVersion)
         } catch let error as FilterDatasetError {
-            try? await removeSafari()
+            do { try await removeSafari() }
+            catch {
+                return .init(component: .safari, phase: .failed,
+                    detail: "The signed dataset is unusable and Safari rejected the empty-rule reload. Cached rules may remain; disable Fire Privacy in Safari Settings and retry.", verifiedAt: Date())
+            }
             return .init(component: .safari, phase: error == .expired ? .staleDataset : error == .revoked ? .revokedDataset : .failed,
-                         detail: "The local rule dataset cannot be used. Empty rules were requested; if Safari rejected the reload, disable the extension in Settings.", verifiedAt: Date())
+                         systemConfirmed: true,
+                         detail: "Safari accepted empty rules because the signed dataset is unusable. The extension switch may remain enabled in Settings.", verifiedAt: Date())
         } catch ProtectionConfigurationError.consentRevoked {
-            try? await removeSafari()
-            return .init(component: .safari, phase: .disabled,
-                         detail: "The rule authorization expired. Empty rules were requested; verify removal in Safari Settings.", verifiedAt: Date())
+            do { try await removeSafari() }
+            catch {
+                return .init(component: .safari, phase: .failed,
+                    detail: "Authorization expired and Safari rejected the empty-rule reload. Cached rules may remain; disable Fire Privacy in Safari Settings and retry.", verifiedAt: Date())
+            }
+            return .init(component: .safari, phase: .disabled, systemConfirmed: true,
+                         detail: "Safari accepted empty rules after authorization expired. The extension switch may remain enabled in Settings.", verifiedAt: Date())
         } catch {
             return .init(component: .safari, phase: .needsConfiguration,
                          detail: "Install a trusted, current rule dataset before enabling Safari protection.", verifiedAt: Date())
@@ -78,8 +97,13 @@ final class ProtectionService {
         }
     }
     func removeSafari() async throws {
-        try ProtectionArtifactStore(bundle: bundle).remove(named: "safari-rules.json")
+        var localFailure: (any Error)?
+        do { try ProtectionArtifactStore(bundle: bundle).remove(named: "safari-rules.json") }
+        catch { localFailure = error }
+        // Still ask Safari to reload if local cleanup failed; never call it disabled
+        // unless both the empty local artifact and the OS reload are confirmed.
         try await reloadSafari()
+        if let localFailure { throw localFailure }
     }
 
     func enableDNS(configuration: DNSResolverConfiguration, authorization: ConsentAuthorization,

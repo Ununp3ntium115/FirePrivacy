@@ -1,7 +1,7 @@
 import Foundation
 
 public enum FilterPayloadKind: String, Codable, Sendable {
-    case safariDomainsV1, appleURLBloomV1, managedRulesV1
+    case safariDomainsV1, appleURLBloomV1, managedRulesV1, revocationsV1
 }
 
 /// The signed representation includes every field, including parameters and deployment binding.
@@ -59,6 +59,34 @@ public struct FilterRevocations: Codable, Equatable, Sendable {
     }
 }
 
+public struct FilterRevocationDocument: Codable, Equatable, Sendable {
+    public let targetKind: FilterPayloadKind
+    public let revocations: FilterRevocations
+    public init(targetKind: FilterPayloadKind, revocations: FilterRevocations) {
+        self.targetKind = targetKind; self.revocations = revocations
+    }
+    public func validate() throws {
+        guard targetKind != .revocationsV1, revocations.keyIDs.count <= 1_000,
+              revocations.versions.count <= 5_000, revocations.payloadDigests.count <= 5_000,
+              revocations.keyIDs.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 120 && $0.utf8.allSatisfy { $0 >= 33 && $0 <= 126 } }),
+              revocations.versions.allSatisfy({ $0 > 0 }),
+              revocations.payloadDigests.allSatisfy({ value in value.count == 64 && value.utf8.allSatisfy { ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102) } }) else {
+            throw FilterDatasetError.invalidPayload
+        }
+    }
+}
+
+public struct ValidatedFilterRevocationList: Sendable, Equatable {
+    public let signedDataset: SignedFilterDataset
+    public let document: FilterRevocationDocument
+    public var version: UInt64 { signedDataset.manifest.version }
+    public var expiresAt: Date { Date(timeIntervalSince1970: Double(signedDataset.manifest.expiresAtSeconds)) }
+    public var manifestDigest: String { get throws { ContentDigest.sha256(try signedDataset.manifest.signedRepresentation()) } }
+    fileprivate init(_ signed: SignedFilterDataset, document: FilterRevocationDocument) {
+        signedDataset = signed; self.document = document
+    }
+}
+
 public enum FilterDatasetError: Error, Equatable, Sendable {
     case unsupportedSchema, malformedManifest, excessivePayload, payloadMismatch, unknownSigningKey
     case invalidSignature, notYetValid, expired, revoked, rollback, incompatibleBloomFilter, invalidPayload
@@ -69,12 +97,16 @@ public struct ValidatedFilterDataset: Sendable, Equatable {
     public let signedDataset: SignedFilterDataset
     public var manifest: FilterDatasetManifest { signedDataset.manifest }
     public var payload: Data { signedDataset.payload }
+    public var manifestDigest: String { get throws {
+        ContentDigest.sha256(try manifest.signedRepresentation())
+    } }
     fileprivate init(_ signed: SignedFilterDataset) { signedDataset = signed }
     public var expiresAt: Date { Date(timeIntervalSince1970: Double(manifest.expiresAtSeconds)) }
-    public func safariConfiguration(allowedDomains: [String] = []) throws -> SafariRuleConfiguration {
+    public func safariConfiguration(allowedDomains: [String] = [], userBlockedDomains: [String] = []) throws -> SafariRuleConfiguration {
         guard manifest.kind == .safariDomainsV1 else { throw ProtectionConfigurationError.wrongDatasetKind }
         return SafariRuleConfiguration(blockedDomains: try JSONDecoder().decode([String].self, from: payload),
-                                       allowedDomains: allowedDomains, datasetVersion: manifest.version)
+                                       allowedDomains: allowedDomains, userBlockedDomains: userBlockedDomains,
+                                       datasetVersion: manifest.version, manifestDigest: try manifestDigest)
     }
     public func urlConfiguration(controlProviderBundleIdentifier: String) throws -> URLFilterServiceConfiguration {
         guard manifest.kind == .appleURLBloomV1, let pirServerURL = manifest.pirServerURL,
@@ -84,7 +116,7 @@ public struct ValidatedFilterDataset: Sendable, Equatable {
         return URLFilterServiceConfiguration(pirServerURL: pirServerURL,
                                             privacyPassIssuerURL: manifest.privacyPassIssuerURL,
                                             controlProviderBundleIdentifier: controlProviderBundleIdentifier,
-                                            datasetDigest: manifest.payloadSHA256,
+                                            datasetDigest: try manifestDigest,
                                             appleApprovedConfigurationIdentity: identity)
     }
 }
@@ -148,8 +180,33 @@ public enum FilterDatasetVerifier {
             }
             do { try JSONDecoder().decode(ManagedPolicy.self, from: signed.payload).validate() }
             catch { throw FilterDatasetError.invalidPayload }
+        case .revocationsV1:
+            guard m.rollbackFromVersion == nil, m.bitCount == nil, m.hashCount == nil, m.murmurSeed == nil,
+                  m.hashAlgorithm == nil, m.pirServerURL == nil, m.privacyPassIssuerURL == nil,
+                  m.appleConfigurationIdentity == nil, signed.payload.count <= 512 * 1_024 else {
+                throw FilterDatasetError.malformedManifest
+            }
+            try JSONDecoder().decode(FilterRevocationDocument.self, from: signed.payload).validate()
         }
         return ValidatedFilterDataset(signed)
+    }
+
+    public static func verifyRevocationList(_ signed: SignedFilterDataset, trustedKeys: [String: Data],
+                                            highestAcceptedVersion: UInt64 = 0,
+                                            previousRevocations: FilterRevocations = .init(),
+                                            now: Date = Date()) throws -> ValidatedFilterRevocationList {
+        guard signed.manifest.kind == .revocationsV1 else { throw ProtectionConfigurationError.wrongDatasetKind }
+        guard signed.manifest.version >= highestAcceptedVersion, signed.manifest.rollbackFromVersion == nil else {
+            throw FilterDatasetError.rollback
+        }
+        _ = try verify(signed, trustedKeys: trustedKeys, highestAcceptedVersion: highestAcceptedVersion, now: now)
+        let document = try JSONDecoder().decode(FilterRevocationDocument.self, from: signed.payload)
+        guard document.revocations.keyIDs.isSuperset(of: previousRevocations.keyIDs),
+              document.revocations.versions.isSuperset(of: previousRevocations.versions),
+              document.revocations.payloadDigests.isSuperset(of: previousRevocations.payloadDigests) else {
+            throw FilterDatasetError.rollback
+        }
+        return .init(signed, document: document)
     }
 }
 

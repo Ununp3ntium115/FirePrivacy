@@ -132,8 +132,11 @@ public struct KnowledgeBaseVerifier: Sendable {
     public let trustAnchors: [KnowledgeBaseTrustAnchor]
     public let revokedVersions: Set<String>
     public let revokedKeyIDs: Set<String>
-    public init(trustAnchors: [KnowledgeBaseTrustAnchor], revokedVersions: Set<String> = [], revokedKeyIDs: Set<String> = []) {
+    public let revokedPayloadDigests: Set<String>
+    public init(trustAnchors: [KnowledgeBaseTrustAnchor], revokedVersions: Set<String> = [], revokedKeyIDs: Set<String> = [],
+                revokedPayloadDigests: Set<String> = []) {
         self.trustAnchors = trustAnchors; self.revokedVersions = revokedVersions; self.revokedKeyIDs = revokedKeyIDs
+        self.revokedPayloadDigests = revokedPayloadDigests
     }
 
     public func verify(manifestData: Data, payloadData: Data, appVersion: String,
@@ -154,7 +157,8 @@ public struct KnowledgeBaseVerifier: Sendable {
         }
         guard let anchor = trustAnchors.first(where: { $0.keyID == manifest.signingKeyID }),
               anchor.publicKey.count == 32 else { throw Failure.unknownSigningKey }
-        guard !revokedKeyIDs.contains(anchor.keyID), !revokedVersions.contains(manifest.datasetVersion) else { throw Failure.revoked }
+        guard !revokedKeyIDs.contains(anchor.keyID), !revokedVersions.contains(manifest.datasetVersion),
+              !revokedPayloadDigests.contains(manifest.payloadSHA256) else { throw Failure.revoked }
         guard let signature = Data(base64Encoded: manifest.signatureBase64),
               DetachedSignature.verify(signature: signature, message: manifest.signingRepresentation, publicKey: anchor.publicKey) else {
             throw Failure.signatureInvalid

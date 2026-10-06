@@ -20,7 +20,7 @@ final class ProtectionContractTests: XCTestCase {
         let dataset = SignedFilterDataset(manifest: manifest, payload: payload,
                                          signature: try key.signature(for: manifest.signedRepresentation()))
         let store = ProtectionArtifactStore(directory: directory, trustedKeys: ["test-only": key.publicKey.rawRepresentation])
-        let config = SafariRuleConfiguration(blockedDomains: ["tracker.example.org"], datasetVersion: 1)
+        let config = try FilterDatasetVerifier.verify(dataset, trustedKeys: store.trustedKeys).safariConfiguration()
         try store.write(ProtectionArtifactStore.SafariEnvelope(configuration: config, signedDataset: dataset,
                                                                 allowedUntil: now.addingTimeInterval(60)), named: "safari-rules.json")
         XCTAssertEqual(try store.validatedSafari(now: now).0, config)
@@ -32,6 +32,19 @@ final class ProtectionContractTests: XCTestCase {
                                                                 allowedUntil: now.addingTimeInterval(60)), named: "safari-rules.json")
         XCTAssertThrowsError(try store.validatedSafari(now: now)) {
             XCTAssertEqual($0 as? FilterDatasetError, .payloadMismatch)
+        }
+        try store.write(ProtectionArtifactStore.SafariEnvelope(configuration: config, signedDataset: dataset,
+                                                                allowedUntil: now.addingTimeInterval(60)), named: "safari-rules.json")
+        let document = FilterRevocationDocument(targetKind: .safariDomainsV1, revocations: .init(versions: [1]))
+        let revocationPayload = try JSONEncoder().encode(document)
+        let revocationManifest = FilterDatasetManifest(version: 1, kind: .revocationsV1, tag: "native-revocations",
+            issuedAtSeconds: manifest.issuedAtSeconds, expiresAtSeconds: manifest.expiresAtSeconds,
+            payloadSHA256: ContentDigest.sha256(revocationPayload), payloadByteCount: revocationPayload.count, keyID: "test-only")
+        let raw = SignedFilterDataset(manifest: revocationManifest, payload: revocationPayload,
+                                     signature: try key.signature(for: revocationManifest.signedRepresentation()))
+        try store.installRevocations(FilterDatasetVerifier.verifyRevocationList(raw, trustedKeys: store.trustedKeys))
+        XCTAssertThrowsError(try store.validatedSafari(now: now)) {
+            XCTAssertEqual($0 as? FilterDatasetError, .revoked)
         }
     }
 

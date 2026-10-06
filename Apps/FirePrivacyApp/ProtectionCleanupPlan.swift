@@ -34,6 +34,7 @@ actor ProtectionCleanupPlan {
         if features.isEmpty {
             if FileManager().fileExists(atPath: url.deletingLastPathComponent().path) {
                 try FileManager().removeItem(at: url.deletingLastPathComponent())
+                try RotationDurability.synchronizeDirectory(at: url.deletingLastPathComponent().deletingLastPathComponent())
             }
             return
         }
@@ -48,6 +49,7 @@ actor ProtectionCleanupPlan {
         let staged = folder.appendingPathComponent(".removal-\(UUID().uuidString).json")
         defer { try? FileManager().removeItem(at: staged) }
         try ReportFileIO.writeProtectedData(data, to: staged)
+        try RotationDurability.synchronizeFile(at: staged)
         // Atomic rename preserves the previous retry plan if the new write fails.
         let result = staged.withUnsafeFileSystemRepresentation { source in
             url.withUnsafeFileSystemRepresentation { destination in
@@ -56,5 +58,6 @@ actor ProtectionCleanupPlan {
             }
         }
         guard result == 0 else { throw ReportStoreError.persistenceFailed }
+        try RotationDurability.synchronizeDirectory(at: folder)
     }
 }

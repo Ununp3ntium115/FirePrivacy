@@ -9,12 +9,16 @@ final class ManagedProtectionService {
     init(bundle: Bundle = .main) { self.bundle = bundle }
 
     func enable(dataset: ValidatedFilterDataset, authorization: ConsentAuthorization,
+                revocationList: ValidatedFilterRevocationList? = nil,
                 checker: any ConsentAuthorizationChecking) async throws -> ProtectionComponentState {
         guard bundle.object(forInfoDictionaryKey: "FirePrivacyDistributionEdition") as? String == "managed" else {
             throw ProtectionConfigurationError.unapprovedDeployment
         }
         let store = try ProtectionArtifactStore(bundle: bundle)
-        let verified = try FilterDatasetVerifier.verify(dataset.signedDataset, trustedKeys: store.trustedKeys)
+        if let revocationList { try store.installRevocations(revocationList) }
+        let revoked = try store.currentRevocationList(for: .managedRulesV1)
+        let verified = try FilterDatasetVerifier.verify(dataset.signedDataset, trustedKeys: store.trustedKeys,
+            revocations: revoked?.document.revocations ?? .init())
         guard verified.manifest.kind == .managedRulesV1 else { throw ProtectionConfigurationError.wrongDatasetKind }
         let policy = try JSONDecoder().decode(ManagedPolicy.self, from: verified.payload)
         try policy.validate()
@@ -43,7 +47,8 @@ final class ManagedProtectionService {
             manager.isEnabled = true
         }
         try store.write(ProtectionArtifactStore.ManagedEnvelope(signedDataset: verified.signedDataset,
-                                                                allowedUntil: min(verified.expiresAt, Date(timeIntervalSince1970: Double(policy.expiresAtSeconds)))),
+            allowedUntil: min(verified.expiresAt, Date(timeIntervalSince1970: Double(policy.expiresAtSeconds)), revoked?.expiresAt ?? verified.expiresAt),
+            revocationList: revoked?.signedDataset),
                         named: "managed-policy.json")
         do { try await manager.saveToPreferences() }
         catch { try? store.remove(named: "managed-policy.json"); throw error }
@@ -70,19 +75,30 @@ final class ManagedProtectionService {
                          detail: "iOS confirms an enabled managed content-filter configuration. Flow attribution is available only where the managed OS exposes it; policy never inspects encrypted payloads.",
                          verifiedAt: Date(), datasetVersion: policy.version)
         } catch let error as FilterDatasetError {
-            try? await remove()
+            do { try await remove() }
+            catch {
+                return .init(component: .managed, phase: .failed,
+                    detail: "The policy is unusable and iOS did not confirm configuration removal. Ask the device administrator to disable the filter and retry.", verifiedAt: Date())
+            }
             return .init(component: .managed, phase: error == .expired ? .staleDataset : error == .revoked ? .revokedDataset : .failed,
-                         detail: "The managed policy is unusable. Filtering was removed or needs an administrator removal retry.", verifiedAt: Date())
+                         systemConfirmed: true, detail: "iOS accepted removal of the unusable managed filter configuration.", verifiedAt: Date())
         } catch {
-            try? await remove()
+            do { try await remove() }
+            catch {
+                return .init(component: .managed, phase: .failed,
+                    detail: "iOS did not confirm removal of an unverifiable managed configuration. Ask the device administrator to disable it and retry.", verifiedAt: Date())
+            }
             return .init(component: .managed, phase: .unavailable,
                          detail: "Managed protection requires an authorized managed deployment, entitled signing and a current signed policy. A consumer app cannot grant supervision or MDM enrollment.", verifiedAt: Date())
         }
     }
     func remove() async throws {
         guard bundle.object(forInfoDictionaryKey: "FirePrivacyDistributionEdition") as? String == "managed" else { return }
-        try ProtectionArtifactStore(bundle: bundle).remove(named: "managed-policy.json")
+        var localFailure: (any Error)?
+        do { try ProtectionArtifactStore(bundle: bundle).remove(named: "managed-policy.json") }
+        catch { localFailure = error }
         try await manager.loadFromPreferences()
         try await manager.removeFromPreferences()
+        if let localFailure { throw localFailure }
     }
 }
