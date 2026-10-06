@@ -36,6 +36,7 @@ MAX_INT64 = (1 << 63) - 1
 MAX_UINT64 = (1 << 64) - 1
 ED25519_PUBLIC_PREFIX = bytes.fromhex("302a300506032b6570032100")
 FILTER_KINDS = ("safariDomainsV1", "appleURLBloomV1", "managedRulesV1")
+RULE_IDS = {"AGG-APPLE-001", "AGG-CROSSAPP-002", "LOC-NET-003", "SENSOR-UNEXPECTED-004", "UNKNOWN-HIGHFANOUT-005", "VENDOR-KNOWN-006", "COVERAGE-GAP-007", "FRESHNESS-008"}
 CATEGORIES = {"advertising", "analytics", "attribution", "authentication", "contentDelivery", "content", "crashReporting", "dataBroker", "fraudPrevention", "locationIntelligence", "messaging", "payments", "personalization", "pushNotifications", "social", "telemetry", "dnsResolution"}
 
 
@@ -68,6 +69,12 @@ def integer(value, minimum=0, maximum=MAX_INT64):
 def numeric_version(value):
     require(isinstance(value, str) and re.fullmatch(r"(?:0|[1-9][0-9]{0,8})(?:\.(?:0|[1-9][0-9]{0,8})){2}", value), "Expected a three-component numeric dataset/app version.")
     return tuple(map(int, value.split(".")))
+
+
+def rule_version(value):
+    parsed = numeric_version(value)
+    require(all(len(part) <= 6 for part in value.split(".")), "Rule versions have at most six digits per component.")
+    return parsed
 
 
 def identifier(value, limit=80):
@@ -270,6 +277,35 @@ def validate_filter_payload(payload, kind, version, expires):
                 require(isinstance(rule["appIdentifier"], str) and len(rule["appIdentifier"]) <= 200 and re.fullmatch(r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", rule["appIdentifier"]), "Invalid managed app identifier.")
 
 
+def validate_rules(payload):
+    fields(payload, {"schemaVersion", "version", "implementationVersion", "rules"})
+    require(type(payload["schemaVersion"]) is int and payload["schemaVersion"] == 1 and payload["implementationVersion"] == "ruleset-2.0.0", "Unsupported rule schema/compiled implementation.")
+    rule_version(payload["version"])
+    rules = payload["rules"]
+    require(type(rules) is list and len(rules) == 8, "Rule configuration must contain all eight known detectors.")
+    seen = set()
+    for rule in rules:
+        fields(rule, {"id", "enabled", "parameters"})
+        require(isinstance(rule["id"], str) and rule["id"] in RULE_IDS and rule["id"] not in seen and type(rule["enabled"]) is bool, "Unknown, duplicate or malformed detector.")
+        seen.add(rule["id"]); parameters = rule["parameters"]
+        if rule["id"] == "AGG-CROSSAPP-002":
+            fields(parameters, {"minimumDistinctApps"}); integer(parameters["minimumDistinctApps"], 3, 1000)
+        elif rule["id"] == "UNKNOWN-HIGHFANOUT-005":
+            fields(parameters, {"minimumDistinctDestinations", "maximumReviewedCoverage"})
+            integer(parameters["minimumDistinctDestinations"], 10, 1000)
+            coverage = parameters["maximumReviewedCoverage"]
+            require(type(coverage) in (int, float) and math.isfinite(coverage) and 0.05 <= coverage <= 0.5, "Rule coverage parameter exceeds its reviewed range.")
+        elif rule["id"] == "FRESHNESS-008":
+            fields(parameters, {"minimumAgeDays"}); integer(parameters["minimumAgeDays"], 1, 365)
+        else: fields(parameters, set())
+    require(seen == RULE_IDS, "Rule configuration is incomplete.")
+
+
+def rules_signing_bytes(manifest):
+    keys = ("schemaVersion", "configurationVersion", "sequence", "generatedAt", "expiresAt", "minimumAppVersion", "ruleCount", "payloadSHA256", "signingKeyID")
+    return ("\n".join(["FirePrivacy.AnalysisRules.v1", *(str(manifest[k]) for k in keys)]) + "\n").encode("ascii")
+
+
 def kb_signing_bytes(manifest, revocations=False):
     if revocations:
         separator = "FirePrivacy.KnowledgeBaseRevocations.v1"
@@ -348,18 +384,23 @@ def prepare(args, now=None):
     command = args.command
     revocation = command.endswith("revocations")
     kb = command.startswith("kb")
+    rules = command == "rules"
     time_window(issued, args.expires_at, 90 if revocation or not kb else 366, now)
     endpoint = https(args.endpoint)
     key_id = identifier(args.key_id)
     review = review_record(args.review_record, now)
-    maximum = MIB if command == "kb-revocations" else 4 * MIB if kb else 512 * 1024 if revocation else MAX_FILTER_PAYLOAD
+    maximum = 16_384 if rules else MIB if command == "kb-revocations" else 4 * MIB if kb else 512 * 1024 if revocation else MAX_FILTER_PAYLOAD
     raw = read_bytes(args.payload, maximum)
     input_digest = digest(raw)
     payload = None if command == "filter" and args.kind == "appleURLBloomV1" else decode_json(raw)
     if revocation:
         validate_revocations(payload, kb)
         raw = encoded(payload)  # Canonical sorted unique revocations are required.
-    if kb:
+    if rules:
+        validate_rules(payload); rule_version(args.minimum_app_version)
+        manifest = {"schemaVersion": 1, "configurationVersion": payload["version"], "sequence": integer(args.sequence, 1), "generatedAt": issued, "expiresAt": args.expires_at, "minimumAppVersion": args.minimum_app_version, "ruleCount": 8, "payloadSHA256": digest(raw), "signingKeyID": key_id}
+        message = rules_signing_bytes(manifest)
+    elif kb:
         sequence = integer(args.sequence, 1)
         manifest = {"schemaVersion": 1, "sequence": sequence, "generatedAt": issued, "expiresAt": args.expires_at, "payloadSHA256": digest(raw), "signingKeyID": key_id}
         if revocation:
@@ -387,9 +428,13 @@ def prepare(args, now=None):
     require(len(raw) <= maximum, "Normalized payload exceeds its target bound.")
     signer = Signer(args.private_key, args.passphrase_file)
     if args.previous_artifact:
-        check_previous(args.previous_artifact, manifest, payload, signer, kb, revocation)
+        check_previous(args.previous_artifact, manifest, payload, signer, kb, revocation, rules=rules)
     signature = signer.sign(message)
-    if kb:
+    if rules:
+        manifest["signatureBase64"] = b64(signature)
+        manifest_bytes = encoded(manifest)
+        envelope = {"rules": {"manifest": manifest, "payloadData": b64(raw)}}
+    elif kb:
         manifest["signatureBase64"] = b64(signature)
         manifest_bytes = encoded(manifest)
         require(len(manifest_bytes) <= 16_384, "Manifest exceeds the app bound.")
@@ -401,16 +446,28 @@ def prepare(args, now=None):
     require(len(envelope_bytes) <= MAX_ENVELOPE, "Download envelope exceeds the approved transport response bound.")
     files = {"download.json": envelope_bytes, "manifest.json": manifest_bytes, "payload.bin" if payload is None else "payload.json": raw, "signing-message.bin": message}
     public_map = {key_id: signer.public_key.hex()}
-    files["public-key-reference.json"] = encoded({"keyID": key_id, "publicKeyBase64": b64(signer.public_key), "publicKeyHex": signer.public_key.hex(), "publicKeySHA256": digest(signer.public_key), "buildVariableName": "FIREPRIVACY_KB_PUBLIC_KEYS_JSON" if kb else "FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON", "buildVariableJSON": encoded(public_map).decode("ascii"), "requirement": "A matching trusted public key must be deployed in the app before this download is accepted; this file does not install or authorize a key."})
+    files["public-key-reference.json"] = encoded({"keyID": key_id, "publicKeyBase64": b64(signer.public_key), "publicKeyHex": signer.public_key.hex(), "publicKeySHA256": digest(signer.public_key), "buildVariableName": "FIREPRIVACY_KB_PUBLIC_KEYS_JSON" if kb or rules else "FIREPRIVACY_FILTER_PUBLIC_KEYS_JSON", "buildVariableJSON": encoded(public_map).decode("ascii"), "requirement": "A matching trusted public key must be deployed in the app before this download is accepted; this file does not install or authorize a key."})
     record = {"schemaVersion": 1, "target": command, "payloadKind": manifest.get("kind"), "endpoint": endpoint, "preparedAtSeconds": now, "sourceReview": review, "inputPayloadSHA256": input_digest, "signedPayloadSHA256": digest(raw), "signingMessageSHA256": digest(message), "signingKeyID": key_id, "publicKeySHA256": digest(signer.public_key), "previousArtifactChecked": bool(args.previous_artifact), "artifacts": {name: {"sha256": digest(data), "bytes": len(data)} for name, data in files.items()}, "status": "Local artifacts only; no hosting, operator identity, key deployment, Apple approval or network publication verified."}
     files["source-review-and-changelog.json"] = encoded(record)
     return files
 
 
-def check_previous(path, new, payload, signer, kb, revocation):
+def check_previous(path, new, payload, signer, kb, revocation, *, rules=False):
     _, old = input_json(path, MAX_ENVELOPE)
     try:
-        if kb:
+        if rules:
+            fields(old, {"rules"}); fields(old["rules"], {"manifest", "payloadData"})
+            m = old["rules"]["manifest"]
+            fields(m, {"schemaVersion", "configurationVersion", "sequence", "generatedAt", "expiresAt", "minimumAppVersion", "ruleCount", "payloadSHA256", "signingKeyID", "signatureBase64"})
+            raw = base64.b64decode(old["rules"]["payloadData"], validate=True)
+            require(type(m["schemaVersion"]) is int and m["schemaVersion"] == 1 and type(m["ruleCount"]) is int and m["ruleCount"] == 8 and 0 < len(raw) <= 16_384, "Invalid previous rule envelope schema/bounds.")
+            time_window(m["generatedAt"], m["expiresAt"], 90, m["generatedAt"])
+            identifier(m["signingKeyID"]); hex_digest(m["payloadSHA256"]); rule_version(m["minimumAppVersion"])
+            signer.verify(rules_signing_bytes(m), base64.b64decode(m["signatureBase64"], validate=True))
+            require(m["signingKeyID"] == new["signingKeyID"] and new["sequence"] > integer(m["sequence"], 1) and rule_version(new["configurationVersion"]) > rule_version(m["configurationVersion"]), "Rule publisher sequence and configuration version must increase.")
+            old_payload = decode_json(raw); validate_rules(old_payload)
+            require(old_payload["version"] == m["configurationVersion"], "Previous rule payload/manifest version mismatch.")
+        elif kb:
             fields(old, {"revocations"} if revocation else {"manifest", "payload"})
             item = old["revocations"] if revocation else old
             if revocation: fields(item, {"manifestData", "payloadData"})
@@ -475,7 +532,7 @@ def write_artifacts(output, files):
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
     subs = result.add_subparsers(dest="command", required=True)
-    for command in ("kb", "kb-revocations", "filter", "filter-revocations"):
+    for command in ("kb", "kb-revocations", "filter", "filter-revocations", "rules"):
         p = subs.add_parser(command)
         for name in ("payload", "private-key", "key-id", "review-record", "endpoint", "output"):
             p.add_argument("--" + name, required=True)
@@ -483,9 +540,9 @@ def parser():
         p.add_argument("--previous-artifact", help="Prior same-key download; authenticate and enforce increasing version/sticky revocations")
         p.add_argument("--issued-at", type=int)
         p.add_argument("--expires-at", type=int, required=True)
-        if command.startswith("kb"):
+        if command.startswith("kb") or command == "rules":
             p.add_argument("--sequence", type=int, required=True)
-            if command == "kb": p.add_argument("--minimum-app-version", required=True)
+            if command in ("kb", "rules"): p.add_argument("--minimum-app-version", required=True)
         else:
             p.add_argument("--version", type=int, required=True)
             p.add_argument("--tag", required=True)

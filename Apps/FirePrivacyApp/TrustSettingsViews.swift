@@ -54,8 +54,30 @@ struct TrustCenterView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     DetailRow(label: "Knowledge version", value: model.knowledgeBaseVersion ?? "Unavailable")
                     DetailRow(label: "Verification failure", value: model.knowledgeBaseFailure ? "Needs attention; imported evidence remains usable" : "No failure in current snapshot")
+                    DetailRow(label: "Publisher trust configuration", value: model.engine.datasetTrustConfigurationFailure ? "Rejected or unavailable" : "Loaded")
+                    DetailRow(label: "Knowledge signing key IDs", value: model.engine.knowledgeTrustKeyIDs.joined(separator: ", "))
+                    DetailRow(label: "Filter signing key IDs", value: model.engine.filterTrustKeyIDs.joined(separator: ", "))
+                    if let knowledge = model.engine.knowledgeBase {
+                        DetailRow(label: "Knowledge expiry", value: Date(timeIntervalSince1970: Double(knowledge.manifest.expiresAt)).formatted(date: .abbreviated, time: .shortened))
+                    }
                     Text("Classification describes documented business or infrastructure, not observed conduct. Missing, expired or rejected knowledge remains unknown. Local opinions are separate from signed sources.").foregroundStyle(FireStyle.muted)
                     NavigationLink { DatasetUpdatesView() } label: { Label("Review signed updates", systemImage: "arrow.down.doc").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
+                }
+            }
+            SectionHeading(title: "Reviewed rule configuration")
+            FireCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    DetailRow(label: "Active analysis version", value: model.rulesVersion)
+                    DetailRow(label: "Configuration state", value: model.engine.verifiedRuleConfiguration == nil ? "Compiled reviewed defaults" : "Verified signed configuration")
+                    DetailRow(label: "Configuration failure", value: model.ruleConfigurationFailure ? "Candidate rejected or unavailable; compiled defaults retained" : "No failure in current snapshot")
+                    if let verified = model.engine.verifiedRuleConfiguration {
+                        DetailRow(label: "Signed configuration version", value: verified.manifest.configurationVersion)
+                        DetailRow(label: "Payload SHA-256", value: verified.manifest.payloadSHA256)
+                        DetailRow(label: "Manifest SHA-256", value: verified.manifestSHA256)
+                        DetailRow(label: "Signer key ID", value: verified.manifest.signingKeyID)
+                        DetailRow(label: "Expires", value: Date(timeIntervalSince1970: Double(verified.manifest.expiresAt)).formatted(date: .abbreviated, time: .shortened))
+                    }
+                    Text("Updates can configure reviewed rule parameters within this build’s closed schema. They cannot introduce executable code or invented recommendation steps. They use the same explicit knowledge update request and signature checks.").font(.footnote).foregroundStyle(FireStyle.muted)
                 }
             }
             SectionHeading(title: "System protection inventory")
@@ -101,7 +123,10 @@ struct TrustCenterView: View {
             }
             TextListCard(title: "Evidence boundaries", strings: ["A domain contact does not reveal payloads, prove personal data transmission, or establish harm. Counts show frequency, not volume.", "Sensor begin/end records can describe one access. Historical exports do not reveal current permission choices.", "App identifiers are not an installed-app inventory. Unknown owners and app relationships remain unknown.", "Private Cloud Compute is unavailable in this build. The on-device advisor uses only SystemLanguageModel; external model processing uses only your explicitly configured endpoint."])
             NavigationLink { PrivacyPolicyView() } label: { Label("Read the privacy policy", systemImage: "doc.text").font(.headline).foregroundStyle(FireStyle.ember).padding(.vertical, 12) }.accessibilityIdentifier("privacy-policy-link")
-            if let support = PublicLinks.support { Link("Support in your browser", destination: support).foregroundStyle(FireStyle.ember).frame(minHeight: 44) }
+            if let support = PublicLinks.support {
+                Link("Support in your browser", destination: support).foregroundStyle(FireStyle.ember).frame(minHeight: 44)
+                Text("The configured support route may be public. Share synthetic reproductions only; never post reports, private identifiers or secrets. Use the repository’s private security-report route for sensitive vulnerabilities.").font(.footnote).foregroundStyle(FireStyle.muted)
+            }
         }.accessibilityIdentifier("trust-screen")
     }
 }
@@ -182,6 +207,7 @@ struct AppSettingsView: View {
             }
             settingsLink("Retention, key rotation & cleanup", symbol: "lock.rotation") { StorageSettingsView() }
             FireCard { DetailRow(label: "Build", value: appVersion) }
+            settingsLink("Third-party notices · readable offline", symbol: "doc.plaintext") { ThirdPartyNoticesView() }
         }.accessibilityIdentifier("settings-screen")
         .confirmationDialog("Share this report?", isPresented: $showExportConfirmation, titleVisibility: .visible) {
             Button("Prepare export & choose destination") { Task { await model.prepareExport(format: format, options: redacted ? .redacted : .full) } }
@@ -290,17 +316,20 @@ struct PrivacyPolicyView: View {
             PolicySection(title: "Information you import", text: "App Privacy Reports can include bundle identifiers, domains, counts, sensor categories, event types, timestamps, context, reported owners and source provenance. Parsing is bounded and skipped records are quarantined from analysis. Original source bytes are discarded unless you explicitly grant encrypted source retention and choose it for that import. Your original in Files is never modified.")
             PolicySection(title: "Local analysis and storage", text: "Versioned rules, profiles, manual audits, local overrides, comparisons and weekly summaries run locally. History and private feature state are AES-GCM encrypted in protected, backup-excluded storage with device-only unlocked Keychain keys. There is no app-controlled cloud sync, user account, advertising SDK or telemetry. A fictional demo is clearly labeled and is not saved as an imported report.")
             PolicySection(title: "Optional advisors", text: "Offline explanations make no model request. On eligible devices, separate consent enables Apple’s SystemLanguageModel on-device adapter; this build does not use Private Cloud Compute or an automatic external fallback. A separately configured self-hosted HTTPS endpoint receives only the exact bounded reference payload you preview and approve, excluding report text, bundle identifiers, domains, notes and timestamps. Its operator still receives connection metadata, model selection and any configured authentication. Its retention and model-training practices are outside this app’s control. All displayed conclusions remain grounded in deterministic findings.")
-            PolicySection(title: "Updates and network inventory", text: "Knowledge and filter updates occur only after separate scoped consent and approval of an exact request preview. The endpoint receives connection metadata; imported report payloads are not attached. Signed data must pass trusted-key, integrity, version, expiry and revocation checks. A bounded local ledger stores purpose, host, time, phase and byte counts, excluding paths, credentials, report identifiers, raw payloads and server messages. There is no silent polling.")
+            PolicySection(title: "Updates and network inventory", text: "Knowledge, reviewed rule configuration and filter updates occur only after separate scoped consent and approval of an exact request preview. Knowledge and closed-schema rule configurations use the same update channel. The endpoint receives connection metadata; imported report payloads are not attached. Signed data must pass trusted-key, integrity, version, expiry and revocation checks. A bounded local ledger stores purpose, host, time, phase and byte counts, excluding paths, credentials, report identifiers, raw payloads and server messages. There is no silent polling.")
             PolicySection(title: "Optional protection", text: "Safari evaluates validated rules locally after system enablement; coverage is limited to matching Safari resources and may break features. Encrypted DNS sends query names to your disclosed resolver, which can read them; encryption does not itself establish tracking protection. Approved URL-filter and managed editions require their platform, entitlement, service and enrollment conditions. Consent is separate from system activation, and failures or incomplete removals remain visible. The app does not automatically change another app’s permissions.")
             PolicySection(title: "Sharing, links and providers", text: "Full or redacted JSON, CSV and Markdown exports are prepared locally and shared only to the destination you choose. Redaction removes selected fields but does not guarantee anonymity. Sanitized diagnostics exclude report contents and identifiers but include versions and aggregate counts. Protected temporary decrypted files are removed after sharing or at next launch. Files providers, browser links, system-controlled DNS or URL services and share destinations apply their own privacy and retention practices and are outside the app request ledger’s coverage.")
-            PolicySection(title: "Retention, credentials and deletion", text: "Bounded retention removes oldest imports as needed. You can delete individual reports, revoke source retention, rotate encryption keys or delete all app data. Saved endpoint credentials require a separate deliberate choice and are stored in the device-only Keychain rather than ordinary preferences. Revocation cancels approved operations and attempts system removal; incomplete cleanup is shown and retryable. Delete All removes private workspace data, credentials, consent, temporary exports and keys. It does not delete originals in Files or external exports.")
+            PolicySection(title: "Retention, credentials and deletion", text: "Bounded retention removes oldest imports as needed. You can delete individual reports, revoke source retention, rotate encryption keys or delete all app data. Saved endpoint credentials require a separate deliberate choice and are stored in the device-only Keychain rather than ordinary preferences. Revocation cancels approved operations and attempts system removal; incomplete cleanup is shown and retryable. Delete All removes private workspace data, credentials, consent, temporary exports and keys. It does not delete originals in Files, external exports or data already received by advisor, resolver or other service operators. Contact those recipients under their own policies for their deletion options.")
             PolicySection(title: "Reminders and accuracy", text: "Optional local notifications contain a generic review prompt and require separate consent plus Apple notification permission. They do not monitor activity in the background. Historical contact counts are frequency, not data volume or proof of transmission or harm. Sensor records do not reveal current permissions. Classification describes documented business, not conduct. Incomplete knowledge remains unknown, and a finding absent from a later export is not assumed resolved.")
             PolicySection(title: "Sensitive information", text: "Reports and local notes can reveal sensitive habits. Avoid sharing them broadly or importing another person’s report without permission. The app does not request contact details, age, research participation or advertising identifiers.")
             FireCard {
                 VStack(alignment: .leading, spacing: 14) {
                     SectionHeading(title: "Policy and support")
                     if let privacy = PublicLinks.privacy { Link("Public privacy policy", destination: privacy).foregroundStyle(FireStyle.ember).frame(minHeight: 44) }
-                    if let support = PublicLinks.support { Link("Contact the developer", destination: support).foregroundStyle(FireStyle.ember).frame(minHeight: 44) }
+                    if let support = PublicLinks.support {
+                        Link("Contact the developer", destination: support).foregroundStyle(FireStyle.ember).frame(minHeight: 44)
+                        Text("Public support issues should contain synthetic reproductions only, without private reports, identifiers or secrets. Report sensitive vulnerabilities through the repository’s private security-report route.").font(.footnote).foregroundStyle(FireStyle.muted)
+                    }
                     else { Text("A functioning public support contact must be configured before release.").foregroundStyle(FireStyle.muted) }
                 }
             }

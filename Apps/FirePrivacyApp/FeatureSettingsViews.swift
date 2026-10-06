@@ -336,16 +336,18 @@ struct DatasetUpdatesView: View {
     @State private var preview: PreparedRequestPresentation?
     var body: some View {
         FirePage {
-            PageHeader(eyebrow: "Authenticated knowledge, explicit updates", title: "Keep sources accountable.", subtitle: "Signed knowledge and filter data are verified for trusted keys, integrity, version, expiry and revocation before activation. A network response is never assumed trustworthy.")
+            PageHeader(eyebrow: "Authenticated knowledge, explicit updates", title: "Keep sources accountable.", subtitle: "Signed knowledge, reviewed rule configurations and filter data are verified before activation. A network response is never assumed trustworthy.")
             FireCard {
                 VStack(spacing: 14) {
                     DetailRow(label: "Knowledge version", value: model.knowledgeBaseVersion ?? "No usable verified knowledge")
+                    DetailRow(label: "Rule analysis version", value: model.rulesVersion)
+                    DetailRow(label: "Rule configuration", value: model.ruleConfigurationFailure ? "Rejected candidate; compiled defaults retained" : model.engine.verifiedRuleConfiguration == nil ? "Compiled reviewed defaults" : "Verified signed configuration")
                     DetailRow(label: "Verification status", value: model.knowledgeBaseFailure ? "Unavailable or rejected; evidence remains usable" : "Current engine snapshot")
                 }
             }
             FireCard {
                 VStack(alignment: .leading, spacing: 18) {
-                    Picker("Update purpose", selection: $purpose) { Text("Knowledge base").tag(NetworkPurpose.knowledgeBaseUpdate); Text("Filter dataset / revocations").tag(NetworkPurpose.filterListUpdate) }.pickerStyle(.menu)
+                    Picker("Update purpose", selection: $purpose) { Text("Knowledge / reviewed rules").tag(NetworkPurpose.knowledgeBaseUpdate); Text("Filter dataset / revocations").tag(NetworkPurpose.filterListUpdate) }.pickerStyle(.menu)
                     SettingsTextField(title: "HTTPS signed-document endpoint", text: $endpoint)
                     SettingsTextField(title: "Operator retention disclosure", text: $retention)
                     Text("The endpoint receives connection metadata. Updates contain no imported report payload. Supply a real publisher endpoint using this build’s signed update format and trust roots. There is no automatic polling.").foregroundStyle(FireStyle.muted)
@@ -476,7 +478,7 @@ struct ProtectionSettingsView: View {
                     let allowed = model.preferences.overrides.sorted.filter { $0.disposition == .localAllow }.map { $0.host.value }
                     let blocked = model.preferences.overrides.sorted.filter { $0.disposition == .localBlockRequest }.map { $0.host.value }
                     let config = try dataset.safariConfiguration(allowedDomains: allowed, userBlockedDomains: blocked)
-                    plan = ProtectionConsentPlan(feature: feature, scope: try config.scopeIdentity, title: "Install these Safari rules?", paragraphs: ["Signed dataset version \(dataset.manifest.version), expires \(dataset.expiresAt.formatted(date: .abbreviated, time: .shortened)). Safari evaluates these rules locally; imported reports and browsing URLs are not uploaded by the extension.", "Dataset domains (including suffix coverage): " + config.blockedDomains.prefix(30).joined(separator: ", "), "Your allow exceptions: " + (allowed.isEmpty ? "None" : allowed.joined(separator: ", ")), "Your exact-host third-party block requests: " + (blocked.isEmpty ? "None" : blocked.joined(separator: ", ")), "Rules affect matching third-party resources in Safari and may break features. Enable the extension in Settings and refresh system status; setup alone is not activation.", decline], dataset: dataset)
+                    plan = ProtectionConsentPlan(feature: feature, scope: try config.scopeIdentity, title: "Install these Safari rules?", paragraphs: ["Signed dataset version \(dataset.manifest.version), expires \(dataset.expiresAt.formatted(date: .abbreviated, time: .shortened)). Safari evaluates these rules locally; imported reports and browsing URLs are not uploaded by the extension.", "Dataset domains (first 30 of \(config.blockedDomains.count); includes suffix coverage): " + config.blockedDomains.prefix(30).joined(separator: ", "), "Your allow exceptions: " + (allowed.isEmpty ? "None" : allowed.joined(separator: ", ")), "Your exact-host third-party block requests: " + (blocked.isEmpty ? "None" : blocked.joined(separator: ", ")), "Rules affect matching third-party resources in Safari and may break features. Enable the extension in Settings and refresh system status; setup alone is not activation.", decline], dataset: dataset)
                 case .encryptedDNS:
                     guard let config = model.preferences.dnsConfiguration else { throw EngineError.missingConfiguration }
                     let disclosure = NetworkCatalogue.encryptedDNS(resolver: config.serverURL?.absoluteString ?? config.serverName ?? "", operatorName: config.operatorName, retention: config.retentionDisclosure)

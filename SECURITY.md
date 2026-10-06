@@ -1,52 +1,81 @@
 # Security
 
-Fire Privacy's first release is a local App Privacy Report reader. Its primary
-security boundaries are hostile imported files, encrypted app storage, the
-device-only Keychain key, and explicit plaintext exports.
+Fire Privacy's boundaries cover hostile report input, authenticated private
+storage, signed public datasets, optional approved network requests, constrained
+advisors, and edition-specific protection extensions. Source implementation and
+passing portable tests do not establish native or physical-device readiness.
 
 ## Reporting
 
-Use the project's public issue tracker for ordinary bugs and privacy-policy
-questions. Do not publish a personal App Privacy Report, private device activity,
-credentials, or a sensitive vulnerability reproducer. For a sensitive issue,
-request a private reporting channel from the maintainer before sharing details.
-No private security email or response-time commitment has been verified yet.
+Use the [public issue tracker](https://github.com/Ununp3ntium115/FirePrivacy/issues)
+for ordinary bugs or policy questions. Use a minimal synthetic example and the
+app/OS versions. Do not publish a personal report, activity history, credentials,
+or a sensitive vulnerability reproducer. Request a private reporting route from
+the maintainer before sending sensitive details. No private email or response-time
+promise has been verified.
 
-Use a minimal synthetic example where possible. Include the app and operating
-system versions and the expected versus observed behavior.
+## Security contracts
 
-## Implemented boundaries
+- Import bounds bytes, lines, records, nesting, collections and strings, rejects
+  invalid UTF-8/duplicate keys, and preserves provenance for supported evidence.
+  Imported text is plain data, never HTML, SQL, instructions or executable code.
+- Local analysis contains no networking path. Networking belongs only to the
+  approved native worker, whose typed, one-use authority binds the exact bytes,
+  destination, authentication, context, consent generation and expiry.
+- Revocation and context changes cancel pending work and reject late output.
+  A stale callback must neither publish a result nor recreate deleted storage.
+- Private history and feature state use versioned AES-GCM authenticated contexts,
+  a random device-only unlocked Keychain key, protected atomic writes and backup
+  exclusion. Missing keys/authentication failures preserve an unavailable state.
+  Deletion/retention failures require truthful, retryable cleanup.
+- Signed KB/rule/filter data have bounded, declarative schemas, trusted public keys,
+  authenticated payload digests, validity/semantic checks and persisted downgrade
+  protection. Trust anchors are not taken from an unauthenticated download.
+  A supplied trusted revocation context must be enforced. A publisher signature
+  does not establish vendor accuracy or license rights.
+- Signed rule updates configure only eight compiled detectors and bounded
+  thresholds. They cannot inject prose, executable code, actions or score
+  weights. Increasing sequence/version and complete signed-manifest identity
+  reject rollback and same-sequence equivocation; disabled detectors are explicit
+  and withhold overall posture.
+- The advisor accepts closed typed inputs and constrained presentation choices;
+  evidence/action references must match the captured current analysis. Model
+  prose, new facts, tools and control commands are never displayed or executed.
+  There is no automatic cloud fallback. Remote input is minimized and previewed.
+- Native transport retains normal TLS trust, dates and hostnames; an optional
+  leaf pin is additional validation. HTTP, redirects, cookies, caches, header
+  injection and unbounded response accumulation are rejected. Tokens never enter
+  previews, event logs, Codable endpoint configuration or diagnostics.
+- App Groups contain validated protection configuration/rules and explicit
+  allowances, not report history, raw source, consent, model inputs or secrets.
+  Consumer, URL-filter and managed targets have distinct capabilities and gates.
+- Routine logs/event history contain codes/counts/host metadata, not personal
+  observations or server/model text. Reminders contain generic text. Scene
+  privacy covering protects inactive previews; it does not prevent someone
+  reading an already unlocked, open device.
+- Full exports are intentionally readable. Redacted export does not guarantee
+  anonymity. Protected temporary copies are cleaned, while recipients retain
+  their own copies under their policies.
 
-- The core importer bounds file, line, record, nesting, collection, and string
-  sizes; invalid UTF-8, duplicate keys, unsafe displayed identifiers, unsupported
-  records, and invalid numerical data are rejected or quarantined.
-- Imported strings are plain text and are not executed, rendered as HTML,
-  interpolated into SQL, or sent to a model.
-- There are no networking, analytics, advertising, model, filtering, or
-  third-party SDK APIs on the shipping app's local-analysis path.
-- One normalized report is authenticated and encrypted with CryptoKit AES-GCM.
-  A random 256-bit key is held in the device-only, unlocked Keychain. Local files
-  use complete protection and backup exclusion.
-- Failed decryption or a missing key does not silently replace existing data.
-  Deletion failures are reported instead of claiming completion.
-- Export is an explicit plaintext-sharing action with a privacy warning and
-  temporary-file cleanup. Original and previously shared files are outside the
-  app's deletion boundary.
-- Routine app code does not log imported domains, identifiers, or report data.
-  The scene cover hides report content when the app becomes inactive.
+## Verification and residual limits
 
-## Verification and future work
+See [VALIDATION](Documentation/VALIDATION.md) for dated evidence and
+[RELEASE-CHECKLIST](Documentation/RELEASE-CHECKLIST.md) for pending checks.
+Native SDK/type checking, real current Apple exports, TLS/pinning with a test
+endpoint, OS extension/DNS activation and removal, key rotation and deletion
+races, accessibility, physical locked-state/backup behavior, signed distribution,
+and Apple review must each be demonstrated separately.
 
-See [VALIDATION](Documentation/VALIDATION.md) for actual test results. Linux core
-and structural checks do not prove Apple-platform storage, backup, device-lock,
-or UI behavior; the Apple test targets and physical-device release checks are
-required before submission.
+Safari can retain compiled rules after an unsuccessful reload; report uncertain
+removal and provide Settings remediation. DNS providers can see queries and
+control retention; TLS alone does not guarantee their data practices. Approved
+URL-filter infrastructure, signed publishing/revocation operations, and managed
+operator deployment are external prerequisites. Consent cannot recall data
+already sent to an external endpoint. Historical contacts and temporal patterns
+cannot establish payload contents, current permissions, malicious intent or a
+legal conclusion.
 
-The original architecture proposed signed knowledge bases, filters, and model
-adapters. Those are not implemented in this first release. Any later network
-service, extension, dependency, or data use needs a reviewed threat model,
-updated disclosures, capability permissions where applicable, and meaningful
-security tests before release.
-
-Never commit signing keys, certificates, provisioning profiles, passwords, or
-App Store Connect credentials. Keep private `.p8` files outside the checkout.
+Keep private signing keys, passwords, `.p12`/`.p8` files, provisioning profiles,
+model credentials and production dataset signing keys out of commits/chat/logs.
+Use secure GitHub secrets/Keychain as appropriate. Committed dataset public keys
+and synthetic test keys are not production private signing credentials.

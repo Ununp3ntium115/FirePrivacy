@@ -45,6 +45,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var networkEvents: [NetworkEvent] = []
     @Published private(set) var knowledgeBaseVersion: String?
     @Published private(set) var knowledgeBaseFailure = false
+    @Published private(set) var rulesVersion = VersionedRuleSet.defaultConfiguration.analysisVersion
+    @Published private(set) var ruleConfigurationFailure = false
     @Published private(set) var pendingSystemCleanup: Set<ConsentFeature> = []
     @Published private(set) var unavailableSessionIDs: Set<UUID> = []
     @Published private(set) var keyRotationStatus = ReportKeyRotationStatus.idle
@@ -94,6 +96,8 @@ final class AppModel: ObservableObject {
     private func readSavedReport() async {
         do {
             _ = try await engine.restore()
+            await engine.refreshProtection()
+            try await engine.rebuildAnalysis()
             await syncEngine()
             hasSavedReport = !sessions.isEmpty
             savedReportUnavailable = false
@@ -329,6 +333,8 @@ final class AppModel: ObservableObject {
         networkEvents = await engine.gate.ledger.snapshot()
         knowledgeBaseVersion = engine.knowledgeBase?.version
         knowledgeBaseFailure = engine.knowledgeBaseFailure
+        rulesVersion = engine.ruleConfiguration.analysisVersion
+        ruleConfigurationFailure = engine.ruleConfigurationFailure
         pendingSystemCleanup = engine.pendingSystemCleanup
         unavailableSessionIDs = engine.unavailableSessionIDs
         retention = engine.retention
@@ -343,7 +349,12 @@ final class AppModel: ObservableObject {
     }
 
     private func showFailure(_ title: String, _ error: any Error) {
-        notice = AppNotice(title: title, message: error.localizedDescription)
+        let message: String
+        if error is KnowledgeBaseVerifier.Failure || error is KnowledgeBaseRevocationVerifier.Failure
+            || error is RuleConfigurationVerifier.Failure || error is FilterDatasetError {
+            message = "The publisher data could not be authenticated or is incompatible, expired, or revoked. No unverified update was activated. Check the publisher’s current release and the configured public signing keys before trying again."
+        } else { message = error.localizedDescription }
+        notice = AppNotice(title: title, message: message)
     }
 
     func prepareExport(format: ExportFormat = .json, options: ReportExportOptions = .full) async {

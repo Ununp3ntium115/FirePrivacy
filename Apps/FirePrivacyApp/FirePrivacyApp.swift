@@ -107,6 +107,11 @@ struct FirePrivacyRootView: View {
             }
         }
         .task { await model.load() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, !model.isWorking {
+                Task { await model.refreshProtection() }
+            }
+        }
         .onOpenURL { model.openDocument($0) }
         .fileImporter(isPresented: $model.showImporter, allowedContentTypes: [.json, .plainText, .data], allowsMultipleSelection: false) { result in
             Task { await model.handleImport(result) }

@@ -272,6 +272,12 @@ struct ReportHistoryView: View {
     var body: some View {
         FirePage {
             PageHeader(eyebrow: "An encrypted notebook", title: "Snapshots over time.", subtitle: "Select a saved import to review its evidence. Comparing exports does not establish that apps were installed, removed, blocked or stopped acting.")
+            if model.analysisHistoryCapacityExceeded {
+                TextListCard(title: "Analysis-history capacity reached", strings: ["The current analysis remains available, but this revision could not be saved within the bounded analysis-history limits. Earlier saved revisions remain; history comparisons cannot treat this unsaved output as a recorded baseline."], symbol: "exclamationmark.triangle")
+            }
+            if let revision = model.latestAnalysisRevision, revision.inputs.reportID == model.report?.id, !model.isDemo {
+                AnalysisRevisionCard(revision: revision)
+            }
             if let weekly = model.weeklySummary {
                 FireCard {
                     VStack(alignment: .leading, spacing: 14) {
@@ -312,6 +318,59 @@ struct ReportHistoryView: View {
             Button("Delete snapshot", role: .destructive) { if let session = deleting { Task { await model.deleteReport(session.id) } }; deleting = nil }
             Button("Cancel", role: .cancel) { deleting = nil }
         } message: { Text("This removes this saved report and any retained encrypted source from Fire Privacy. Originals in Files and exports shared elsewhere remain.") }
+    }
+}
+
+private struct AnalysisRevisionCard: View {
+    let revision: AnalysisHistoryRecord
+    var body: some View {
+        FireCard {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeading(title: "Latest saved analysis revision", detail: "An immutable local record of the inputs used. Concurrent input changes are not proof that any one change caused a finding.")
+                DetailRow(label: "Evaluated", value: revision.evaluatedAt.formatted(date: .abbreviated, time: .shortened))
+                DetailRow(label: "Parser / normalization", value: (revision.inputs.parserVersion ?? "Unknown") + " / " + (revision.inputs.normalizationVersion ?? "Unknown"))
+                DetailRow(label: "Ruleset", value: revision.inputs.rulesetVersion)
+                DetailRow(label: "Scoring", value: revision.inputs.scoringVersion)
+                DetailRow(label: "Action catalog", value: revision.inputs.actionCatalogVersion)
+                DetailRow(label: "Knowledge", value: revision.inputs.knowledgeBaseVersion ?? "Unavailable")
+                if let comparison = revision.comparison {
+                    Text(comparison.isSameEvidenceReanalysis ? "Same-evidence reanalysis" : "Comparison with an earlier saved analysis").font(.headline).foregroundStyle(FireStyle.gold)
+                    Text("Changed input dimensions").font(.subheadline.weight(.medium)).foregroundStyle(FireStyle.text)
+                    ForEach(comparison.dimensions, id: \.rawValue) { dimension in Text(dimensionTitle(dimension)).font(.subheadline).foregroundStyle(FireStyle.muted) }
+                    DetailRow(label: "Normalized evidence changed", value: comparison.normalizedEvidenceChanged ? "Yes" : "No")
+                    DetailRow(label: "Source bytes changed", value: comparison.sourceBytesChanged.map { $0 ? "Yes" : "No" } ?? "Unknown")
+                    DetailRow(label: "Introduced / absent finding groups", value: "\(comparison.findings.introducedKeys.count) / \(comparison.findings.removedKeys.count)")
+                    DetailRow(label: "Changed / unchanged finding groups", value: "\(comparison.findings.changedKeys.count) / \(comparison.findings.unchangedKeys.count)")
+                    ForEach(Array(comparison.limitations.enumerated()), id: \.offset) { _, limitation in Text(verbatim: limitation).font(.footnote).foregroundStyle(FireStyle.muted) }
+                } else { Text("No earlier saved analysis baseline is attached to this revision.").font(.footnote).foregroundStyle(FireStyle.muted) }
+            }
+        }
+    }
+    private func dimensionTitle(_ dimension: AnalysisChangeDimension) -> String {
+        switch dimension {
+        case .reportIdentity: "Report identity"
+        case .sourceIdentity: "Source identity"
+        case .normalizedEvidence: "Normalized evidence"
+        case .evidenceReferences: "Evidence references"
+        case .importTime: "Import time"
+        case .reportMetadata: "Report metadata"
+        case .parserVersion: "Parser version"
+        case .normalizationVersion: "Normalization version"
+        case .rulesetVersion: "Ruleset version"
+        case .scoringVersion: "Scoring version"
+        case .actionCatalogVersion: "Action catalog version"
+        case .knowledgeVersion: "Knowledge version"
+        case .reviewedKnowledge: "Reviewed knowledge context"
+        case .profile: "Privacy priorities"
+        case .permissionAudit: "Manual permission audit"
+        case .domainOverrides: "Local domain choices"
+        case .publisherIdentities: "Publisher identities"
+        case .protection: "Protection state"
+        case .scoringPreference: "Overall-summary preference"
+        case .findingDecisions: "Your finding-review decisions"
+        case .evaluationTime: "Evaluation time"
+        case .analysisOutput: "Analysis output"
+        }
     }
 }
 

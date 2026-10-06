@@ -1,47 +1,67 @@
-# Fire Privacy: local report MVP
+# Fire Privacy expanded source scope
 
-This document describes the app being built in this checkout. It supersedes the
-earlier repository descriptions where they refer to modules or capabilities
-that are not included in this app. It is a scope description, not evidence of a
-successful device build or App Store approval.
+The local-report MVP has been expanded with the repository's underlying privacy
+architecture. This describes implemented source/coordinator paths, not a native
+build, completed UI, installed protection, Apple approval, or released product.
+Screenshots and final metadata must wait for the matching working binary.
 
-Fire Privacy lets someone import an App Privacy Report exported from iPhone or
-iPad Settings, then explore the app identifiers, contacted domains, and recorded
-sensor access in that file. Analysis is descriptive. A contact is not proof that
-personal information was transmitted, and a recorded sensor access does not
-reveal the permission's current state. The report is historical and may be
-incomplete.
+## Consumer implementation
 
-The app includes a clearly labeled synthetic example for people who do not have
-a report yet. It keeps one imported report on the device, encrypted using
-Apple's CryptoKit and a key in the device Keychain. Importing another report
-replaces the stored report. Export is an explicit action through the system
-share sheet. Deleting the report removes the app's stored copy and encryption
-key; it does not delete the original file in Files or copies previously shared.
+- Bounded App Privacy Report import with normalized app/domain/sensor activity,
+  source hashes/line provenance, public-suffix normalization, explicit unsupported
+  evidence and a synthetic demo.
+- Cited signed knowledge, versioned deterministic findings, facts/inferences/
+  uncertainty, closed actions, explainable posture dimensions, profiles and
+  manual audits kept separate from Apple observations. Signed rule configuration
+  can only enable/disable the eight compiled detectors and adjust bounded
+  reviewed thresholds; it cannot download executable behavior or new claims.
+- Bounded encrypted report history, comparison/weekly summaries, optional
+  separately consented encrypted source retention, local overrides, JSON/CSV/
+  Markdown full/redacted exports and sanitized diagnostic export.
+- Separate versioned consent receipts, dynamic network disclosure/event history,
+  exact expiring one-use request approval, revocation/cancellation and protected
+  preference/dataset state.
+- Offline advisor; optional iOS/iPadOS 26 SystemLanguageModel presentation
+  assistance with runtime fallback; optional user-operated HTTPS model endpoint
+  with exact minimized-payload preview and no automatic cloud fallback.
+- Safari content-blocker extension and encrypted-DNS settings adapter, each with
+  separate consent, actual OS state, explicit coverage and removal limitations.
+- Generic local reminders, with separate consent and OS notification permission.
 
-The MVP has no account, subscription, ads, analytics SDK, remote analysis, AI
-service, VPN, URL filter, Safari extension, knowledge-base download, live traffic
-inspection, or claim that it can change another app's permissions. It makes no
-tracker, ownership, maliciousness, legal, or security classification of the
-domains in a report. The earlier proposals for those features remain future
-ideas rather than shipping functionality.
+The app has no account, ads, subscription, analytics SDK, report resale, or
+installed-app enumeration. It does not read other apps' current permissions,
+change their permissions, inspect encrypted payloads, or guarantee anonymity,
+complete tracking prevention, safety, or a legal finding. Imported activity is
+historical. Unknown/absent evidence remains unknown.
 
-## Release evidence
+## Separate editions and external prerequisites
 
-The release checklist in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) separates
-checks that can run in this Linux workspace from checks requiring Xcode,
-physical devices, an Apple Developer account, or App Store Connect. Public
-metadata and policies must describe the build that is actually submitted.
+The consumer target excludes URL-filter and managed provider extensions. The
+URL-filter edition contains real iOS 26 manager/control-provider code and signed
+prefilter handling, but distribution additionally requires registered IDs/App
+Groups, granted capabilities, an operating PIR/Privacy Pass/OHTTP service and
+Apple relay validation. Coverage is participating APIs, not all packet traffic.
 
-## Report compatibility
+The managed edition has separate local policy/data/control providers. It needs
+an eligible operator, matching entitlements and a supported supervised/MDM
+installation. Reading or possessing a policy does not prove management status
+or activate a provider. The consumer app is not an MDM enrollment service.
+Private Cloud Compute has no implemented request path.
 
-The import instructions follow the normal Settings export workflow: Settings →
-Privacy & Security → App Privacy Report → share/export the report to Files,
-then select it in Fire Privacy. Availability, screen labels, and the exported
-schema can vary by OS version. Import compatibility with a real, current
-Apple-generated report on iPhone and iPad is a release check. Synthetic parser
-fixtures alone do not establish that compatibility.
+Dataset downloads need a real publisher endpoint, maintained signing/revocation
+operations and truthful operator retention disclosures. Optional self-hosted
+inference needs a user-operated compatible HTTPS endpoint. No unverified service
+hostname, account, certificate, capability grant or legal organization is invented.
+The local [dataset publisher](DATASET-PUBLISHING.md) produces real signed KB,
+rule/filter and revocation envelopes with an operator's existing private key;
+its public authority must be deployed in the signed app before use. It does not
+host an endpoint or establish operator identity/Apple service approval.
 
-If an imported record is not supported, the app should describe that limitation
-and retain the distinction between missing evidence and no activity. It must
-never present imported text as executable content or as instructions.
+## Remaining release evidence
+
+The expanded native implementation and UI must pass hosted Xcode checks and
+real-device QA. Initial TestFlight upload can supply the installable QA build;
+physical/report/accessibility/protection/backup checks finish before final App
+Review. Public policies and metadata must be republished to match that exact
+edition. See [VALIDATION](VALIDATION.md), [APPLE-REQUIREMENTS](APPLE-REQUIREMENTS.md)
+and [RELEASE-CHECKLIST](RELEASE-CHECKLIST.md).

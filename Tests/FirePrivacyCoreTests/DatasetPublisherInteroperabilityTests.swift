@@ -10,6 +10,7 @@ final class DatasetPublisherInteroperabilityTests: XCTestCase {
         let manifest: Data?
         let payload: Data?
         let revocations: SignedKnowledgeBaseRevocations?
+        let rules: SignedRuleConfiguration?
     }
     private let repository = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -148,6 +149,40 @@ final class DatasetPublisherInteroperabilityTests: XCTestCase {
         let filterRevVerified = try FilterDatasetVerifier.verifyRevocationList(filterRev, trustedKeys: keys, now: now)
         XCTAssertEqual(filterRevVerified.document.revocations.versions, [1, 2])
         XCTAssertThrowsError(try FilterDatasetVerifier.verifyRevocationList(filterRev, trustedKeys: [:], now: now))
+
+        let config = try DeclarativeRuleConfiguration(version: "1.0.1", rules: VersionedRuleSet.defaultConfiguration.rules)
+        let ruleDirectory = try publish("rules", payload: config.encoded(), extra: ["--sequence", "6", "--minimum-app-version", "1.0.0"])
+        let ruleDownload = try JSONDecoder().decode(KnowledgeDownload.self, from: bytes(ruleDirectory, "download.json"))
+        let signedRules = try XCTUnwrap(ruleDownload.rules)
+        let rulesVerifier = RuleConfigurationVerifier(trustAnchors: anchors)
+        let checkedRules = try rulesVerifier.verify(signedRules, appVersion: "1.0.0", now: now)
+        XCTAssertEqual(checkedRules.configuration, config)
+        XCTAssertEqual(signedRules.manifest.signingRepresentation, try bytes(ruleDirectory, "signing-message.bin"))
+        XCTAssertEqual(try signedRules.manifest.encoded(), try bytes(ruleDirectory, "manifest.json"))
+        XCTAssertEqual(checkedRules.manifestSHA256, ContentDigest.sha256(try bytes(ruleDirectory, "manifest.json")))
+        XCTAssertThrowsError(try rulesVerifier.verify(.init(manifest: signedRules.manifest,
+            payloadData: signedRules.payloadData + Data([32])), appVersion: "1.0.0", now: now))
+        XCTAssertThrowsError(try rulesVerifier.verify(signedRules, appVersion: "1.0.0", now: now,
+            highWaterMark: checkedRules.highWaterMark))
+        XCTAssertNoThrow(try rulesVerifier.verify(signedRules, appVersion: "1.0.0", now: now,
+            highWaterMark: checkedRules.highWaterMark, restoringCurrent: true))
+
+        let original = signedRules.manifest
+        let changedUnsigned = RuleConfigurationManifest(configurationVersion: original.configurationVersion,
+            sequence: original.sequence, generatedAt: original.generatedAt, expiresAt: original.expiresAt + 60,
+            minimumAppVersion: original.minimumAppVersion, payloadSHA256: original.payloadSHA256,
+            signingKeyID: original.signingKeyID, signatureBase64: "")
+        let messagePath = directory.appendingPathComponent("changed-rule-manifest.bin")
+        try changedUnsigned.signingRepresentation.write(to: messagePath)
+        let changedSignature = try command(openssl, ["pkeyutl", "-sign", "-rawin", "-inkey", key.path, "-in", messagePath.path])
+        let changedManifest = RuleConfigurationManifest(configurationVersion: original.configurationVersion,
+            sequence: original.sequence, generatedAt: original.generatedAt, expiresAt: original.expiresAt + 60,
+            minimumAppVersion: original.minimumAppVersion, payloadSHA256: original.payloadSHA256,
+            signingKeyID: original.signingKeyID, signatureBase64: changedSignature.base64EncodedString())
+        XCTAssertThrowsError(try rulesVerifier.verify(.init(manifest: changedManifest, payloadData: signedRules.payloadData),
+            appVersion: "1.0.0", now: now, highWaterMark: checkedRules.highWaterMark, restoringCurrent: true)) {
+            XCTAssertEqual($0 as? RuleConfigurationVerifier.Failure, .equivocationRejected)
+        }
     }
 }
 #endif

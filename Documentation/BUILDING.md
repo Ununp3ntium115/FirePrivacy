@@ -1,214 +1,157 @@
-# Build, test, archive, and upload
+# Build, test, archive and upload
 
-This repository contains a native SwiftUI app for iPhone and iPad, a portable
-Swift core package, generated Xcode project, local privacy/support website, and
-release scripts. Linux can validate the core and repository configuration. A
-Mac with Xcode is required to compile the native UI, run Apple-platform tests,
-sign, archive, and upload an iOS/iPadOS binary. That Mac can be the hosted GitHub
-Actions runner: see [CLOUD-RELEASE.md](CLOUD-RELEASE.md) to keep this session in the
-cloud and use browser-based release controls. The local-Mac commands below are
-an additional supported workflow.
+The repository contains a portable Swift core, a native iPhone/iPad app, separate
+protection editions, generated Xcode project, draft privacy/support site and
+release scripts. Linux validates portable code and repository/signing contracts.
+macOS/Xcode validates native APIs, simulator tests and signed archives. Hosted
+GitHub Actions supplies that Mac; see [CLOUD-RELEASE](CLOUD-RELEASE.md) to keep
+this session in the cloud. The local Mac commands below are an additional route.
 
-Use the existing checkout. Each cloud task already has an isolated environment;
-no additional Git worktree is needed unless explicitly requested.
+## Dependencies and toolchain
 
-## Toolchain and dependencies
+Apple's verified October 5, 2026 upload minima are Xcode 26+, iOS/iPadOS 26+ SDK
+and deployment target 13+. This project uses Xcode 26.2 in hosted workflows;
+consumer/managed schemes target iOS 17+, and the URL-filter scheme targets 26+.
+SystemLanguageModel additionally needs a ready, eligible iOS/iPadOS 26 device.
+Source settings do not establish a native build or platform eligibility.
 
-The verified Apple requirements on October 5, 2026 require **Xcode 26+** and an
-**iOS/iPadOS 26+ SDK** for uploads, and an iOS/iPadOS 13+ deployment target. This
-project deploys to iOS/iPadOS 17+. The scripts check the selected Xcode and iOS
-SDK. See [APPLE-REQUIREMENTS.md](APPLE-REQUIREMENTS.md) for the dated sources.
+The native graph uses public Apple SwiftUI, Foundation, CryptoKit, Security,
+SafariServices, NetworkExtension, UserNotifications and conditionally
+FoundationModels APIs plus in-repository code. `Package.swift` pins Apple Swift
+Crypto 3.15.1 for Linux hashing/signature verification; Apple platforms use
+CryptoKit. Bundled resources include public-suffix and authenticated domain
+knowledge data. Check final dependency/license attribution rather than assuming
+an earlier MVP graph remains unchanged.
 
-The app uses system SwiftUI, Foundation, CryptoKit, and Security APIs and the
-in-repository `FirePrivacyCore` module. No CocoaPods, Carthage, external SwiftPM
-package, account backend, remote model, VPN entitlement, network service, or
-private SDK is required. The generator and validators use Python 3's standard
-library. The approved flame artwork and opaque 1024-pixel app icon are committed.
-The optional `scripts/generate-app-icon.py` export helper uses ImageMagick or
-macOS `sips` to prepare the asset from `Design/FirePrivacy-icon-master.png`; it
-does not generate new artwork or require Pillow.
+Project/signing validators use Python 3's standard library. The approved flame
+artwork and opaque 1024-pixel icon are committed. The optional
+`scripts/generate-app-icon.py` export helper uses ImageMagick or macOS `sips`
+with `Design/FirePrivacy-icon-master.png`; it does not generate new artwork.
 
-## Linux/core validation
+## Portable checks
 
-The supplied helper installs the pinned Swift 6.2.3 Debian 12 x86_64 toolchain
-under `/workspace/toolchains`, using both a pinned SHA-256 and a verified Swift
-release signature. It needs `curl`, `gpg`, `rg`, `tar`, and the runtime libraries
-required by that official toolchain. Preserve certificate, checksum, and
-signature validation when troubleshooting installation.
-
-From the repository root:
+From the existing checkout:
 
 ```sh
 bash scripts/install-swift-linux.sh
 bash scripts/check-portable.sh
 ```
 
-The portable helper also runs 19 standard-library Python signing/cleanup tests.
-They use dummy credentials, owned temporary directories, and mocked Apple
-tools/frameworks; they do not prove actual certificate trust, signing, or upload.
-Run them independently with:
+The installer pins Swift 6.2.3 Debian 12 x86_64 under `/workspace/toolchains`,
+verifying the release signature and SHA-256 with normal HTTPS verification.
+Preserve all verification when troubleshooting. The check helper builds/tests
+core code, runs the CloudRelease Python suite, validates the generated project
+and scans the actual local-analysis/network boundaries. Sandbox caches/config
+stay below ignored `.build/tooling/`.
+
+Run the signing/configuration tests separately if needed:
 
 ```sh
 python3 -m unittest discover -s Tests/CloudRelease -p 'test_*.py' -v
 ```
 
-The portable script uses cache/config directories under ignored `.build/tooling/`,
-so it works in this sandbox without writing to the home directory. It runs the
-core build, tests, project audit, and privacy scan.
+These tests use synthetic fixtures, owned temporary directories and mocked Apple
+tools where appropriate. They do not establish an account's certificates,
+profiles, capability approval or actual signing/upload. Dated counts and native
+results belong in [VALIDATION](VALIDATION.md); a source privacy scan does not
+replace binary inspection or runtime traffic testing.
 
-Core tests exercise report normalization and malformed/untrusted input. The
-privacy scan is a source check for the actual shipping target; it does not
-replace inspecting the final Apple binary or runtime network behavior. Current
-results belong in [VALIDATION.md](VALIDATION.md), not as an assumed pass here.
+## Native build and tests
 
-## Native build and tests on a Mac
-
-Install Xcode 26 or newer, complete its first-launch setup, and select it as the
-active developer toolchain in Xcode Settings → Locations. Install an iOS
-Simulator runtime with both iPhone and iPad device types in Xcode Settings →
-Components. The scripts choose an available simulator running iOS 17 or later,
-preferring large iPhone and iPad display families.
-
-Open `FirePrivacy.xcodeproj` and use the shared `FirePrivacy` scheme. For
-repeatable command-line validation:
+Use Xcode 26.2+ with its first-launch setup complete, selected under Xcode
+Settings → Locations. Install an iOS 26 simulator runtime with both iPhone/iPad
+models for the full edition build. The generated schemes are `FirePrivacy`
+(consumer), `FirePrivacyURL`, and `FirePrivacyManaged`.
 
 ```sh
 python3 scripts/validate-project.py
 bash scripts/build-ios.sh
 bash scripts/test-ios.sh iphone
 bash scripts/test-ios.sh ipad
-bash scripts/capture-screenshots.sh
 ```
 
-Simulator test builds use ad-hoc signing so the test host has working Keychain
-entitlements; they do not require an Apple distribution identity. Test result
-bundles and native screenshot
-captures are written below ignored `.build/apple/`. The screenshot command
-launches the actual app with the clearly labeled synthetic demo. Capture
-additional views and verify accepted pixel dimensions using
-`AppStore/SCREENSHOTS.md`; merely running the capture command does not establish
-a complete screenshot submission set.
+The build helper compiles all three schemes separately with signing disabled.
+Simulator test hosts use ad-hoc signing for Keychain behavior; no distribution
+certificate is needed for those tests. `APP_EDITION` selects the tested/released
+edition (`consumer`, `url-filter`, `managed`; default consumer). Test logs and
+result bundles go under ignored `.build/apple/`.
 
-The project can be regenerated with
-`python3 scripts/generate-xcode-project.py`. Regeneration writes project
-configuration, so use it when source/resource membership changes and inspect
-the diff. Routine builds do not require it.
+Screenshots are paused until the underlying functionality and native controls
+are verified. When that work is complete, `bash scripts/capture-screenshots.sh`
+captures the actual app with synthetic demo activity. Verify every required
+image/dimension against [SCREENSHOTS](../AppStore/SCREENSHOTS.md); a capture
+command alone does not establish a complete submission set.
 
-## Configure signing and public pages
+Regenerate source/resource/target membership with
+`python3 scripts/generate-xcode-project.py` when membership changes, then inspect
+the project diff. Routine builds do not require regeneration. Physical iPhone/
+iPad QA is separate from simulator compilation/tests.
 
-The supplied signing team is `LYDVWU62G4`. A team ID does not grant credentials.
-Sign in to the correct Apple Developer account in Xcode Settings → Accounts and
-verify access to that team. Alternatively, configure the optional complete
-`ASC_KEY_PATH`, `ASC_KEY_ID`, and `ASC_ISSUER_ID` triple for an authorized App
-Store Connect API key. The local `.p8` file stays outside the repository. Do not
-paste private keys, passwords, or signing assets into chat, source, logs, or
-metadata.
+## Real identifiers, signing and public pages
 
-Register the final bundle identifier and create the corresponding iOS app
-record in App Store Connect. Set `BUNDLE_ID` in the shell to that exact registered
-identifier. `TEAM_ID` defaults to the supplied team. Set `APP_VERSION` and a
-unique `BUILD_NUMBER` for the upload; defaults are `1.0` and `1`. The project's
-development identifier is provisional and is not proof of a registered ID.
+The supplied team is `LYDVWU62G4`; the provisional base ID is
+`com.firesoftwaresolutions.FirePrivacy`. Confirm actual registered edition/app/
+extension identifiers, App Group, granted capabilities, matching profiles and
+App Store Connect app record. Consumer includes only Safari; URL/managed editions
+have additional selected profiles and external deployment/service gates. See
+[CLOUD-RELEASE](CLOUD-RELEASE.md) for the exact cloud secret/variable schema and
+[APPLE-REQUIREMENTS](APPLE-REQUIREMENTS.md) for those gates.
 
-The public [privacy policy](https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md)
-and [support issue tracker](https://github.com/Ununp3ntium115/FirePrivacy/issues)
-were verified as readable without authentication with HTTP 200 on October 5,
-2026. They are the default `PRIVACY_POLICY_URL` and `SUPPORT_URL`. These are
-built into the app's
-`FirePrivacyPrivacyURL` and `FirePrivacySupportURL` fields. The app also displays
-its local privacy explanation without a network connection. Use the same URLs
-in App Store Connect. See [website/README.md](../website/README.md).
+For a local automatic-signing route, authenticate an authorized Xcode account.
+An optional complete `ASC_KEY_PATH`, `ASC_KEY_ID`, `ASC_ISSUER_ID` triple supplies
+an authorized API key; the `.p8` stays outside the checkout. A team ID, API key
+ID or certificate without its private key cannot itself sign. Keep signing keys,
+passwords, profiles and model tokens out of chat, commits, logs and artifacts.
 
-The standalone `website/` files are also published to `gh-pages`, but enabling
-GitHub Pages returned HTTP 403 for this integration. The owner can enable the
-site in repository settings or use another HTTPS static host. To change the
-default URLs, set `PRIVACY_POLICY_URL` and `SUPPORT_URL` to verified public HTTPS
-pages and rebuild. Do not modify an archive after signing. Contact monitoring and
-the account's actual review-contact details remain submission requirements.
+Set `BUNDLE_ID` or `APP_BASE_BUNDLE_ID` to the real registered base and
+`APP_EDITION` to the chosen edition. `TEAM_ID` defaults to the supplied team;
+`APP_VERSION` and `BUILD_NUMBER` default to 1.0 and 1. Use a unique build number
+for a newly accepted upload. The provisional defaults register nothing.
 
-## Signed archive and upload option
+The public [policy](https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md)
+and [support](https://github.com/Ununp3ntium115/FirePrivacy/issues) returned HTTP
+200 without authentication on October 5, 2026 and are default build/metadata
+URLs. The live policy still describes the earlier MVP: publish the revised
+matching policy before expanded distribution. `PRIVACY_POLICY_URL`/`SUPPORT_URL`
+can override those defaults with verified public HTTPS pages. Rebuild after a
+change; never modify an already signed archive. Standalone Pages hosting was
+not enabled by this integration; see [website README](../website/README.md).
 
-The shortest workflow on the authenticated Mac is:
+## Archive and upload
+
+On a configured authenticated Mac, the wrapper runs required checks and signed
+archive, then opens Xcode Organizer:
 
 ```sh
 bash scripts/release-to-app-store.command
 ```
 
-This runs the checks and signed archive, then opens the archive in Xcode
-Organizer with the **Distribute App → App Store Connect** option. To use the
-command-line upload option after those checks instead:
+The explicit upload option runs the same checks before sending to ASC:
 
 ```sh
 bash scripts/release-to-app-store.command --upload
 ```
 
-The wrapper uses team `LYDVWU62G4`, the verified public URLs, and provisional
-bundle identifier `com.firesoftwaresolutions.FirePrivacy`. That identifier must
-be registered to the team and match the App Store Connect app record; override
-`BUNDLE_ID` with the actual registered identifier if it differs. It does not
-register an identifier or authenticate an account merely by printing its name.
-
-On the configured Mac, with the registered `BUNDLE_ID` already set:
+For separate commands with identifiers/edition already configured:
 
 ```sh
-: "${BUNDLE_ID:?Set BUNDLE_ID to the exact registered identifier}"
-export BUNDLE_ID
-export TEAM_ID=LYDVWU62G4
 bash scripts/archive-ios.sh
-```
-
-The archive script runs core tests, source privacy checks, and iPhone/iPad
-Apple-platform tests before creating a signed Release archive. It verifies the
-signature and records hashes of the executable, plist, privacy manifest, and
-provisioning profile alongside the test results. Its output prints the absolute
-archive path and writes `.build/apple/LatestArchive.txt`.
-
-Upload the validated archive when ready:
-
-```sh
 archive_path="$(cat .build/apple/LatestArchive.txt)"
 bash scripts/upload-app-store.sh "$archive_path"
 ```
 
-The upload script verifies the archive against its recorded checks, bundle ID,
-team, SDK, universal device support, signature, and configured public URLs. It
-uses authenticated `xcodebuild -exportArchive` with export method
-`app-store-connect` and destination `upload`. It does not create App Store
-metadata or submit a version for review.
+The archive helper runs core/Python/source checks and both native simulator
+suites before creating a signed device archive. It verifies signing, selected
+edition/embedded targets/profiles, SDK/configuration and records validation
+hashes. Upload verifies the recorded archive and configured HTTPS URLs, then
+uses `xcodebuild -exportArchive` with `app-store-connect` and destination upload.
+The helpers do not create missing account records, complete metadata or submit
+for review. Cloud execution uses the same helpers and selected-target validation.
 
-For an Xcode UI workflow, use Product → Archive, then Organizer → Distribute App
-→ App Store Connect. Upload goes to **App Store Connect**, not the Apple
-Developer membership portal. Inspect any validation/processing warnings before
-moving forward.
-
-## Processing, TestFlight, and submission
-
-After Apple processes the upload, find it in App Store Connect → My Apps → the
-app's TestFlight/Distribution pages. Test the uploaded build on physical iPhone
-and iPad, including real Apple-generated report import, offline browsing,
-export, delete, encryption/Keychain behavior, backup exclusion, and accessibility.
-
-Complete the version's metadata using `AppStore/`, upload actual-build screenshots,
-choose the processed build, and finish the privacy, export, age-rating, content
-rights, trader, support, and review-contact fields. The required role for final
-submission is Account Holder, Admin, or App Manager. Apple currently separates
-**Add for Review** from **Submit for Review**: the first prepares a draft and
-does not send it to App Review. Use the actual App Store Connect status as the
-record of submission.
-
-The signed archive, upload, completed metadata, review submission, review
-approval, and public release are separate results. Track each in
-[RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md); report the app as live only after the
-public listing and download have been verified.
-
-## Common failures
-
-| Result | Diagnosis and next action |
-| --- | --- |
-| “This step needs a Mac” | The Linux environment cannot run Apple SDKs. Keep this session in the cloud and use the macOS Actions runner described in `CLOUD-RELEASE.md`, or use the optional local-Mac workflow. |
-| Xcode/SDK below 26 | Select/install the required Xcode and SDK; do not lower the submission check to make upload pass. |
-| No iPhone/iPad simulator | Install an iOS Simulator runtime and the corresponding device types in Xcode. |
-| Provisioning or team error | Verify account role, registered bundle ID, team access, certificates, and profiles. The team ID alone does not authenticate. |
-| Archive changed after validation | Rebuild through `archive-ios.sh`; do not edit a signed archive or fabricate a validation result. |
-| Public page fails HTTPS/reachability | Fix the hosting/URL and retest without disabling TLS verification. App Store metadata requires reachable public policy/support pages. |
-| Real report import differs from demo | Reproduce with a small synthetic fixture and fix compatibility before submission; demo success alone is insufficient. |
+In Xcode Organizer use Distribute App → App Store Connect. Upload goes to App
+Store Connect, separate from the Developer membership portal. Inspect Apple
+processing and the actual build; initial TestFlight upload can provide the
+installable physical QA build. Finish real-report/storage/protection/model/
+accessibility checks and final declarations/screenshots before App Review.
+Upload, processing, TestFlight, Add for Review, Submit for Review, approval and
+public release are separate statuses. See [RELEASE-CHECKLIST](RELEASE-CHECKLIST.md).

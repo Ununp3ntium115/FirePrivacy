@@ -11,6 +11,7 @@ final class KnowledgeBaseTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
     private struct Fixture {
+        let key: Curve25519.Signing.PrivateKey
         let manifest: KnowledgeBaseManifest
         let manifestData: Data
         let payloadData: Data
@@ -46,8 +47,27 @@ final class KnowledgeBaseTests: XCTestCase {
                                              minimumAppVersion: unsigned.minimumAppVersion, recordCount: unsigned.recordCount,
                                              payloadSHA256: unsigned.payloadSHA256, signingKeyID: unsigned.signingKeyID,
                                              signatureBase64: signature.base64EncodedString())
-        return .init(manifest: manifest, manifestData: try encoder.encode(manifest), payloadData: bytes,
+        return .init(key: key, manifest: manifest, manifestData: try encoder.encode(manifest), payloadData: bytes,
                      verifier: .init(trustAnchors: [.init(keyID: "test-key", publicKey: key.publicKey.rawRepresentation)]))
+    }
+
+    private func resigned(_ value: Fixture, expiresAt: Int64? = nil, minimumApp: String? = nil,
+                          signingKeyID: String? = nil, key: Curve25519.Signing.PrivateKey? = nil) throws -> Fixture {
+        let original = value.manifest
+        let signingKey = key ?? value.key
+        let unsigned = KnowledgeBaseManifest(schemaVersion: original.schemaVersion, datasetVersion: original.datasetVersion,
+            sequence: original.sequence, generatedAt: original.generatedAt, expiresAt: expiresAt ?? original.expiresAt,
+            minimumAppVersion: minimumApp ?? original.minimumAppVersion, recordCount: original.recordCount,
+            payloadSHA256: original.payloadSHA256, signingKeyID: signingKeyID ?? original.signingKeyID, signatureBase64: "")
+        let signed = KnowledgeBaseManifest(schemaVersion: unsigned.schemaVersion, datasetVersion: unsigned.datasetVersion,
+            sequence: unsigned.sequence, generatedAt: unsigned.generatedAt, expiresAt: unsigned.expiresAt,
+            minimumAppVersion: unsigned.minimumAppVersion, recordCount: unsigned.recordCount,
+            payloadSHA256: unsigned.payloadSHA256, signingKeyID: unsigned.signingKeyID,
+            signatureBase64: try signingKey.signature(for: unsigned.signingRepresentation).base64EncodedString())
+        return Fixture(key: signingKey, manifest: signed, manifestData: try JSONEncoder().encode(signed),
+            payloadData: value.payloadData, verifier: .init(trustAnchors: [
+                .init(keyID: signed.signingKeyID, publicKey: signingKey.publicKey.rawRepresentation)
+            ]))
     }
 
     private func activate(_ value: Fixture, highWater: KnowledgeBaseHighWaterMark? = nil, restoring: Bool = false) throws -> VerifiedKnowledgeBase {
@@ -67,6 +87,7 @@ final class KnowledgeBaseTests: XCTestCase {
         let activated = try activate(value)
         XCTAssertEqual(activated.version, "1.0.0")
         XCTAssertEqual(activated.highWaterMark.sequence, 7)
+        XCTAssertEqual(activated.highWaterMark.manifestSHA256, ContentDigest.sha256(value.manifestData))
         XCTAssertEqual(activated.payloadData, value.payloadData)
         XCTAssertNoThrow(try value.verifier.verify(manifestData: value.manifestData, payloadData: value.payloadData, appVersion: "1.0", now: now))
         XCTAssertFalse(DetachedSignature.verify(signature: Data(repeating: 0, count: 64), message: value.manifest.signingRepresentation,
@@ -124,11 +145,104 @@ final class KnowledgeBaseTests: XCTestCase {
         assertFailure(.rollbackRejected) { _ = try self.activate(original, highWater: installed.highWaterMark) }
         XCTAssertNoThrow(try activate(original, highWater: installed.highWaterMark, restoring: true))
         let changedSameSequence = try fixture(pattern: "other.example.com")
-        assertFailure(.rollbackRejected) { _ = try self.activate(changedSameSequence, highWater: installed.highWaterMark, restoring: true) }
+        assertFailure(.equivocationRejected) { _ = try self.activate(changedSameSequence, highWater: installed.highWaterMark, restoring: true) }
         let older = try fixture(version: "0.9.0", sequence: 6)
         assertFailure(.rollbackRejected) { _ = try self.activate(older, highWater: installed.highWaterMark) }
         let newer = try fixture(version: "1.0.1", sequence: 8)
         XCTAssertNoThrow(try activate(newer, highWater: installed.highWaterMark))
+    }
+
+    func testRestoreCannotExtendLifetimeLowerMinimumAppOrChangeSignerAtSameRelease() throws {
+        let original = try fixture()
+        let accepted = try activate(original)
+        for changed in [try resigned(original, expiresAt: original.manifest.expiresAt + 600),
+                        try resigned(original, minimumApp: "0.9.0"),
+                        try resigned(original, signingKeyID: "new-authorized-test-key", key: Curve25519.Signing.PrivateKey())] {
+            XCTAssertEqual(changed.payloadData, original.payloadData)
+            XCTAssertNoThrow(try activate(changed), "The regression uses a genuine, currently valid authorized signature.")
+            for restoring in [false, true] {
+                assertFailure(.equivocationRejected) {
+                    _ = try self.activate(changed, highWater: accepted.highWaterMark, restoring: restoring)
+                }
+            }
+        }
+    }
+
+    func testDuplicateSelectedTrustAnchorIDsFailClosedRegardlessOfOrder() throws {
+        let original = try fixture()
+        let anchor = try XCTUnwrap(original.verifier.trustAnchors.first)
+        let alternative = KnowledgeBaseTrustAnchor(keyID: anchor.keyID,
+            publicKey: Curve25519.Signing.PrivateKey().publicKey.rawRepresentation)
+        let malformed = KnowledgeBaseTrustAnchor(keyID: anchor.keyID, publicKey: Data(repeating: 0, count: 31))
+        for anchors in [[anchor, anchor], [anchor, alternative], [alternative, anchor],
+                        [malformed, anchor], [anchor, malformed]] {
+            assertFailure(.ambiguousSigningKey) {
+                _ = try KnowledgeBaseVerifier(trustAnchors: anchors).verify(
+                    manifestData: original.manifestData, payloadData: original.payloadData,
+                    appVersion: "1.0.0", now: self.now)
+            }
+        }
+    }
+
+    func testRestoreCannotAcceptAnUnacceptedNewerRelease() throws {
+        let accepted = try activate(fixture()).highWaterMark
+        let newer = try fixture(version: "1.0.1", sequence: 8)
+        XCTAssertNoThrow(try activate(newer, highWater: accepted))
+        assertFailure(.rollbackRejected) { _ = try self.activate(newer, highWater: accepted, restoring: true) }
+    }
+
+    func testLegacyHighWaterDecodesFailsRestoreAndStillAllowsStrictUpgrade() throws {
+        let original = try fixture()
+        let accepted = try activate(original).highWaterMark
+        let legacyData = try JSONSerialization.data(withJSONObject: ["sequence": accepted.sequence,
+            "datasetVersion": accepted.datasetVersion, "payloadSHA256": accepted.payloadSHA256])
+        let legacy = try JSONDecoder().decode(KnowledgeBaseHighWaterMark.self, from: legacyData)
+        XCTAssertNil(legacy.manifestSHA256)
+        assertFailure(.invalidHighWaterMark) { _ = try self.activate(original, highWater: legacy, restoring: true) }
+        assertFailure(.rollbackRejected) { _ = try self.activate(original, highWater: legacy) }
+        let upgraded = try fixture(version: "1.0.1", sequence: 8)
+        XCTAssertNoThrow(try activate(upgraded, highWater: legacy))
+        XCTAssertEqual(try JSONDecoder().decode(KnowledgeBaseHighWaterMark.self,
+            from: JSONEncoder().encode(accepted)), accepted)
+    }
+
+    func testRestoreWithoutPriorAcceptanceFailsClosed() throws {
+        let original = try fixture()
+        assertFailure(.invalidHighWaterMark) { _ = try self.activate(original, restoring: true) }
+    }
+
+    func testRestoreRequiresExactAcceptedManifestBytes() throws {
+        let original = try fixture()
+        let accepted = try activate(original)
+        let object = try JSONSerialization.jsonObject(with: original.manifestData)
+        let reformatted = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
+        XCTAssertNotEqual(reformatted, original.manifestData)
+        XCTAssertNoThrow(try original.verifier.verify(manifestData: reformatted, payloadData: original.payloadData,
+            appVersion: "1.0.0", now: now))
+        assertFailure(.equivocationRejected) {
+            _ = try original.verifier.verify(manifestData: reformatted, payloadData: original.payloadData,
+                appVersion: "1.0.0", now: self.now, highWaterMark: accepted.highWaterMark, restoringCurrent: true)
+        }
+        XCTAssertEqual(try activate(original, highWater: accepted.highWaterMark, restoring: true).manifestData,
+                       original.manifestData)
+    }
+
+    func testMalformedStoredHighWaterMarksDoNotAuthorizeAnUpgrade() throws {
+        let original = try activate(fixture()).highWaterMark
+        let upgraded = try fixture(version: "1.0.1", sequence: 8)
+        let invalid = [
+            KnowledgeBaseHighWaterMark(sequence: 0, datasetVersion: original.datasetVersion,
+                payloadSHA256: original.payloadSHA256, manifestSHA256: original.manifestSHA256),
+            KnowledgeBaseHighWaterMark(sequence: original.sequence, datasetVersion: "invalid",
+                payloadSHA256: original.payloadSHA256, manifestSHA256: original.manifestSHA256),
+            KnowledgeBaseHighWaterMark(sequence: original.sequence, datasetVersion: original.datasetVersion,
+                payloadSHA256: "too-short", manifestSHA256: original.manifestSHA256),
+            KnowledgeBaseHighWaterMark(sequence: original.sequence, datasetVersion: original.datasetVersion,
+                payloadSHA256: original.payloadSHA256, manifestSHA256: String(repeating: "g", count: 64))
+        ]
+        for prior in invalid {
+            assertFailure(.invalidHighWaterMark) { _ = try self.activate(upgraded, highWater: prior) }
+        }
     }
 
     func testSignedSemanticallyInvalidRulesAreRejected() throws {

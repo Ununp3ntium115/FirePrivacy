@@ -13,19 +13,20 @@ public enum VersionedRuleSet {
     public static let version = "ruleset-2.0.0"
     public static let all: [DetectionRuleDescriptor] = [
         .init(id: "AGG-APPLE-001", explanation: "Preserve Apple's reported classification values without guessing undocumented numeric meanings."),
-        .init(id: "AGG-CROSSAPP-002", explanation: "A destination appears in at least three apps; distinguish app counts from verified publisher identities."),
+        .init(id: "AGG-CROSSAPP-002", explanation: "Default: a destination appears in at least three apps; distinguish app counts from verified publisher identities. Reviewed configurations can raise the minimum."),
         .init(id: "LOC-NET-003", explanation: "Location events and a reviewed location-data service appear under the same app in the export."),
         .init(id: "SENSOR-UNEXPECTED-004", explanation: "The user explicitly marked an observed sensor category as unexpected."),
-        .init(id: "UNKNOWN-HIGHFANOUT-005", explanation: "At least ten destinations and less than 40% reviewed classification coverage."),
+        .init(id: "UNKNOWN-HIGHFANOUT-005", explanation: "Default: at least ten destinations and less than 40% reviewed classification coverage. Reviewed configurations can change bounded thresholds."),
         .init(id: "VENDOR-KNOWN-006", explanation: "A cited, verified, reviewed high-impact service appears in recorded contacts."),
         .init(id: "COVERAGE-GAP-007", explanation: "A working optional filter is available but inactive for reviewed candidate destinations."),
-        .init(id: "FRESHNESS-008", explanation: "The latest known activity, or import when activity time is unknown, is more than fourteen days old.")
+        .init(id: "FRESHNESS-008", explanation: "Default: the latest known activity, or import when activity time is unknown, is more than fourteen days old. Reviewed configurations can change the bounded age threshold.")
     ]
 }
 
 /// Deterministic analysis. It neither reads system permissions nor establishes what was transmitted.
 public enum VersionedFindingEngine {
-    public static func evaluate(report: PrivacyReport, context: FindingContext = .init()) -> FindingAnalysis {
+    public static func evaluate(report: PrivacyReport, context: FindingContext = .init(),
+                                configuration: DeclarativeRuleConfiguration = VersionedRuleSet.defaultConfiguration) -> FindingAnalysis {
         let network = report.observations.filter { $0.category == .network && $0.domain != nil && $0.count > 0 }
         let groups = Dictionary(grouping: network, by: { $0.domain! })
         let appGroups = Dictionary(grouping: report.observations, by: \.bundleID)
@@ -33,6 +34,7 @@ public enum VersionedFindingEngine {
 
         // Apple's fields are preserved as observed facts. Numeric encodings have no inferred meaning.
         for domain in groups.keys.sorted() {
+            guard configuration.isEnabled(.reportedClassification) else { break }
             let records = sortedEvidence(groups[domain]!)
             let flagged = records.filter { record in
                 [record.domainClassification, record.domainType].contains { value in
@@ -57,15 +59,16 @@ public enum VersionedFindingEngine {
                 detail: "The export includes domain classification or type fields. Their original values are shown with the source records.",
                 severity: .info, confidence: 0.98, records: flagged, facts: facts,
                 uncertainty: ["An undocumented value is not interpreted as tracking, aggregation, ownership, or harm.", FindingUncertainty.payload],
-                actions: [ActionCatalog.reviewDomain.id, ActionCatalog.learnLimits.id], categories: ["reported-classification"], context: context))
+                actions: [ActionCatalog.reviewDomain.id, ActionCatalog.learnLimits.id], categories: ["reported-classification"], context: context, configuration: configuration))
         }
 
         for domain in groups.keys.sorted() {
+            guard configuration.isEnabled(.crossApp) else { break }
             let records = sortedEvidence(groups[domain]!)
             let apps = Set(records.map(\.bundleID)).sorted()
             let knowledge = context.reviewedDomain(domain)
             let isInfrastructure = knowledge.map { !$0.categories.isEmpty && $0.categories.allSatisfy(\.isInfrastructure) } ?? false
-            guard apps.count >= 3, !isInfrastructure else { continue }
+            guard apps.count >= configuration.minimumDistinctApps, !isInfrastructure else { continue }
             let publishers = apps.compactMap { context.appPublisherIDs[$0] }
             let verifiedUnrelated = publishers.count == apps.count && Set(publishers).count >= 3
             var facts = [FindingFact(key: "apps", value: apps.joined(separator: ", "), evidenceIDs: records.map(\.id)),
@@ -82,7 +85,7 @@ public enum VersionedFindingEngine {
                 severity: .low, confidence: verifiedUnrelated ? 0.8 : 0.65, records: records, facts: facts,
                 inference: inference, uncertainty: [FindingUncertainty.payload, FindingUncertainty.purpose] + (knowledge == nil ? [FindingUncertainty.unknown] : []),
                 actions: [ActionCatalog.reviewDomain.id, ActionCatalog.learnCrossApp.id, ActionCatalog.markExpected.id],
-                categories: ["shared-destination"], knowledge: knowledge, context: context))
+                categories: ["shared-destination"], knowledge: knowledge, context: context, configuration: configuration))
         }
 
         for app in appGroups.keys.sorted() {
@@ -93,7 +96,7 @@ public enum VersionedFindingEngine {
                       let knowledge = context.reviewedDomain(domain) else { return false }
                 return knowledge.categories.contains(.locationIntelligence)
             }
-            if !location.isEmpty && !locationContacts.isEmpty {
+            if configuration.isEnabled(.locationNetwork) && !location.isEmpty && !locationContacts.isEmpty {
                 let domains = Set(locationContacts.compactMap(\.domain)).sorted()
                 let evidence = location + locationContacts
                 let knowledge = domains.compactMap { context.reviewedDomain($0) }
@@ -106,12 +109,13 @@ public enum VersionedFindingEngine {
                     inference: "These two kinds of recorded activity can guide a review of why the app needs location access.",
                     uncertainty: ["Co-occurrence in an export does not establish timing, causation, or transmission of location.", FindingUncertainty.payload, FindingUncertainty.permission],
                     actions: [ActionCatalog.reviewLocation.id, ActionCatalog.reviewDomain.id, ActionCatalog.reviewApp.id],
-                    categories: ["location", "locationIntelligence"], knowledgeList: knowledge, context: context))
+                    categories: ["location", "locationIntelligence"], knowledgeList: knowledge, context: context, configuration: configuration))
             }
 
             let sensors = Dictionary(grouping: allRecords.filter { $0.category == .sensor }, by: \.sensorCategory)
             for category in sensors.keys.sorted() {
-                guard let audit = context.permissionAudit.entry(bundleID: app, category: category), audit.isExpected == false else { continue }
+                guard configuration.isEnabled(.unexpectedSensor),
+                      let audit = context.permissionAudit.entry(bundleID: app, category: category), audit.isExpected == false else { continue }
                 let records = sensors[category]!
                 findings.append(makeFinding(ruleID: "SENSOR-UNEXPECTED-004", subject: .app(app), discriminator: category,
                     title: "You marked \(category) access as unexpected",
@@ -122,13 +126,14 @@ public enum VersionedFindingEngine {
                             .init(key: "user_reported_expectation", value: "unexpected", evidenceIDs: [])],
                     uncertainty: ["The expectation is your own assessment, not a device permission reading.", FindingUncertainty.permission],
                     actions: [category == "location" ? ActionCatalog.reviewLocation.id : ActionCatalog.reviewSensor.id, ActionCatalog.reviewApp.id],
-                    categories: [category], context: context))
+                    categories: [category], context: context, configuration: configuration))
             }
 
             let contacts = allRecords.filter { $0.category == .network && $0.domain != nil && $0.count > 0 }
             let domains = Set(contacts.compactMap(\.domain)).sorted()
             let reviewedCount = domains.filter { context.reviewedDomain($0) != nil }.count
-            if domains.count >= 10 && Double(reviewedCount) / Double(domains.count) < 0.4 {
+            if configuration.isEnabled(.unknownHighFanout), domains.count >= configuration.minimumDistinctDestinations,
+               Double(reviewedCount) / Double(domains.count) < configuration.maximumReviewedCoverage {
                 findings.append(makeFinding(ruleID: "UNKNOWN-HIGHFANOUT-005", subject: .app(app),
                     title: "Many destinations remain unreviewed",
                     detail: "\(app) contacted \(domains.count) distinct destinations; \(domains.count - reviewedCount) have no verified reviewed classification in this analysis.",
@@ -136,7 +141,7 @@ public enum VersionedFindingEngine {
                     facts: [.init(key: "distinct_destinations", value: String(domains.count), evidenceIDs: contacts.map(\.id)),
                             .init(key: "reviewed_destinations", value: String(reviewedCount), evidenceIDs: contacts.map(\.id))],
                     uncertainty: [FindingUncertainty.unknown, "These destinations are not assumed to be third parties or trackers.", FindingUncertainty.payload],
-                    actions: [ActionCatalog.reviewDomain.id, ActionCatalog.learnLimits.id], categories: ["unknown"], context: context))
+                    actions: [ActionCatalog.reviewDomain.id, ActionCatalog.learnLimits.id], categories: ["unknown"], context: context, configuration: configuration))
             }
         }
 
@@ -144,7 +149,7 @@ public enum VersionedFindingEngine {
         for domain in groups.keys.sorted() {
             guard let knowledge = context.reviewedDomain(domain) else { continue }
             let records = sortedEvidence(groups[domain]!)
-            if knowledge.categories.contains(where: \.isHighImpact) {
+            if configuration.isEnabled(.reviewedHighImpact), knowledge.categories.contains(where: \.isHighImpact) {
                 findings.append(makeFinding(ruleID: "VENDOR-KNOWN-006", subject: .domain(domain),
                     title: "A reviewed service appears in contacts",
                     detail: "Reviewed sources classify \(domain) as \(knowledge.categories.map(\.rawValue).sorted().joined(separator: ", ")). The export records contacts with that destination.",
@@ -153,7 +158,7 @@ public enum VersionedFindingEngine {
                             .init(key: "reviewed_categories", value: knowledge.categories.map(\.rawValue).sorted().joined(separator: ", "), evidenceIDs: [])],
                     uncertainty: [FindingUncertainty.payload, FindingUncertainty.purpose],
                     actions: [ActionCatalog.reviewDomain.id, ActionCatalog.reviewApp.id],
-                    categories: knowledge.categories.map(\.rawValue), knowledge: knowledge, context: context))
+                    categories: knowledge.categories.map(\.rawValue), knowledge: knowledge, context: context, configuration: configuration))
             }
             if knowledge.categories.contains(where: { [.advertising, .attribution, .dataBroker, .locationIntelligence].contains($0) }) {
                 filterCandidates.append(contentsOf: records)
@@ -161,7 +166,7 @@ public enum VersionedFindingEngine {
         }
 
         // Availability describes a real working capability, not merely an API or OS version.
-        if !filterCandidates.isEmpty &&
+        if configuration.isEnabled(.coverageGap) && !filterCandidates.isEmpty &&
             ((context.protection.urlFilterAvailable && !context.protection.urlFilterActive) ||
              (context.protection.safariBlockerAvailable && !context.protection.safariBlockerActive)) {
             var actions: [String] = []
@@ -175,7 +180,7 @@ public enum VersionedFindingEngine {
                 uncertainty: ["A category alone does not prove this destination appears in the installed block list.",
                               "Safari rules cover browser resources. URL filters cover supported networking; other apps may not participate.",
                               "Blocking can affect app or website features."],
-                actions: actions, categories: ["protection"], context: context))
+                actions: actions, categories: ["protection"], context: context, configuration: configuration))
         }
 
         let datedRecords = report.observations.filter { observation in
@@ -184,7 +189,7 @@ public enum VersionedFindingEngine {
         let activityEnd = datedRecords.flatMap { [$0.timestamp, $0.firstTimestamp, $0.lastTimestamp].compactMap { $0 } }.max()
         let reference = activityEnd ?? report.importedAt
         let age = context.now.timeIntervalSince(reference)
-        if age.isFinite && age > 14 * 86_400 {
+        if configuration.isEnabled(.freshness), age.isFinite && age > Double(configuration.minimumAgeDays) * 86_400 {
             let days = min(Int.max / 2, Int(min(Double(Int.max / 2), age / 86_400)))
             findings.append(makeFinding(ruleID: "FRESHNESS-008", subject: .report,
                 title: activityEnd == nil ? "This import is \(days) days old" : "Latest recorded activity is \(days) days old",
@@ -194,7 +199,7 @@ public enum VersionedFindingEngine {
                 uncertainty: activityEnd == nil
                     ? ["The export has no usable activity timestamps; its actual activity window is unknown.", "No newer report means no newer evidence, not that nothing changed."]
                     : ["No newer report means no newer evidence, not that nothing changed."],
-                actions: [ActionCatalog.importFresh.id, ActionCatalog.learnLimits.id], categories: ["freshness"], context: context))
+                actions: [ActionCatalog.importFresh.id, ActionCatalog.learnLimits.id], categories: ["freshness"], context: context, configuration: configuration))
         }
 
         findings.sort {
@@ -202,22 +207,23 @@ public enum VersionedFindingEngine {
             if $0.profileRelevance != $1.profileRelevance { return $0.profileRelevance > $1.profileRelevance }
             return $0.id < $1.id
         }
-        return .init(reportID: report.id, rulesetVersion: VersionedRuleSet.version, findings: findings,
-                     scores: PostureCalculator.evaluate(report: report, findings: findings, context: context))
+        return .init(reportID: report.id, rulesetVersion: configuration.analysisVersion, findings: findings,
+                     scores: configuration.explaining(PostureCalculator.evaluate(report: report, findings: findings, context: context)))
     }
 
     private static func makeFinding(
         ruleID: String, subject: FindingSubject, discriminator: String = "", title: String, detail: String,
         severity: FindingSeverity, confidence: Double, records: [Observation], facts: [FindingFact],
         inference: String? = nil, uncertainty: [String], actions: [String], categories: [String],
-        knowledge: ReviewedDomainContext? = nil, knowledgeList: [ReviewedDomainContext] = [], context: FindingContext
+        knowledge: ReviewedDomainContext? = nil, knowledgeList: [ReviewedDomainContext] = [], context: FindingContext,
+        configuration: DeclarativeRuleConfiguration
     ) -> RuleFinding {
         let evidence = Array(Set(records.map(\.id))).sorted { $0.uuidString < $1.uuidString }
         let knowledgeRecords = knowledgeList + (knowledge.map { [$0] } ?? [])
         let stale = knowledgeRecords.contains { $0.expiresAt.map { $0 <= context.now } ?? false }
         let version = VersionedRuleSet.all.first { $0.id == ruleID }!.version
         // JSON component encoding prevents ambiguous separator collisions in imported text.
-        let identity = [ruleID, version, subject.key, discriminator]
+        let identity = [ruleID, version, configuration.digest, subject.key, discriminator]
             + knowledgeRecords.map(\.knowledgeBaseVersion).sorted() + evidence.map(\.uuidString)
         let data = (try? JSONEncoder().encode(identity)) ?? Data()
         let sourceBoundConfidence = min(confidence, knowledgeRecords.map(\.evidenceConfidence).min() ?? confidence)

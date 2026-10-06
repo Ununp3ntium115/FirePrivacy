@@ -1,105 +1,120 @@
-# Release checklist
+# Expanded implementation release checklist
 
-All unchecked items are pending. Use the actual command logs and App Store
-Connect statuses as evidence. A native source build, passing test run, signed
-archive, uploaded/processed build, review submission, approval, and public
-release are separate results.
+Unchecked items remain pending. Source, portable tests, native SDK builds,
+signed archives, upload/processing, TestFlight QA, review approval and public
+release are separate results. Earlier MVP native results do not validate the
+expanded architecture. Screenshots are paused until functionality is verified.
 
-## Build and product
+## Current evidence
 
-- [x] Current-instance Linux/core build and 34 tests pass; see `VALIDATION.md`.
-- [x] Current-instance portable project, asset, plist, and privacy checks pass.
-- [x] Hosted Mac CI uses Xcode 26.2 and iOS/iPadOS 26.2 SDK; verify current Apple minima
-      using [APPLE-REQUIREMENTS.md](APPLE-REQUIREMENTS.md).
-- [x] `scripts/build-ios.sh` succeeds on both hosted Mac jobs at `d44a996`.
-- [x] `scripts/test-ios.sh iphone` and `scripts/test-ios.sh ipad` succeed at `d44a996`;
-      the separate hardware-protection test is skipped in Simulator.
-- [ ] Final local lifecycle/accessibility/release-helper changes pass a new native run.
-- [ ] A real Apple-generated App Privacy Report from a current iPhone imports.
-- [ ] A real Apple-generated App Privacy Report from a current iPad imports.
-- [ ] No-activity, unsupported-record, malformed, oversized, truncated,
-      non-UTF-8, and canceled-import flows give accurate outcomes.
-- [ ] Demo, populated-report, empty-report, and error screens work in portrait,
-      landscape, iPad split view, and compact widths.
-- [ ] Export produces the intended readable file, the system share sheet works,
-      and temporary exports are cleaned up after use or relaunch.
-- [ ] Delete removes the stored report and Keychain key, including after restart.
-      It accurately explains that the original and already shared files remain.
-- [ ] The Keychain/encryption/file-protection behavior works on a physical device.
-- [ ] On passcode-protected physical iPhone and iPad, the report, device-only
-      Keychain key, and temporary exports respect the locked state and reopen
-      correctly after unlock. Verify complete file-protection metadata on those
-      devices; simulator filesystems cannot validate hardware Data Protection.
-- [ ] Device backup behavior matches the policy; stored report/key are not
-      accidentally backed up or synced to iCloud.
-- [ ] No imported report content appears in production logs or crash annotations.
-- [ ] Release network inspection confirms no app-created request during demo,
-      import, browsing, delete, and export preparation.
-- [ ] VoiceOver names/values/order work; 200%+ text does not hide controls;
-      meaningful color has a text/shape equivalent; contrast and reduced motion
-      work. Record only verified accessibility labels in App Store Connect.
+- [x] Expanded portable checkpoint: 149 core tests and 76 cloud-release Python
+      tests passed, as reported October 5, 2026. Later lifecycle/security fixes
+      require the final rerun; see [VALIDATION](VALIDATION.md).
+- [x] Official current Apple requirements and optional-feature documentation
+      were retrieved with normal TLS; see [APPLE-REQUIREMENTS](APPLE-REQUIREMENTS.md).
+- [x] The existing GitHub policy/support URLs are public and returned HTTP 200.
+      The live policy still describes the earlier MVP; publication of the new
+      matching policy remains pending.
+- [ ] Final expanded source passes portable checks after all security fixes.
+- [ ] Expanded consumer, URL-filter and managed source targets pass required
+      Xcode 26.2/iPhone/iPad SDK checks; no inactive edition is reported available.
+- [ ] Consumer native storage, coordinator, UI and privacy regression tests pass.
 
-## Account, legal, and privacy
+## Actual product and privacy behavior
 
-- [ ] Apple Developer team `LYDVWU62G4` is accessible to the signing account.
-- [ ] Membership and relevant current Apple agreements are active/accepted.
-- [ ] The final bundle identifier is registered and matches project, signing
-      profile, App Store Connect record, archive, and export configuration.
-- [ ] Actual seller identity, copyright holder, app/icon/code/asset rights, and
-      review contact are accurate. No placeholder personal or business data.
-- [ ] Apple's standard EULA is used, or any chosen custom EULA is valid for the
-      selected rights holder and territories.
-- [ ] Account enrollment type and the applicability of App Review 5.1.1(ix) to
-      the optional local report workflow are reviewed; no unverified LLC claim.
-- [ ] Export compliance questionnaire matches Apple CryptoKit/Keychain-only
-      encryption; record the applicable exemption and any documentation needed.
-- [ ] Trader/non-trader status is declared in App Store Connect, including if
-      distribution excludes the EU. For EU trader distribution, the required
-      contact information is verified and availability matches that decision.
-- [ ] Price, territories, age-rating questionnaire, category, and content rights
-      answers describe the actual build.
-- [ ] A public HTTPS privacy policy and support page are deployed and return 200
-      without login, from an ordinary network outside this workspace.
-- [ ] App Store Connect URLs match the deployed pages; the in-app policy/link
-      works and matches the source policy.
-- [ ] Support route is reachable by an ordinary user; private reports are not
-      requested in public issues. No unverified email/domain is displayed.
-- [ ] App Privacy answers are reviewed against the final app and dependencies.
-- [ ] `PrivacyInfo.xcprivacy` parses, is bundled, and agrees with used APIs;
-      generate/review Xcode's privacy report and final processing warnings.
-- [ ] Any third-party SDK or asset change has a documented privacy/license review.
+- [ ] Current real Apple-generated iPhone and iPad reports import correctly.
+      Unsupported/malformed/oversized/cancelled cases retain accurate outcomes.
+- [ ] Evidence provenance, facts/inferences/uncertainty, dataset status, profile
+      relevance, manual audits, score coverage, comparison and absence wording
+      match source data. No current-permission/payload/causal/legal claims.
+- [ ] Encrypted history, optional source copy, retention quotas, key rotation,
+      corrupt/missing-key states and migration work on the native implementation.
+- [ ] Session deletion/retention failures are retryable; no decryptable orphan is
+      silently omitted from accounting. Late operations cannot repopulate data.
+- [ ] Independent disclosure receipts are persisted protected/encrypted. Decline
+      leaves local analysis usable; revoke/cancel/version/config/report changes
+      invalidate pending approvals and reject stale output.
+- [ ] Exact remote preview shows every transmitted field and destination. Test
+      HTTPS trust/hostname/date, pin mismatch, redirects, header injection,
+      streaming size bounds, expiry/replay, cancellation and revoked completion
+      with an authorized synthetic endpoint. No raw/stable report identifiers
+      escape the minimized advisor DTO. No automatic cloud fallback.
+- [ ] Dataset tamper/schema/semantic/expiry/downgrade/revocation checks reject
+      updates and preserve valid state. Real publisher keys, endpoint/retention,
+      citations/licenses and signed revocation operations are documented.
+- [ ] Model availability/fallback is truthful; invalid output cannot add facts,
+      IDs/actions/commands or change decisions. Test inference on an eligible
+      physical Apple Intelligence device before advertising that support.
+- [ ] Full/redacted JSON/CSV/Markdown exports, diagnostics and share-sheet cleanup
+      work. Redaction is not advertised as anonymity. External copies are disclosed.
+- [ ] Generic reminders require consent and OS permission and contain no activity.
+- [ ] Delete-all removes private files/key and retries owned OS removal after
+      restart from the feature-name-only queue. No false completed-removal state.
+- [ ] Production network inspection shows no app request on local analysis,
+      imports, history, deletion or export preparation. Optional destinations
+      agree with dynamic disclosures/event history; no payload/token logging.
+- [ ] Physical passcode-protected iPhone/iPad verify locked-state key/report/
+      export behavior, complete protection, backup exclusion and no iCloud sync.
+- [ ] Working expanded controls/layout/VoiceOver/200%+ text/contrast/reduced
+      motion/rotation/split view are verified. Capture actual synthetic screenshots
+      only after these flows work; declare only tested accessibility support.
 
-## App Store Connect submission
+## Consumer Safari and encrypted DNS
 
-- [ ] App record, primary language, SKU, and final name are configured.
-- [ ] Version/build number are unique for upload; Release configuration is used.
-- [ ] Review the draft metadata in `AppStore/` against the exact shipping build.
-- [ ] Current required iPhone and iPad screenshot classes have actual-build
-      screenshots with synthetic data. Text, orientation, cropping, and privacy
-      are checked; no conceptual render is submitted as a screenshot.
-- [ ] TestFlight install and launch succeed on physical iPhone and iPad;
-      import/export/delete and offline use pass on the uploaded build.
-- [ ] Signed archive succeeds and passes local archive validation.
-- [ ] Upload to App Store Connect succeeds; processing finishes without blockers.
-- [ ] Select the processed build in the version record; all required fields and
-      declarations are complete; add review notes and contact details.
-- [ ] Submit for review and record the exact App Store Connect submission status.
-- [ ] Address any App Review issue with verified behavior and accurate metadata.
-- [ ] Release only after the selected release option and Apple status allow it;
-      verify the public store listing and download before reporting it live.
+- [ ] Registered App Group and consumer+Safari App IDs/profiles/certificate match.
+      Main target grants dns-settings; Safari target/embedded resources are valid.
+- [ ] Safari rule install, user Settings enablement, local allowances, actual
+      enabled state, expired/revoked data, cached-rule reload failure and Settings
+      removal work. No claim of universal coverage or autonomous cache expiry.
+- [ ] Resolver choice discloses operator, queried names, metadata, logging,
+      retention, jurisdiction, blocking/failure behavior and coverage limits.
+      Save/enabled/change/removal states match NEDNSSettingsManager on device.
+- [ ] The consumer archive contains no URL/managed provider or those capabilities.
 
-## Evidence log
+## Separate URL-filter / managed gates
 
-Record evidence, not an assumed pass. Do not attach a real report, credentials,
-private key, provisioning profile, device identifier, or private personal data.
+- [ ] URL edition: actual iOS 26 device, url-filter-provider capability/profile,
+      App Group, signed Apple-format data, live PIR/Privacy Pass/OHTTP resources,
+      correct configuration identity and actual running/removal state.
+- [ ] URL operator: Apple Identity & Trust registration and relay validation
+      completed before any non-development distribution, including TestFlight.
+      Actual service/publisher policies, revocations and coverage are disclosed.
+- [ ] Managed edition: eligible operator, granted content-filter capability,
+      matching provider App IDs/profiles, supported supervised/MDM deployment,
+      signed policy and no unauthorized consumer activation or flow retention.
+- [ ] Any offered MDM/configuration-profile service meets App Review 5.5 capability,
+      eligible-entity, disclosure and restricted-data-use requirements. No VPN
+      service/organization requirement is inferred merely from Safari/DNS.
 
-| Check | Build/version | Date | Evidence/result |
-| --- | --- | --- | --- |
-| Core tests | Candidate 1.0 | October 5, 2026 | 34 XCTest cases, 0 failures; portable script exit 0 |
-| Apple-platform build and tests | `d44a996`, candidate 1.0 | October 5, 2026 | Both native build/test steps passed in run 37378242655; hardware protection skipped in Simulator; final local changes await rerun |
-| Real report compatibility | Pending | Pending | OS version and anonymized result |
-| Storage/delete/backup/device tests | Pending | Pending | Physical-device result |
-| Public policy/support reachability | Pending | Pending | Exact deployed HTTPS URLs/status |
-| Current Apple requirements | Pending | Pending | Retrieval date and requirement text |
-| Signing/archive/upload | Pending | Pending | Archive result and processing status |
-| App Review/release | Pending | Pending | Actual App Store Connect state |
+## Account, legal and App Store Connect
+
+- [ ] Active team LYDVWU62G4 membership, current agreements, authorized signing/
+      upload roles and exact registered edition IDs/ASC app records are confirmed.
+- [ ] Real seller/copyright/review contact, app/icon/code/data/license rights,
+      standard/custom EULA and App Review 5.1.1(ix) applicability are resolved.
+- [ ] Export answers match the actual native cryptography and any reporting/
+      territorial obligations. Plist exemption is not absence of encryption.
+- [ ] Trader status/EU contact verification, price/territories, current age-rating
+      questionnaire, category and content-rights answers match the actual edition.
+- [ ] Revised public policy is published and returns HTTP 200 without login. In-app/ASC
+      URLs match it; monitored support and actual review contact are available.
+- [ ] App Privacy answers review every enabled/optional endpoint, operator access
+      and retention. Optional toggles alone do not exempt data from disclosure.
+- [ ] Every shipped app/extension manifest and required-reason/SDK attribution
+      agrees with actual APIs; Xcode privacy report and processing are reviewed.
+- [ ] Draft AppStore text is replaced with exact verified consumer feature labels;
+      no inactive edition or untested native capability is advertised.
+- [ ] Exact signed archive and unique version/build pass release validation and
+      upload to App Store Connect; Apple processing finishes without blockers.
+- [ ] Initial TestFlight install supplies physical QA where needed; finish that
+      QA before selecting the final build/metadata for App Review.
+- [ ] Actual required iPhone/iPad screenshots use the final binary and synthetic
+      data. Review contact/notes/declarations are complete; Add for Review and
+      Submit for Review statuses are recorded separately.
+- [ ] Review issues are resolved; release selection/status and public listing/
+      download are verified before reporting the app live.
+
+Record exact revision/run IDs and statuses in [VALIDATION](VALIDATION.md). Never
+attach private reports, keys, profiles, account details or device identifiers as
+evidence. GitHub secret/variable metadata HTTP 403 means unknown, not absent; a team
+identifier and workflow source do not prove usable signing authorization.

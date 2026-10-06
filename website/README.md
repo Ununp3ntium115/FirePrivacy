@@ -11,7 +11,9 @@ Local preview from the repository:
 python3 -m http.server 8080 --directory website
 ```
 
-The site files have been pushed to the repository's `gh-pages` branch. Enabling
+An earlier version of the site files has been pushed to the repository's
+`gh-pages` branch. The revised expanded policy/support/home source in this
+checkout is draft; publish it after the matching native functionality is verified. Enabling
 GitHub Pages through this integration was rejected with HTTP 403, so no live
 Pages website is claimed. The repository owner can enable Settings → Pages →
 Deploy from a branch → `gh-pages` → root, or publish the files through another
@@ -22,7 +24,9 @@ The public [rendered policy](https://github.com/Ununp3ntium115/FirePrivacy/blob/
 and [issue tracker](https://github.com/Ununp3ntium115/FirePrivacy/issues) were
 verified as publicly readable with HTTP 200 on October 5, 2026. Those URLs are
 configured as the app and App Store metadata defaults. They work before the
-standalone site is live; no active GitHub Pages domain is claimed.
+standalone site is live; no active GitHub Pages domain is claimed. The live
+policy still describes the earlier single-report MVP and must be republished
+to match the expanded build before distribution.
 
 The GitHub API verified on October 5, 2026 that this repository is
 public and issues are enabled. Ensure the issue tracker is monitored and usable

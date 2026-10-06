@@ -24,10 +24,13 @@
     <p>The report contains only the activity and record types available in the selected file. A newly enabled report may have little history. Unsupported or malformed records are not evidence that nothing happened. Check the import result, export a new report from Settings, and try again.</p>
 
     <h2>Does a domain contact mean something is unsafe?</h2>
-    <p>No. A contact is a recorded event. It does not establish what information was sent, the owner’s intent, or a security finding. Fire Privacy is a local report viewer; it does not block requests, run a VPN, or change other apps’ permissions.</p>
+    <p>No. A contact is a recorded event. It does not establish what information was sent, the owner’s intent, or a security finding. Fire Privacy distinguishes observed activity from cited knowledge and inference. Optional Safari blocking and encrypted DNS have specific coverage limits; the app does not run a VPN or change other apps’ permissions.</p>
 
     <h2>How do export and delete work?</h2>
-    <p>Export uses the system share sheet to share a readable normalized JSON report. Only share it with someone you trust. Delete removes the app’s stored report, temporary exports, and encryption key. It leaves your original file, history in Settings, and previously shared copies in their original locations.</p>
+    <p>Export uses the system share sheet for readable JSON, CSV or Markdown, with full or redacted choices. Redaction does not guarantee anonymity. Delete revokes/cancels requests, removes private history/state and attempts removal of owned protections. Failed OS removal is reported and retains a protected feature-name-only retry plan; Settings removal may be needed. Your original file, history in Settings, previously shared copies and external-server copies remain outside that action.</p>
+
+    <h2>Optional protections and model help</h2>
+    <p>The expanded consumer source includes optional Safari content blocking, encrypted DNS, eligible Apple on-device presentation assistance and a user-operated HTTPS model endpoint. Native/device validation and final controls remain pending. Safari needs Settings enablement; compiled rules can remain after a failed reload. DNS query names go to the selected resolver. A remote model request requires disclosure and approval of the exact structured payload; there is no automatic cloud fallback.</p>
 
     <h2>Contact the project</h2>
     <p>For ordinary help, an import bug, or a privacy-policy question, <a href="https://github.com/Ununp3ntium115/FirePrivacy/issues" rel="noreferrer">open a project issue on GitHub</a>. Include the app version, iOS/iPadOS version, what you expected, and what happened. The project issue tracker requires a GitHub account to post.</p>

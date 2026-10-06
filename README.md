@@ -1,61 +1,55 @@
 # Fire Privacy
 
-A native iPhone and iPad privacy report reader. Import an App Privacy Report exported from Settings, explore recorded domain contacts and sensor events, and get clear steps for reviewing privacy settings. Reports are analyzed on the device. No account, advertisements, tracking SDKs, or app-operated network requests.
+A native iPhone and iPad privacy control center built around the App Privacy Report you export from Settings. Import and analyze evidence on your device, compare encrypted report history, review cited findings, and choose supported protection and explanation features explicitly.
 
-## The first release
+The app has no account, ads, tracking SDK, subscription, or report resale. A recorded contact does not prove what was transmitted or establish harm. Historical sensor records do not show another app’s current permissions. Unknown ownership stays unknown.
 
-- An adaptive SwiftUI dashboard, app and domain detail, linked evidence, and settings guidance.
-- Bounded newline-delimited JSON import with visible rejected-record counts. Supported records and limits are documented in [BUILDING](Documentation/BUILDING.md).
-- One normalized report encrypted with CryptoKit AES-GCM, using a device-only Keychain key and file protection.
-- Explicit sharing and deletion controls, with a warning before exporting readable report data.
-- A clearly labeled synthetic demo that works without an account or a personal export.
-- An in-app Trust Center that explains storage, sharing, and the limits of the evidence.
+## Engineered concepts
 
-A recorded domain contact does not reveal its payload or prove harm. Historical sensor events do not show current permissions. App identities are exported bundle identifiers, not an inventory of installed apps. This release does not block traffic, change other apps’ settings, classify tracking vendors, or use AI.
+- Bounded hostile-input import, exact reported fields, content-derived evidence IDs, source/line hashes, timestamp precision, public-suffix normalization and sensor begin/end distinctions.
+- Signed, cited knowledge; versioned deterministic findings with separate facts, inferences, uncertainty, evidence, actions and explainable posture dimensions. Preferences change relevance rather than factual confidence.
+- Profiles, self-reported permission audits, local domain overrides, encrypted session history, comparisons, weekly summaries and bounded analysis revisions.
+- AES-GCM storage with a device-only unlocked Keychain key, optional encrypted source retention, retention limits, generation guards, recoverable key rotation, deletion and retryable cleanup.
+- JSON/CSV/Markdown full or redacted exports and opt-in sanitized diagnostics. Originals and previously shared copies remain outside the app’s control.
+- Persisted feature-specific consent, exact one-use network previews, cancellation/revocation and a bounded host/purpose/byte/status ledger. Local import and analysis need no network request.
+- Offline guidance; optional Apple on-device presentation assistance and a user-operated HTTPS advisor. Models choose from grounded presentation options; authored facts and actions remain deterministic. No automatic cloud fallback.
+- Safari content blocking and optional encrypted DNS with real OS activation checks. Separate URL-filter and managed editions contain their own providers and distribution gates.
+- Local notification reminders and secure, explicitly retained endpoint credentials. Report data and credentials never enter the protection App Group.
 
-The original repository described a broader product. [FEATURE-COVERAGE](Documentation/FEATURE-COVERAGE.md)
-maps those concepts to this candidate and records missing knowledge-base,
-versioned analysis/scoring, filtering, private-advisor, and managed-edition work.
+[FEATURE-COVERAGE](Documentation/FEATURE-COVERAGE.md) maps the original concepts to source, integration and external prerequisites. [VALIDATION](Documentation/VALIDATION.md) separates portable tests, native SDK/simulator checks, signing and hardware QA. The expanded UI and native implementation are undergoing hosted validation; source presence is not App Store acceptance.
 
-## Develop
-
-Open `FirePrivacy.xcodeproj` in a supported Xcode on macOS. The app targets iOS/iPadOS 17 or later; App Store submission must use Apple's currently required SDK. See [BUILDING](Documentation/BUILDING.md) for simulator, device, archive, and upload commands.
-
-The portable analysis engine can also be built and tested on Linux with Swift 6:
+## Develop in the cloud
 
 ```sh
-swift build
-swift test
-./Tests/PrivacyRegression/no-network-in-local-analysis.sh
+bash scripts/install-swift-linux.sh
+bash scripts/check-portable.sh
 ```
 
-The app's UI, Keychain, CryptoKit storage, simulator checks, and signing require Apple platforms. A passing Linux suite does not validate those parts.
+The Linux workspace tests the portable core and release tooling. GitHub Actions uses hosted Macs for the Apple SDK, all three editions, encrypted storage, and iPhone/iPad UI tests. Screenshot capture is optional and disabled during underlying engineering.
 
-You can keep development cloud based: this chat uses the Linux workspace, and
-GitHub Actions uses hosted Macs for the Apple toolchain. See
-[SESSION](Documentation/SESSION.md) for the durable handoff and
-[CLOUD-RELEASE](Documentation/CLOUD-RELEASE.md) for browser-driven signing and upload.
+On macOS, open `FirePrivacy.xcodeproj`. The consumer and managed app support iOS/iPadOS 17 or later; the separate URL-filter edition requires iOS/iPadOS 26. Build and release instructions are in [BUILDING](Documentation/BUILDING.md) and [CLOUD-RELEASE](Documentation/CLOUD-RELEASE.md). [SESSION](Documentation/SESSION.md) records the cloud handoff.
 
-## Release
+## Release and operation
 
-[RELEASE-CHECKLIST](Documentation/RELEASE-CHECKLIST.md) records the checks required before submission. Draft metadata and review notes live in `AppStore/`; deployed privacy and support links are listed in [CLOUD-RELEASE](Documentation/CLOUD-RELEASE.md), and standalone website source lives in `website/`. App Store Connect handles uploads and review; the Apple Developer site handles developer resources and signing capabilities.
+The manual signed-build workflow can archive or upload a validated build to **App Store Connect**. It does not submit for review or release the app. Apple Developer manages identifiers, capabilities and signing; App Store Connect receives builds and handles TestFlight and review.
 
-Team `LYDVWU62G4` was supplied by the developer for signing. The proposed bundle identifier is a development default until it is registered for this app. Signing certificates, private keys, passwords, and App Store Connect API keys must never be committed.
+Team `LYDVWU62G4` was supplied by the developer. The proposed bundle identifier remains provisional until its registration and App Store Connect record are verified. Matching distribution credentials belong in the private GitHub Actions environment, never in source or chat.
 
-The source implementation is a first-release candidate, not an assertion of App Store approval or legal compliance. See the validation record for completed tests and remaining checks.
+[RELEASE-CHECKLIST](Documentation/RELEASE-CHECKLIST.md) covers the current Apple requirements and remaining release evidence. Draft listing/policy/review material is in `AppStore/`; standalone public-page source is in `website/`. Policies must match the exact edition before submission.
+
+Runtime dataset updates require an operator’s deployed **public** trust anchors, maintained signed data/revocations, a real HTTPS endpoint and truthful retention disclosures. [DATASET-PUBLISHING](Documentation/DATASET-PUBLISHING.md) describes the local publisher. Private signing keys never ship in the app. URL protection also needs Apple-granted capability and a registered operating PIR/Privacy Pass/OHTTP service; managed protection needs an eligible supervised/MDM deployment. Those external services and approvals are not established by a passing simulator build.
 
 ## Structure
 
 ```text
-Apps/FirePrivacyApp/        SwiftUI app and encrypted storage
-Sources/FirePrivacyCore/   Portable parser, summaries, and descriptive findings
-Tests/                    Core, Apple-platform, and privacy checks
-Resources/                Synthetic demo report
-FirePrivacy.xcodeproj/     Universal iPhone/iPad app project
-scripts/                  Build, archive, and upload helpers
-Documentation/            Architecture, validation, and release requirements
-AppStore/                 Draft store listing and review material
-website/                  Privacy and support pages ready to host
+Apps/FirePrivacyApp/       SwiftUI app, integration engine and protected storage
+Sources/FirePrivacyCore/   Portable evidence, knowledge, analysis and consent
+Extensions/               Safari, URL-control and managed providers
+Tests/                    Core, native, UI, release and privacy checks
+scripts/                  Build, dataset publishing, archive and upload helpers
+Documentation/            Architecture, validation and release requirements
+AppStore/                 Draft listing, privacy policy and review material
+website/                  Privacy and support page source
 ```
 
-Read [CONTRIBUTING](CONTRIBUTING.md), [SECURITY](SECURITY.md), and [PRIVACY-ARCHITECTURE](PRIVACY-ARCHITECTURE.md) before changing privacy behavior.
+Read [CONTRIBUTING](CONTRIBUTING.md), [SECURITY](SECURITY.md) and [PRIVACY-ARCHITECTURE](PRIVACY-ARCHITECTURE.md) before changing privacy behavior.

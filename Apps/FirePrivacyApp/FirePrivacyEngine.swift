@@ -47,6 +47,12 @@ private struct KnowledgeBaseDownload: Decodable {
     let manifest: Data?
     let payload: Data?
     let revocations: SignedKnowledgeBaseRevocations?
+    let rules: SignedRuleConfiguration?
+}
+
+private struct StoredRuleConfiguration: Codable, Sendable {
+    let signed: SignedRuleConfiguration
+    let highWaterMark: RuleConfigurationHighWaterMark
 }
 
 private struct StoredKnowledgeBaseRevocations: Codable, Sendable {
@@ -79,6 +85,9 @@ final class FirePrivacyEngine {
     private(set) var knowledgeBaseFailure = false
     private(set) var knowledgeBaseRevocations = KnowledgeBaseRevocations()
     private(set) var knowledgeBaseRevocationsCurrent = true
+    private(set) var ruleConfiguration = VersionedRuleSet.defaultConfiguration
+    private(set) var ruleConfigurationFailure = false
+    private(set) var verifiedRuleConfiguration: VerifiedRuleConfiguration?
     private(set) var analysis: FindingAnalysis?
     private(set) var lifecycle: FindingLifecycleResult?
     private(set) var analysisHistory = AnalysisHistory()
@@ -104,6 +113,9 @@ final class FirePrivacyEngine {
     private let credentials: AdvisorCredentialStore
     private let credentialCleanupMarker: CredentialCleanupMarker
     private let datasetTrust: DatasetTrustConfiguration?
+    private let now: @Sendable () -> Date
+    private var knowledgeBaseRevocationsExpiresAt: Date?
+    private var knowledgeBaseBaseline: KnowledgeBaseHighWaterMark?
     private let transport: any ApprovedRequestTransport
     private let appVersion: String
     private let osVersion: String
@@ -117,16 +129,23 @@ final class FirePrivacyEngine {
         }
     }
 
+    private func requireCleanupCurrent(_ operation: UUID, deleting: Bool) throws {
+        guard operation == operationGeneration, isDeleting == deleting else { throw EngineError.staleOperation }
+    }
+
     init(store: EncryptedReportStore, transport: any ApprovedRequestTransport = ApprovedHTTPTransport(),
          cleanupPlan: ProtectionCleanupPlan = ProtectionCleanupPlan(),
          credentialStore: AdvisorCredentialStore = AdvisorCredentialStore(),
-         credentialCleanupMarker: CredentialCleanupMarker = CredentialCleanupMarker()) {
+         credentialCleanupMarker: CredentialCleanupMarker = CredentialCleanupMarker(),
+         datasetTrustConfiguration: DatasetTrustConfiguration? = nil,
+         now: @escaping @Sendable () -> Date = { Date() }) {
         self.store = store
         self.transport = transport
         self.cleanupPlan = cleanupPlan
         credentials = credentialStore
         self.credentialCleanupMarker = credentialCleanupMarker
-        datasetTrust = try? DatasetTrustConfiguration.load()
+        datasetTrust = datasetTrustConfiguration ?? (try? DatasetTrustConfiguration.load())
+        self.now = now
         appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
         osVersion = ProcessInfo.processInfo.operatingSystemVersionString
         gate = ApprovedNetworkGate(appVersion: appVersion, osVersion: osVersion)
@@ -182,21 +201,27 @@ final class FirePrivacyEngine {
             let events = try await store.loadFeatureState([NetworkEvent].self, key: "network-events") ?? []
             var nextRevocations = KnowledgeBaseRevocations()
             var nextRevocationsCurrent = true
+            var nextRevocationsExpiresAt: Date?
             var nextKnowledge: VerifiedKnowledgeBase?
             var nextKnowledgeFailure = false
+            var nextRules = VersionedRuleSet.defaultConfiguration
+            var nextVerifiedRules: VerifiedRuleConfiguration?
+            var nextRuleFailure = false
             if let saved = try await store.loadFeatureState(StoredKnowledgeBaseRevocations.self, key: "kb-revocations") {
                 nextRevocations = saved.highWaterMark.revocations
                 do {
-                    _ = try KnowledgeBaseRevocationVerifier(trustAnchors: requireDatasetTrust().verifierAnchors).verify(saved.signed,
+                    let verified = try KnowledgeBaseRevocationVerifier(trustAnchors: requireDatasetTrust().verifierAnchors).verify(saved.signed, now: now(),
                         highWaterMark: saved.highWaterMark, restoringCurrent: true)
+                    nextRevocationsExpiresAt = verified.expiresAt
                 } catch KnowledgeBaseRevocationVerifier.Failure.expired {
                     nextRevocationsCurrent = false
+                    nextRevocationsExpiresAt = .distantPast
                 }
             }
             if let saved = try await store.loadFeatureState(StoredKnowledgeBase.self, key: "knowledge-base") {
                 do {
                     nextKnowledge = try knowledgeVerifier(nextRevocations).verify(
-                        manifestData: saved.manifest, payloadData: saved.payload, appVersion: appVersion,
+                        manifestData: saved.manifest, payloadData: saved.payload, appVersion: appVersion, now: now(),
                         highWaterMark: saved.highWaterMark, restoringCurrent: true)
                 } catch {
                     // Never replace a rejected downloaded version with an older bundled version.
@@ -204,28 +229,44 @@ final class FirePrivacyEngine {
                 }
             } else {
                 do {
-                    let bundled = try KnowledgeBaseResources.loadBundled(appVersion: appVersion)
+                    let bundled = try KnowledgeBaseResources.loadBundled(appVersion: appVersion, now: now())
                     guard !nextRevocations.revokes(bundled.manifest) else { throw KnowledgeBaseVerifier.Failure.revoked }
                     nextKnowledge = bundled
                 }
                 catch { nextKnowledgeFailure = true }
             }
+            if let saved = try await store.loadFeatureState(StoredRuleConfiguration.self, key: "analysis-rules") {
+                do {
+                    let verified = try ruleVerifier(nextRevocations).verify(saved.signed,
+                        appVersion: appVersion, now: now(), highWaterMark: saved.highWaterMark, restoringCurrent: true)
+                    nextRules = verified.configuration
+                    nextVerifiedRules = verified
+                } catch {
+                    // Only the app's reviewed compiled defaults are used when a
+                    // downloaded configuration is rejected. Keep its high-water
+                    // state and make this fallback visible in the Trust Center.
+                    nextRuleFailure = true
+                }
+            }
             await gate.cancelAllRequests()
-            guard operation == operationGeneration,
-                  await store.currentStorageGeneration() == storageGeneration else { throw EngineError.staleOperation }
+            try await requireCurrent(operation, storageGeneration: storageGeneration)
             preferences = nextPreferences
             preferences.pendingProtectionRemoval = pendingSystemCleanup
             consent = nextConsent
             knowledgeBase = nextKnowledge
+            knowledgeBaseBaseline = nextKnowledge?.highWaterMark
             knowledgeBaseFailure = nextKnowledgeFailure
             knowledgeBaseRevocations = nextRevocations
             knowledgeBaseRevocationsCurrent = nextRevocationsCurrent
+            knowledgeBaseRevocationsExpiresAt = nextRevocationsExpiresAt
+            ruleConfiguration = nextRules
+            verifiedRuleConfiguration = nextVerifiedRules
+            ruleConfigurationFailure = nextRuleFailure
             gate = ApprovedNetworkGate(consent: nextConsent, appVersion: appVersion, osVersion: osVersion,
                                        ledger: NetworkEventLedger(events: events))
             didRestore = true
         }
-        guard operation == operationGeneration,
-              await store.currentStorageGeneration() == storageGeneration else { throw EngineError.staleOperation }
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
         try await adopt(workspace)
         return workspace
     }
@@ -309,14 +350,24 @@ final class FirePrivacyEngine {
             try await gate.updateContext(reportIdentity: nil, configurationIdentity: "local-only-v1")
             return
         }
-        let reviewed = knowledgeBase.map { DomainMatcher(snapshot: $0).findingContexts(for: report) } ?? []
-        let context = FindingContext(profile: preferences.profile,
+        if let knowledgeBase, knowledgeBase.isExpired(now: now()) {
+            self.knowledgeBase = nil
+            knowledgeBaseFailure = true
+        }
+        refreshRevocationExpiry()
+        let reviewed = knowledgeBase.map { DomainMatcher(snapshot: $0).findingContexts(for: report, now: now()) } ?? []
+        let context = FindingContext(now: now(), profile: preferences.profile,
             permissionAudit: preferences.permissionAudit, reviewedDomains: reviewed, domainOverrides: preferences.overrides,
             protection: .init(urlFilterAvailable: protection.systemURLFilter.phase != .unavailable,
                 urlFilterActive: protection.systemURLFilter.isActive,
                 safariBlockerAvailable: protection.safari.phase != .unavailable, safariBlockerActive: protection.safari.isActive),
             includeOverallScore: preferences.includeOverallScore == true)
-        let current = VersionedFindingEngine.evaluate(report: report, context: context)
+        if let verifiedRuleConfiguration, verifiedRuleConfiguration.isExpired(now: now()) {
+            self.verifiedRuleConfiguration = nil
+            ruleConfiguration = VersionedRuleSet.defaultConfiguration
+            ruleConfigurationFailure = true
+        }
+        let current = VersionedFindingEngine.evaluate(report: report, context: context, configuration: ruleConfiguration)
         var revision: AnalysisHistoryRecord?
         var capacityExceeded = false
         if report.metadata?.isSyntheticDemo != true, sessions.contains(where: { $0.id == report.id }) {
@@ -404,13 +455,16 @@ final class FirePrivacyEngine {
     }
 
     private func persistConsent(storageGeneration: UUID) async throws {
+        let operation = operationGeneration
         for attempt in 0..<3 {
             let previous = try await store.loadFeatureSnapshot(ConsentState.self, key: "consent")
             let current = await gate.consentSnapshot()
-            consent = current
+            try await requireCurrent(operation, storageGeneration: storageGeneration)
             do {
                 try await store.saveFeatureState(current, key: "consent", expectedGeneration: storageGeneration,
                     expectedCurrent: previous.precondition)
+                try await requireCurrent(operation, storageGeneration: storageGeneration)
+                consent = current
                 return
             } catch ReportStoreError.preconditionFailed {
                 if attempt == 2 { throw ReportStoreError.preconditionFailed }
@@ -443,10 +497,25 @@ final class FirePrivacyEngine {
         guard !isDeleting else { throw EngineError.staleOperation }
         operationGeneration = UUID()
         let operation = operationGeneration
+        try value.validate()
+        let priorWorkspace = try await store.loadWorkspace()
         let storageGeneration = await store.currentStorageGeneration()
-        let workspace = try await store.updateRetention(value, expectedGeneration: storageGeneration)
-        guard operation == operationGeneration else { throw EngineError.staleOperation }
-        try await adopt(workspace)
+        var retained = priorWorkspace.sessions
+        while retained.count > value.maximumReports || retained.reduce(0, { $0 + $1.encryptedBytes + $1.encryptedSourceBytes }) > value.maximumStoredBytes {
+            guard let index = retained.firstIndex(where: { $0.id != priorWorkspace.selectedReport?.id }) else {
+                throw ReportStoreError.persistenceFailed
+            }
+            retained.remove(at: index)
+        }
+        try await pruneAnalysisHistory(keeping: Set(retained.map(\.id)), operation: operation, storageGeneration: storageGeneration)
+        do {
+            let workspace = try await store.updateRetention(value, expectedGeneration: storageGeneration)
+            guard operation == operationGeneration else { throw EngineError.staleOperation }
+            try await adopt(workspace)
+        } catch {
+            await recoverCommittedWorkspace(operation: operation)
+            throw error
+        }
     }
 
     func deleteReport(_ id: UUID) async throws {
@@ -455,15 +524,46 @@ final class FirePrivacyEngine {
         let operation = operationGeneration
         await gate.cancelAllRequests()
         let storageGeneration = await store.currentStorageGeneration()
-        let workspace = try await store.deleteSession(id, expectedGeneration: storageGeneration)
-        guard operation == operationGeneration else { throw EngineError.staleOperation }
-        try await adopt(workspace)
+        try await pruneAnalysisHistory(keeping: Set(sessions.map(\.id)).subtracting([id]),
+            operation: operation, storageGeneration: storageGeneration)
+        do {
+            let workspace = try await store.deleteSession(id, expectedGeneration: storageGeneration)
+            guard operation == operationGeneration else { throw EngineError.staleOperation }
+            try await adopt(workspace)
+        } catch {
+            await recoverCommittedWorkspace(operation: operation)
+            throw error
+        }
+    }
+
+    private func pruneAnalysisHistory(keeping reportIDs: Set<UUID>, operation: UUID, storageGeneration: UUID) async throws {
+        let snapshot = try await store.loadFeatureSnapshot(AnalysisHistory.self, key: "analysis-history")
+        guard var history = snapshot.value else { return }
+        history.retain(reportIDs: reportIDs)
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
+        if history != snapshot.value {
+            // Remove duplicated historical facts before deleting their report
+            // ciphertext, including when the subsequent unlink fails.
+            try await store.saveFeatureState(history, key: "analysis-history", expectedGeneration: storageGeneration,
+                expectedCurrent: snapshot.precondition)
+        }
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
+        analysisHistory = history
+    }
+
+    private func recoverCommittedWorkspace(operation: UUID) async {
+        guard !isDeleting, operation == operationGeneration else { return }
+        if let workspace = try? await store.loadWorkspace(), operation == operationGeneration {
+            try? await adopt(workspace)
+        }
     }
 
     func assessLocally() async throws -> AdvisorResult {
         guard !isDeleting else { throw EngineError.staleOperation }
+        try await rebuildAnalysis()
         guard let analysis else { throw EngineError.noReport }
         let generation = operationGeneration
+        let storageGeneration = await store.currentStorageGeneration()
         let input = try AdvisorInput.make(analysis: analysis)
         var preferred: (any PrivacyAdvisor)?
         var authorization: ConsentAuthorization?
@@ -472,13 +572,14 @@ final class FirePrivacyEngine {
             preferred = SystemLanguageModelAdvisor()
         }
         let result = try await AdvisorCoordinator.assess(input, preferred: preferred)
-        guard generation == operationGeneration else { throw EngineError.staleOperation }
         if let authorization, !(await gate.validateAuthorization(authorization)) { throw EngineError.staleOperation }
+        try await requireCurrent(generation, storageGeneration: storageGeneration)
         advisorResult = result
         return result
     }
 
     func prepareSelfHostedAssessment(bearerToken: String? = nil) async throws -> PreparedEngineRequest {
+        try await rebuildAnalysis()
         let operation = operationGeneration
         let storageGeneration = await store.currentStorageGeneration()
         guard let analysis else { throw EngineError.noReport }
@@ -543,20 +644,29 @@ final class FirePrivacyEngine {
                 _ = try AdvisorRenderer.explanations(assessment: checked, analysis: try requireAnalysis())
                 advisorResult = AdvisorResult(assessment: checked, mode: .selfHosted, fallback: nil)
             } else if prepared.request.purpose == .knowledgeBaseUpdate {
+                try UpdateEnvelopeValidator.validate(response.body)
                 let download = try JSONDecoder().decode(KnowledgeBaseDownload.self, from: response.body)
-                guard download.revocations != nil || (download.manifest != nil && download.payload != nil),
+                guard download.revocations != nil || download.rules != nil || (download.manifest != nil && download.payload != nil),
                       (download.manifest == nil) == (download.payload == nil) else { throw EngineError.invalidUpdate }
                 if let revocations = download.revocations {
                     try await installKnowledgeBaseRevocations(revocations, expectedGeneration: prepared.storageGeneration)
+                    try await requireCurrent(generation, storageGeneration: prepared.storageGeneration)
                 }
                 if let manifest = download.manifest, let payload = download.payload {
                     try await installKnowledgeBase(manifest: manifest, payload: payload,
                         expectedGeneration: prepared.storageGeneration)
+                    try await requireCurrent(generation, storageGeneration: prepared.storageGeneration)
+                }
+                if let rules = download.rules {
+                    try await installRuleConfiguration(rules, expectedGeneration: prepared.storageGeneration)
+                    try await requireCurrent(generation, storageGeneration: prepared.storageGeneration)
                 }
             } else if prepared.request.purpose == .filterListUpdate {
+                try UpdateEnvelopeValidator.validate(response.body)
                 let signed = try JSONDecoder().decode(SignedFilterDataset.self, from: response.body)
                 _ = try await installFilterDataset(signed, expectedGeneration: prepared.storageGeneration)
             }
+            try await requireCurrent(generation, storageGeneration: prepared.storageGeneration)
             try await store.saveFeatureState(await gate.ledger.snapshot(), key: "network-events",
                 expectedGeneration: prepared.storageGeneration)
             return response
@@ -663,6 +773,13 @@ final class FirePrivacyEngine {
         guard let analysis else { throw EngineError.noReport }; return analysis
     }
 
+    private func refreshRevocationExpiry() {
+        if let expiry = knowledgeBaseRevocationsExpiresAt, now() >= expiry {
+            knowledgeBaseRevocationsCurrent = false
+        }
+        // Expiry never removes previously authenticated denial entries.
+    }
+
     func installKnowledgeBase(manifest: Data, payload: Data, expectedGeneration: UUID? = nil) async throws {
         let operation = operationGeneration
         let storageGeneration: UUID
@@ -670,24 +787,28 @@ final class FirePrivacyEngine {
         else { storageGeneration = await store.currentStorageGeneration() }
         let snapshot = try await store.loadFeatureSnapshot(StoredKnowledgeBase.self, key: "knowledge-base")
         let previous = snapshot.value
+        refreshRevocationExpiry()
         guard knowledgeBaseRevocationsCurrent else { throw EngineError.invalidUpdate }
         if let previous, previous.manifest == manifest, previous.payload == payload {
             _ = try knowledgeVerifier().verify(manifestData: manifest, payloadData: payload,
-                appVersion: appVersion, highWaterMark: previous.highWaterMark, restoringCurrent: true)
+                appVersion: appVersion, now: now(), highWaterMark: previous.highWaterMark, restoringCurrent: true)
             try await requireCurrent(operation, storageGeneration: storageGeneration)
             return
         }
         let verified = try knowledgeVerifier().verify(
-            manifestData: manifest, payloadData: payload, appVersion: appVersion,
-            highWaterMark: previous?.highWaterMark ?? knowledgeBase?.highWaterMark)
+            manifestData: manifest, payloadData: payload, appVersion: appVersion, now: now(),
+            highWaterMark: previous?.highWaterMark ?? knowledgeBaseBaseline)
         try await requireCurrent(operation, storageGeneration: storageGeneration)
         try await store.saveFeatureState(StoredKnowledgeBase(manifest: manifest, payload: payload,
             highWaterMark: verified.highWaterMark), key: "knowledge-base",
             expectedGeneration: storageGeneration, expectedCurrent: snapshot.precondition)
         try await requireCurrent(operation, storageGeneration: storageGeneration)
+        refreshRevocationExpiry()
+        guard knowledgeBaseRevocationsCurrent else { throw EngineError.invalidUpdate }
         guard !knowledgeBaseRevocations.revokes(verified.manifest) else { throw KnowledgeBaseVerifier.Failure.revoked }
         knowledgeBase = verified; knowledgeBaseFailure = false
-        operationGeneration = UUID()
+        knowledgeBaseBaseline = verified.highWaterMark
+        if expectedGeneration == nil { operationGeneration = UUID() }
         try await rebuildAnalysis()
     }
 
@@ -698,6 +819,46 @@ final class FirePrivacyEngine {
             revokedPayloadDigests: current.revokedPayloadDigests)
     }
 
+    private func ruleVerifier(_ revocations: KnowledgeBaseRevocations? = nil) throws -> RuleConfigurationVerifier {
+        let current = revocations ?? knowledgeBaseRevocations
+        return RuleConfigurationVerifier(trustAnchors: try requireDatasetTrust().verifierAnchors,
+            revokedKeyIDs: current.revokedKeyIDs, revokedPayloadDigests: current.revokedPayloadDigests)
+    }
+
+    func installRuleConfiguration(_ signed: SignedRuleConfiguration, expectedGeneration: UUID? = nil) async throws {
+        let operation = operationGeneration
+        let storageGeneration: UUID
+        if let expectedGeneration { storageGeneration = expectedGeneration }
+        else { storageGeneration = await store.currentStorageGeneration() }
+        refreshRevocationExpiry()
+        guard knowledgeBaseRevocationsCurrent else { throw EngineError.invalidUpdate }
+        let previous = try await store.loadFeatureSnapshot(StoredRuleConfiguration.self, key: "analysis-rules")
+        refreshRevocationExpiry()
+        guard knowledgeBaseRevocationsCurrent else { throw EngineError.invalidUpdate }
+        if let stored = previous.value, stored.signed == signed {
+            _ = try ruleVerifier().verify(signed, appVersion: appVersion, now: now(),
+                highWaterMark: stored.highWaterMark, restoringCurrent: true)
+            try await requireCurrent(operation, storageGeneration: storageGeneration)
+            return
+        }
+        let verified = try ruleVerifier().verify(signed, appVersion: appVersion, now: now(), highWaterMark: previous.value?.highWaterMark)
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
+        try await store.saveFeatureState(StoredRuleConfiguration(signed: signed, highWaterMark: verified.highWaterMark),
+            key: "analysis-rules", expectedGeneration: storageGeneration, expectedCurrent: previous.precondition)
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
+        refreshRevocationExpiry()
+        guard knowledgeBaseRevocationsCurrent else { throw EngineError.invalidUpdate }
+        guard !knowledgeBaseRevocations.revokedKeyIDs.contains(verified.manifest.signingKeyID),
+              !knowledgeBaseRevocations.revokedPayloadDigests.contains(verified.manifest.payloadSHA256) else {
+            throw RuleConfigurationVerifier.Failure.revoked
+        }
+        ruleConfiguration = verified.configuration
+        verifiedRuleConfiguration = verified
+        ruleConfigurationFailure = false
+        if expectedGeneration == nil { operationGeneration = UUID() }
+        try await rebuildAnalysis()
+    }
+
     func installKnowledgeBaseRevocations(_ signed: SignedKnowledgeBaseRevocations,
                                          expectedGeneration: UUID? = nil) async throws {
         let operation = operationGeneration
@@ -706,23 +867,33 @@ final class FirePrivacyEngine {
         else { storageGeneration = await store.currentStorageGeneration() }
         let previous = try await store.loadFeatureSnapshot(StoredKnowledgeBaseRevocations.self, key: "kb-revocations")
         if let current = previous.value, current.signed == signed {
-            _ = try KnowledgeBaseRevocationVerifier(trustAnchors: requireDatasetTrust().verifierAnchors).verify(signed,
+            let verified = try KnowledgeBaseRevocationVerifier(trustAnchors: requireDatasetTrust().verifierAnchors).verify(signed, now: now(),
                 highWaterMark: current.highWaterMark, restoringCurrent: true)
             try await requireCurrent(operation, storageGeneration: storageGeneration)
+            knowledgeBaseRevocationsCurrent = true
+            knowledgeBaseRevocationsExpiresAt = verified.expiresAt
             return
         }
-        let verified = try KnowledgeBaseRevocationVerifier(trustAnchors: requireDatasetTrust().verifierAnchors).verify(signed, highWaterMark: previous.value?.highWaterMark)
+        let verified = try KnowledgeBaseRevocationVerifier(trustAnchors: requireDatasetTrust().verifierAnchors).verify(signed, now: now(), highWaterMark: previous.value?.highWaterMark)
         try await requireCurrent(operation, storageGeneration: storageGeneration)
         try await store.saveFeatureState(StoredKnowledgeBaseRevocations(signed: signed, highWaterMark: verified.highWaterMark),
             key: "kb-revocations", expectedGeneration: storageGeneration, expectedCurrent: previous.precondition)
         try await requireCurrent(operation, storageGeneration: storageGeneration)
         knowledgeBaseRevocations = verified.revocations
         knowledgeBaseRevocationsCurrent = true
+        knowledgeBaseRevocationsExpiresAt = verified.expiresAt
         if let knowledgeBase, verified.revocations.revokes(knowledgeBase.manifest) {
             self.knowledgeBase = nil
             knowledgeBaseFailure = true
         }
-        operationGeneration = UUID()
+        if let active = verifiedRuleConfiguration,
+           verified.revocations.revokedKeyIDs.contains(active.manifest.signingKeyID)
+            || verified.revocations.revokedPayloadDigests.contains(active.manifest.payloadSHA256) {
+            verifiedRuleConfiguration = nil
+            ruleConfiguration = VersionedRuleSet.defaultConfiguration
+            ruleConfigurationFailure = true
+        }
+        if expectedGeneration == nil { operationGeneration = UUID() }
         try await rebuildAnalysis()
     }
 
@@ -819,11 +990,19 @@ final class FirePrivacyEngine {
     }
 
     private func removeCredentials(resumeAfter: Bool) async throws {
+        let operation = operationGeneration
+        let deleting = isDeleting
+        let markerGeneration = await credentialCleanupMarker.currentGeneration()
+        try requireCleanupCurrent(operation, deleting: deleting)
         try await credentials.disableAndEraseAll()
-        try await credentialCleanupMarker.setRequired(false)
+        try requireCleanupCurrent(operation, deleting: deleting)
+        let generation = await credentials.currentGeneration()
+        try requireCleanupCurrent(operation, deleting: deleting)
+        try await credentialCleanupMarker.setRequired(false, expectedGeneration: markerGeneration)
+        try requireCleanupCurrent(operation, deleting: deleting)
         if resumeAfter {
-            let generation = await credentials.currentGeneration()
             try await credentials.resumeAfterDeletion(expectedGeneration: generation)
+            try requireCleanupCurrent(operation, deleting: deleting)
         }
         credentialCleanupRequired = false
     }
@@ -844,19 +1023,29 @@ final class FirePrivacyEngine {
     func retryStorageCleanup() async throws {
         guard !isDeleting else { throw EngineError.staleOperation }
         operationGeneration = UUID()
+        let operation = operationGeneration
         await gate.cancelAllRequests()
         let storageGeneration = await store.currentStorageGeneration()
-        try await store.retryKeyRotationCleanup(expectedGeneration: storageGeneration)
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
+        if try await store.rotationStatus() != .idle {
+            try await store.retryKeyRotationCleanup(expectedGeneration: storageGeneration)
+        }
+        _ = try await store.retryPendingCleanup(expectedGeneration: storageGeneration)
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
         didRestore = false
         _ = try await restore()
     }
 
     func diagnostics() async throws -> Data {
         guard !isDeleting else { throw EngineError.staleOperation }
+        let operation = operationGeneration
+        let storageGeneration = await store.currentStorageGeneration()
         let authorization = try await gate.authorizeFeature(.diagnosticsExport, scopeIdentity: "sanitized-diagnostics-v1")
         guard await gate.validateAuthorization(authorization) else { throw EngineError.consentRequired }
         var reports: [PrivacyReport] = []
         for session in sessions { reports.append(try await store.reportSession(session.id)) }
+        guard await gate.validateAuthorization(authorization) else { throw EngineError.consentRequired }
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
         let version = ProcessInfo.processInfo.operatingSystemVersion
         return try DiagnosticsBuilder.json(DiagnosticsBuilder.build(reports: reports, appVersion: appVersion,
             osVersion: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"))
@@ -890,6 +1079,9 @@ final class FirePrivacyEngine {
         analysisHistory = AnalysisHistory(); latestAnalysisRevision = nil; analysisHistoryCapacityExceeded = false
         knowledgeBaseFailure = false
         knowledgeBaseRevocations = KnowledgeBaseRevocations(); knowledgeBaseRevocationsCurrent = true
+        knowledgeBaseRevocationsExpiresAt = nil
+        knowledgeBaseBaseline = nil
+        ruleConfiguration = VersionedRuleSet.defaultConfiguration; verifiedRuleConfiguration = nil; ruleConfigurationFailure = false
         comparison = nil; weeklySummary = nil; didRestore = false
         retention = WorkspaceRetentionPolicy(); pendingStorageCleanupCount = 0
         unavailableSessionIDs = []
@@ -897,7 +1089,11 @@ final class FirePrivacyEngine {
     }
 
     func retrySystemCleanup() async throws {
+        let operation = operationGeneration
+        let deleting = isDeleting
+        let planGeneration = await cleanupPlan.currentGeneration()
         var features = try await cleanupPlan.load()
+        try requireCleanupCurrent(operation, deleting: deleting)
         var failure: (any Error)?
         let edition = Bundle.main.object(forInfoDictionaryKey: "FirePrivacyDistributionEdition") as? String ?? "consumer"
         for feature in features {
@@ -914,11 +1110,14 @@ final class FirePrivacyEngine {
                     try await ManagedProtectionService().remove()
                 default: throw EngineError.unavailable
                 }
+                try requireCleanupCurrent(operation, deleting: deleting)
                 features.remove(feature)
             } catch { failure = error }
+            try requireCleanupCurrent(operation, deleting: deleting)
         }
+        try await cleanupPlan.save(features, expectedGeneration: planGeneration)
+        try requireCleanupCurrent(operation, deleting: deleting)
         pendingSystemCleanup = features
-        try await cleanupPlan.save(features)
         if let failure { throw failure }
     }
 }

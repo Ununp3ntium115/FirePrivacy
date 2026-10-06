@@ -6,7 +6,10 @@ import FirePrivacyCore
 /// credential, receipt, source hash or encryption key is stored here.
 actor ProtectionCleanupPlan {
     private let injectedDirectory: URL?
+    private var generation = UUID()
     init(directory: URL? = nil) { injectedDirectory = directory }
+
+    func currentGeneration() -> UUID { generation }
 
     private func location() throws -> URL {
         if let injectedDirectory { return injectedDirectory.appendingPathComponent("removal.json") }
@@ -27,7 +30,10 @@ actor ProtectionCleanupPlan {
         return Set(values)
     }
 
-    func save(_ features: Set<ConsentFeature>) throws {
+    func save(_ features: Set<ConsentFeature>, expectedGeneration: UUID? = nil) throws {
+        if let expectedGeneration, expectedGeneration != generation { throw ReportStoreError.staleGeneration }
+        // Even a failed write invalidates previously captured cleanup leases.
+        generation = UUID()
         let allowed: Set<ConsentFeature> = [.safariProtection, .encryptedDNS, .urlProtection, .managedProtection]
         guard features.isSubset(of: allowed) else { throw ReportStoreError.invalidReport }
         let url = try location()

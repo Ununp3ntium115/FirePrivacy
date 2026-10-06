@@ -1,29 +1,18 @@
-# App Store Connect package
+# Draft App Store submission package
 
-These files are prepared submission text, not an uploaded or submitted app
-record. Review them against the exact binary and enter the final data in App
-Store Connect. No login is required by the app itself.
+These files describe the expanded **consumer** implementation, which includes
+Safari content blocking and encrypted-DNS settings, local analysis/history, and
+optional constrained advisors. Verify against the working, signed consumer
+binary before copying fields into App Store Connect. URL-filter and managed
+editions need separate capability/operator/legal review and matching metadata.
 
-- `metadata.en-US.json`: proposed English name, subtitle, promotional text,
-  keywords, categories, and fields requiring real account/deployment data.
-- `description.en-US.txt`: description of the implemented local-report MVP.
-- `review-notes.en-US.txt`: reviewer workflow and privacy/storage explanation.
-- `SCREENSHOTS.md`: actual-build screenshot plan and verified accepted sizes.
-- `privacy-policy.md`: source copy of the readable policy published on
-  `gh-pages`, while the standalone site is not enabled.
+- `metadata.en-US.json`: draft fields; legal identity/contact and App Privacy answers remain operator/account tasks.
+- `description.en-US.txt`: verify feature visibility, then remove the draft instruction.
+- `review-notes.en-US.txt`: replace provisional navigation with exact tested labels and supply actual review instructions.
+- `privacy-policy.md`: revised policy source; root must publish it and verify the live URL before distributing the expanded binary.
+- `SCREENSHOTS.md`: official dimensions; capture is paused until functionality/native validation is complete. Use actual screens with synthetic data.
 
-The prepared name/subtitle/promotional text/keywords fit their character limits;
-the description fits 4,000 characters. App Store name availability is determined
-by the real app record and is not established by these local length checks.
-Screenshots remain a separate deliverable and must come from the actual app.
-
-Final account data includes the registered bundle identifier, SKU, version/build,
-verified seller/copyright holder, review contact, privacy/support URLs, content
-rights, availability, price, and current age-rating, privacy, export, and trader
-answers. Do not enter `null`, explanatory draft strings, or invented contact data
-as production metadata. Recheck privacy labels if the shipping app or its
-dependencies change.
-
-See [BUILDING.md](../Documentation/BUILDING.md) for the signed archive/upload
-commands and [RELEASE-CHECKLIST.md](../Documentation/RELEASE-CHECKLIST.md) for
-the checks required before review submission.
+Portable tests, native builds, signed archives, upload/processing, TestFlight QA,
+review submission, approval and public release are separate statuses. None is
+established by this package. See [Apple requirements](../Documentation/APPLE-REQUIREMENTS.md)
+and [release checklist](../Documentation/RELEASE-CHECKLIST.md).

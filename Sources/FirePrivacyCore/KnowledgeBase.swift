@@ -101,8 +101,13 @@ public struct KnowledgeBaseHighWaterMark: Codable, Hashable, Sendable {
     public let sequence: Int64
     public let datasetVersion: String
     public let payloadSHA256: String
-    public init(sequence: Int64, datasetVersion: String, payloadSHA256: String) {
+    /// Exact accepted encoded manifest bytes, including signature and lifetime.
+    /// Optional only for decoding older caches; legacy marks cannot restore a
+    /// release until a caller makes an explicit, separately validated migration.
+    public let manifestSHA256: String?
+    public init(sequence: Int64, datasetVersion: String, payloadSHA256: String, manifestSHA256: String? = nil) {
         self.sequence = sequence; self.datasetVersion = datasetVersion; self.payloadSHA256 = payloadSHA256
+        self.manifestSHA256 = manifestSHA256
     }
 }
 public struct VerifiedKnowledgeBase: Sendable {
@@ -112,8 +117,10 @@ public struct VerifiedKnowledgeBase: Sendable {
     public let payloadData: Data
     public var version: String { manifest.datasetVersion }
     public var datasetVersion: String { manifest.datasetVersion }
+    public var manifestSHA256: String { ContentDigest.sha256(manifestData) }
     public var highWaterMark: KnowledgeBaseHighWaterMark {
-        .init(sequence: manifest.sequence, datasetVersion: manifest.datasetVersion, payloadSHA256: manifest.payloadSHA256)
+        .init(sequence: manifest.sequence, datasetVersion: manifest.datasetVersion,
+              payloadSHA256: manifest.payloadSHA256, manifestSHA256: manifestSHA256)
     }
     public func isExpired(now: Date = Date()) -> Bool { now.timeIntervalSince1970 >= Double(manifest.expiresAt) }
     // Only a verifier in this file can create an activation value.
@@ -124,9 +131,10 @@ public struct VerifiedKnowledgeBase: Sendable {
 
 public struct KnowledgeBaseVerifier: Sendable {
     public enum Failure: Error, Equatable, Sendable {
-        case oversized, malformedManifest, unsupportedSchema, unknownSigningKey, revoked
+        case oversized, malformedManifest, unsupportedSchema, unknownSigningKey, ambiguousSigningKey, revoked
         case signatureInvalid, payloadDigestMismatch, expired, futureDated, invalidLifetime
-        case rollbackRejected, minimumAppVersionNotMet, malformedPayload, metadataMismatch, invalidSemantics
+        case rollbackRejected, equivocationRejected, invalidHighWaterMark
+        case minimumAppVersionNotMet, malformedPayload, metadataMismatch, invalidSemantics
     }
     public static let maximumPayloadBytes = 4 * 1024 * 1024
     public let trustAnchors: [KnowledgeBaseTrustAnchor]
@@ -151,12 +159,14 @@ public struct KnowledgeBaseVerifier: Sendable {
         guard let version = NumericVersion(manifest.datasetVersion), let minimum = NumericVersion(manifest.minimumAppVersion),
               let current = NumericVersion(appVersion, allowShortAppVersion: true), manifest.sequence > 0, manifest.generatedAt >= 0,
               manifest.expiresAt <= 253_402_300_799, (0...20_000).contains(manifest.recordCount),
-              Self.identifier(manifest.signingKeyID), manifest.payloadSHA256.utf8.count == 64,
-              manifest.payloadSHA256.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else {
+              Self.identifier(manifest.signingKeyID), Self.digest(manifest.payloadSHA256) else {
             throw Failure.malformedManifest
         }
-        guard let anchor = trustAnchors.first(where: { $0.keyID == manifest.signingKeyID }),
-              anchor.publicKey.count == 32 else { throw Failure.unknownSigningKey }
+        let anchors = trustAnchors.filter { $0.keyID == manifest.signingKeyID }
+        guard !anchors.isEmpty else { throw Failure.unknownSigningKey }
+        guard anchors.count == 1 else { throw Failure.ambiguousSigningKey }
+        let anchor = anchors[0]
+        guard anchor.publicKey.count == 32 else { throw Failure.unknownSigningKey }
         guard !revokedKeyIDs.contains(anchor.keyID), !revokedVersions.contains(manifest.datasetVersion),
               !revokedPayloadDigests.contains(manifest.payloadSHA256) else { throw Failure.revoked }
         guard let signature = Data(base64Encoded: manifest.signatureBase64),
@@ -174,13 +184,25 @@ public struct KnowledgeBaseVerifier: Sendable {
               anchor.expiresAt.map({ manifest.generatedAt < $0 && timestamp < Double($0) }) ?? true else { throw Failure.invalidLifetime }
         guard timestamp < Double(manifest.expiresAt) else { throw Failure.expired }
         guard current >= minimum else { throw Failure.minimumAppVersionNotMet }
-        if let highWaterMark {
-            let sameRelease = manifest.sequence == highWaterMark.sequence
-                && manifest.datasetVersion == highWaterMark.datasetVersion && manifest.payloadSHA256 == highWaterMark.payloadSHA256
-            guard (restoringCurrent && sameRelease) ||
-                    (manifest.sequence > highWaterMark.sequence && NumericVersion(highWaterMark.datasetVersion).map({ version > $0 }) == true)
-            else { throw Failure.rollbackRejected }
-        }
+        if let prior = highWaterMark {
+            guard prior.sequence > 0, let priorVersion = NumericVersion(prior.datasetVersion),
+                  Self.digest(prior.payloadSHA256), prior.manifestSHA256.map(Self.digest) ?? true else {
+                throw Failure.invalidHighWaterMark
+            }
+            if restoringCurrent && prior.manifestSHA256 == nil { throw Failure.invalidHighWaterMark }
+            if manifest.sequence == prior.sequence {
+                guard manifest.datasetVersion == prior.datasetVersion, manifest.payloadSHA256 == prior.payloadSHA256 else {
+                    throw Failure.equivocationRejected
+                }
+                guard let acceptedManifest = prior.manifestSHA256 else { throw Failure.rollbackRejected }
+                guard ContentDigest.sha256(manifestData) == acceptedManifest else { throw Failure.equivocationRejected }
+                guard restoringCurrent else { throw Failure.rollbackRejected }
+            } else {
+                guard !restoringCurrent, manifest.sequence > prior.sequence, version > priorVersion else {
+                    throw Failure.rollbackRejected
+                }
+            }
+        } else if restoringCurrent { throw Failure.invalidHighWaterMark }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let payload: KnowledgeBasePayload
@@ -190,6 +212,10 @@ public struct KnowledgeBaseVerifier: Sendable {
               payload.classifications.count == manifest.recordCount else { throw Failure.metadataMismatch }
         try Self.validate(payload, manifest: manifest)
         return .init(manifest: manifest, payload: payload, manifestData: manifestData, payloadData: payloadData)
+    }
+
+    private static func digest(_ value: String) -> Bool {
+        value.utf8.count == 64 && value.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
     }
 
     private static func validate(_ payload: KnowledgeBasePayload, manifest: KnowledgeBaseManifest) throws {

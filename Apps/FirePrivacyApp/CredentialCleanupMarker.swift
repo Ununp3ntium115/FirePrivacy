@@ -5,7 +5,10 @@ import Darwin
 /// no endpoint, account identity, token, consent receipt or encryption key.
 actor CredentialCleanupMarker {
     private let directory: URL?
+    private var generation = UUID()
     init(directory: URL? = nil) { self.directory = directory }
+
+    func currentGeneration() -> UUID { generation }
 
     private func folder() throws -> URL {
         if let directory { return directory }
@@ -24,7 +27,11 @@ actor CredentialCleanupMarker {
         return true
     }
 
-    func setRequired(_ required: Bool) throws {
+    func setRequired(_ required: Bool, expectedGeneration: UUID? = nil) throws {
+        if let expectedGeneration, expectedGeneration != generation { throw ReportStoreError.staleGeneration }
+        // Rotate before filesystem work so a failed update cannot leave an old
+        // cleanup completion authorized to clear a newer removal attempt.
+        generation = UUID()
         let root = try folder()
         let manager = FileManager()
         if !required {

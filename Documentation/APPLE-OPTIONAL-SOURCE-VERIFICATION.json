@@ -1,0 +1,301 @@
+{
+  "retrievedOn": "2026-10-05",
+  "transport": "HTTPS with normal certificate/hostname verification; no overrides",
+  "scope": "Official public optional-feature documentation; no actual account, entitlement grant, relay approval, native/device validation or release verified",
+  "sources": [
+    {
+      "title": "SettingsCommand.Command.Settings.ApplicationConfiguration",
+      "url": "https://developer.apple.com/documentation/DeviceManagement/SettingsCommand/Command-data.dictionary/Settings-data.dictionary/ApplicationConfiguration-data.dictionary",
+      "sha256": "58b9e2633ee557982850c47037093b36b676003efe9ec6b34415ed39d2d935aa",
+      "bytes": 27074
+    },
+    {
+      "title": "Personal VPN Entitlement",
+      "url": "https://developer.apple.com/documentation/BundleResources/Entitlements/com.apple.developer.networking.vpn.api",
+      "sha256": "c738dccc6a00d7d7b9d41053aaab26d95468cf49cae116429878a16cfc548561",
+      "bytes": 20166
+    },
+    {
+      "title": "Content filter providers",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/content-filter-providers",
+      "sha256": "84b02039a28f98fe1180b19b7f66aa73df07e3be3f6adcdb4f782bb564f4e3bf",
+      "bytes": 28549
+    },
+    {
+      "title": "Creating a content blocker",
+      "url": "https://developer.apple.com/documentation/SafariServices/creating-a-content-blocker",
+      "sha256": "3726ddd24b924e78ea44e245cd5c8a39ccfd4b6544dd0f75931b3622662bd0ed",
+      "bytes": 22304
+    },
+    {
+      "title": "Describing use of required reason API",
+      "url": "https://developer.apple.com/documentation/BundleResources/describing-use-of-required-reason-api",
+      "sha256": "d49be095f6898f0b441e395c2b4ff9f8b4227afdfbe77046208868ae7108a1cd",
+      "bytes": 17105
+    },
+    {
+      "title": "DNS proxy provider",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/dns-proxy-provider",
+      "sha256": "8b613b74906f234b49dea537ff536210e43419cb36c1cc530e2095c3e21ce7e3",
+      "bytes": 15873
+    },
+    {
+      "title": "NEDNSProxyProvider",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEDNSProxyProvider",
+      "sha256": "b2c8f2d4a8408539ad5cdf9b55ec1ee5fdaf1314343094dd36889366119a0dbc",
+      "bytes": 30556
+    },
+    {
+      "title": "DNS settings",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/dns-settings",
+      "sha256": "7359a6bea3642598edef272ed82a0121bf30d7265a4a8d403a674d3d132b576c",
+      "bytes": 8817
+    },
+    {
+      "title": "Family Controls",
+      "url": "https://developer.apple.com/documentation/FamilyControls",
+      "sha256": "7efaef32e77f8a6b2cba7e11149053d0581df972ffd0220a261b33dba6afa3ba",
+      "bytes": 17378
+    },
+    {
+      "title": "NEFilterDataProvider",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEFilterDataProvider",
+      "sha256": "bc29b2dfd49ee715ffe05e22075cbcbde5a9ecae0dbe73f434e4c2f4805b9f16",
+      "bytes": 48574
+    },
+    {
+      "title": "Filtering Network Traffic",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/filtering-network-traffic",
+      "sha256": "ac3b69857773db376af6cb16a1b6983ca3a5515959dbd1b7488bcd1e815096ba",
+      "bytes": 3926
+    },
+    {
+      "title": "Filtering traffic by URL",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/filtering-traffic-by-url",
+      "sha256": "2a4d84096da832b9bc794cd383718afcb49d4642fac00e8f5ac94889698dd5df",
+      "bytes": 57978
+    },
+    {
+      "title": "ManagedApp",
+      "url": "https://developer.apple.com/documentation/ManagedApp",
+      "sha256": "bf9b153ac13defe38e785dc58d9916ca33bc6075c615f330d51a290d8912ffd5",
+      "bytes": 15307
+    },
+    {
+      "title": "Network Extensions Entitlement",
+      "url": "https://developer.apple.com/documentation/BundleResources/Entitlements/com.apple.developer.networking.networkextension",
+      "sha256": "1eef8afaee6954354785654ae1a7eb8637374788cece8d8ee413dc51f44c6321",
+      "bytes": 23107
+    },
+    {
+      "title": "NEDNSProxyManager",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEDNSProxyManager",
+      "sha256": "89dac622d4c075e07a1ec5f88e378be92ccfabe0a9f3122541d626a731750c51",
+      "bytes": 33959
+    },
+    {
+      "title": "NEFilterManager",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEFilterManager",
+      "sha256": "a8b6e2f869c260b393601fa8367adcc8720026a6ef5edb60e1d8d336a78775c5",
+      "bytes": 42556
+    },
+    {
+      "title": "Network Extension",
+      "url": "https://developer.apple.com/documentation/NetworkExtension",
+      "sha256": "8c6fc3a4dd2edf0887525ae5b9dc7f1d50829c2b4e25df9730e61123e215162d",
+      "bytes": 32432
+    },
+    {
+      "title": "NEURLFilterControlProvider",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEURLFilterControlProvider",
+      "sha256": "15e528eeba29bab67c23a9b917f28cda6e0e35f06865dc9b6cef99a9e470c72d",
+      "bytes": 14269
+    },
+    {
+      "title": "NEURLFilterManager",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEURLFilterManager",
+      "sha256": "f57fa81a966d30fda4b72e10c7479ce8fb045893d330f347cd6099d677173870",
+      "bytes": 48910
+    },
+    {
+      "title": "NSAppTransportSecurity",
+      "url": "https://developer.apple.com/documentation/BundleResources/Information-Property-List/NSAppTransportSecurity",
+      "sha256": "9cf937d236231e899624969f15e642ce86457ac3a6313c32f2694c94f1d1156f",
+      "bytes": 34158
+    },
+    {
+      "title": "NSBonjourServices",
+      "url": "https://developer.apple.com/documentation/BundleResources/Information-Property-List/NSBonjourServices",
+      "sha256": "d0a85e2630694e97ca9eae694ac8d3a7ba941d284ff8ceee4b4c4db4381400e1",
+      "bytes": 11357
+    },
+    {
+      "title": "NSLocalNetworkUsageDescription",
+      "url": "https://developer.apple.com/documentation/BundleResources/Information-Property-List/NSLocalNetworkUsageDescription",
+      "sha256": "58cb1f0adc31834d9ba60fb236ce959366294e4017188403bec6339884325d31",
+      "bytes": 10548
+    },
+    {
+      "title": "Packet tunnel provider",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/packet-tunnel-provider",
+      "sha256": "6728dd0ae32fa6eecf87284b8766be79f449419d00dc18c5ac8c7dfcddfc99cc",
+      "bytes": 31049
+    },
+    {
+      "title": "Personal VPN",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/personal-vpn",
+      "sha256": "5d010bd8778bea82f862324af80f02f4e0c5b211ae2c0233c29d43381235ceef",
+      "bytes": 22269
+    },
+    {
+      "title": "SFContentBlockerManager",
+      "url": "https://developer.apple.com/documentation/SafariServices/SFContentBlockerManager",
+      "sha256": "4a8b4bca4b75a759e69f59ce2804cefdc432b6b2bf2e65a6c6eff7111a08eed8",
+      "bytes": 19899
+    },
+    {
+      "title": "setConfiguration(pirServerURL:pirPrivacyPassIssuerURL:pirAuthenticationToken:controlProviderBundleIdentifier:)",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEURLFilterManager/setConfiguration(pirServerURL:pirPrivacyPassIssuerURL:pirAuthenticationToken:controlProviderBundleIdentifier:)",
+      "sha256": "c77c3d2e9110d47caa6df7dfc67660d32e09566b3979eeabf8bb0fac18397083",
+      "bytes": 14795
+    },
+    {
+      "title": "Setting up a PIR server for URL filtering",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/setting-up-a-pir-server-for-url-filtering",
+      "sha256": "418499da781f1b1dcf5f11446a399846c4f5ecc0a42d7509417de49121b27d9f",
+      "bytes": 16189
+    },
+    {
+      "title": "TN3120: Expected use cases for Network Extension packet tunnel providers",
+      "url": "https://developer.apple.com/documentation/Technotes/tn3120-expected-use-cases-for-network-extension-packet-tunnel-providers",
+      "sha256": "b2323c3b38ac8ad77a140dd2b044a361dc4f79c1c47d7ac94b4e9abf23f9f2e8",
+      "bytes": 23343
+    },
+    {
+      "title": "TN3134: Network Extension provider deployment",
+      "url": "https://developer.apple.com/documentation/Technotes/tn3134-network-extension-provider-deployment",
+      "sha256": "60526feb764ebfffffac0ffccb44c69538a4698df0141f2527bf10886c4f37a0",
+      "bytes": 37172
+    },
+    {
+      "title": "TN3179: Understanding local network privacy",
+      "url": "https://developer.apple.com/documentation/Technotes/tn3179-understanding-local-network-privacy",
+      "sha256": "478396395b18ce5024feb6635b08ac0719e45656a1adf30fa22ff39002b97c07",
+      "bytes": 79205
+    },
+    {
+      "title": "URL filters",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/url-filters",
+      "sha256": "6344f73fbf5f08eb21858280e09de10ca5f37fa71fa930b3602a34a796add10d",
+      "bytes": 14293
+    },
+    {
+      "title": "UserDefaults",
+      "url": "https://developer.apple.com/documentation/Foundation/UserDefaults",
+      "sha256": "1a0c7a6f534aca0d5fdb59b73cb25bfcb84fc9a34eb0d9cec5ea54df8738b259",
+      "bytes": 121357
+    },
+    {
+      "title": "Using the Bloom filter tool to configure a URL filter",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/using-the-bloom-filter-tool",
+      "sha256": "cee0f4887a8258e9951e5742ac815271460d78ff586d3750da0a25a45077576e",
+      "bytes": 24360
+    },
+    {
+      "title": "NEVPNManager",
+      "url": "https://developer.apple.com/documentation/NetworkExtension/NEVPNManager",
+      "sha256": "b56554c8ec8501f85e2f117d2de6544c5b418f628535f34267b2a831efc267b2",
+      "bytes": 47921
+    },
+    {
+      "title": "WebContentFilter",
+      "url": "https://developer.apple.com/documentation/DeviceManagement/WebContentFilter",
+      "sha256": "670ee96ad9db234499b36994d7ea019b474db5166da92fc2369436388707079b",
+      "bytes": 30441
+    },
+    {
+      "url": "https://developer.apple.com/videos/play/wwdc2025/234/",
+      "sha256": "4a1f308030361008b0be64bb713c3ed5f40f5169f17a6fe5f81f1da5e424a587",
+      "bytes": 173711
+    },
+    {
+      "url": "https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG/ContentBlocker.html",
+      "sha256": "917d6b8a9253e03aac724451631a6c952525f6e793aa9c10fbd24b6efc178969",
+      "bytes": 23293
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels",
+      "sha256": "0e9cc2d95d14c0ec179ddfcf34c4499397118db04c87960c80554f57518521b4"
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel",
+      "sha256": "40a5b0cdd6fe5020b4a35688f70bb187640e8167a0d1db9ed74b2810dccc4fc2"
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/availability-swift.enum/unavailablereason",
+      "sha256": "6c334b53b018905100910a24f57007472f3c936aca427397989442308a50d775"
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels/generating-content-and-performing-tasks-with-foundation-models",
+      "sha256": "53ddaca1592cf6f7bb7a1e8ee818c81cf5f2b8d1e90e01cb6f48ec8fc464856c"
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels/improving-the-safety-of-generative-model-output",
+      "sha256": "718c0ba56300aa07976f5958c88326c1a38d7db87245e2992ea8e413f357f7f9"
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels/generating-swift-data-structures-with-guided-generation",
+      "sha256": "50756d323a6bbfe495d5d13a23bb31a03bf45b528b218424f2de1ba7ed9c5c45"
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels/adding-server-side-intelligence-with-private-cloud-compute",
+      "sha256": "e2afeca20b77f3ecd77d8878cc58ef352af0b8c44b65355e6c04bc82e0977fa7"
+    },
+    {
+      "url": "https://developer.apple.com/support/terms/acceptable-use-requirements-for-the-foundation-models-framework",
+      "sha256": "c52dfd491761bf0fd5c48353be11cb3bb62f3033c903980ae5797a40912d81ea"
+    },
+    {
+      "url": "https://developer.apple.com/app-store/review/guidelines/#data-use-and-sharing",
+      "sha256": "56a9ea6b561d337910532d778f42c28c1d74a3acbe9f35b668abcbd9761fb8d2"
+    },
+    {
+      "url": "https://developer.apple.com/videos/play/wwdc2025/286/",
+      "sha256": "cf226cf0f06d3203106d91da725b18f3816d3039bfd0197cd5bcd35a81f6463a"
+    },
+    {
+      "url": "https://www.apple.com/privacy/features/",
+      "sha256": "4a47501a2b3289614c73a9639dda09fce2185481ccc42b7edd872e9ceabd7feb"
+    },
+    {
+      "url": "https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/guardrails/permissivecontenttransformations",
+      "sha256": "f4bba80a93ad11f715fa3ffd99841bd829a9b9ae0acc2c4add815787a1df223b"
+    },
+    {
+      "title": "NEURLFilterManager.reportEndpoint",
+      "url": "https://developer.apple.com/documentation/networkextension/neurlfiltermanager/reportendpoint",
+      "retrievedURL": "https://developer.apple.com/tutorials/data/documentation/networkextension/neurlfiltermanager/reportendpoint.json",
+      "sha256": "4b6a1977a085c31f56085e3f19456a8e6589443642d736224e0be90fa45a667a",
+      "bytes": 10054,
+      "verifiedFacts": [
+        "Introduced in iOS/iPadOS/Mac Catalyst/macOS 27.0",
+        "Reporting is available only on supervised devices; non-supervised devices save configuration but send no reports",
+        "Disabled by setting reportEndpoint to nil"
+      ]
+    },
+    {
+      "title": "NSPrivacyAccessedAPIType — required-reason API categories/reasons",
+      "url": "https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype",
+      "retrievedURL": "https://developer.apple.com/tutorials/data/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype.json",
+      "retrievedOn": "2026-10-06",
+      "sha256": "19546c6db12067a6e6441140399e8323fd73d5e79d1c682e1d0b826b16da6cf5",
+      "bytes": 50617,
+      "verifiedFacts": [
+        "FileTimestamp category explicitly lists fstat(_:_:)",
+        "C617.1: Declare this reason to access the timestamps, size, or other metadata of files inside the app container, app group container, or the app’s CloudKit container.",
+        "3B52.1: Declare this reason to access the timestamps, size, or other metadata of files or directories that the user specifically granted access to, such as using a document picker view controller."
+      ]
+    }
+  ],
+  "lastRetrievedOn": "2026-10-06"
+}

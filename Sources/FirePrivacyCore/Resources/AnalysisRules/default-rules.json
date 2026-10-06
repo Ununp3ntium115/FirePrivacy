@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "implementationVersion": "ruleset-2.0.0",
+  "rules": [
+    {"id": "AGG-APPLE-001", "enabled": true, "parameters": {}},
+    {"id": "AGG-CROSSAPP-002", "enabled": true, "parameters": {"minimumDistinctApps": 3}},
+    {"id": "LOC-NET-003", "enabled": true, "parameters": {}},
+    {"id": "SENSOR-UNEXPECTED-004", "enabled": true, "parameters": {}},
+    {"id": "UNKNOWN-HIGHFANOUT-005", "enabled": true, "parameters": {"minimumDistinctDestinations": 10, "maximumReviewedCoverage": 0.4}},
+    {"id": "VENDOR-KNOWN-006", "enabled": true, "parameters": {}},
+    {"id": "COVERAGE-GAP-007", "enabled": true, "parameters": {}},
+    {"id": "FRESHNESS-008", "enabled": true, "parameters": {"minimumAgeDays": 14}}
+  ]
+}

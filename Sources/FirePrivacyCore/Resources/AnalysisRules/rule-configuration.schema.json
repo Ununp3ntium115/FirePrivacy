@@ -1,0 +1,370 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fire Privacy compiled detector configuration",
+  "description": "Data-only closed bounded selection for eight reviewed compiled detectors; no downloaded code or generated explanations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "version",
+    "implementationVersion",
+    "rules"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,5})\\.(0|[1-9][0-9]{0,5})\\.(0|[1-9][0-9]{0,5})$"
+    },
+    "implementationVersion": {
+      "const": "ruleset-2.0.0"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "AGG-APPLE-001"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "AGG-CROSSAPP-002"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "minimumDistinctApps"
+                ],
+                "properties": {
+                  "minimumDistinctApps": {
+                    "type": "integer",
+                    "minimum": 3,
+                    "maximum": 1000
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "LOC-NET-003"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "SENSOR-UNEXPECTED-004"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "UNKNOWN-HIGHFANOUT-005"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "minimumDistinctDestinations",
+                  "maximumReviewedCoverage"
+                ],
+                "properties": {
+                  "minimumDistinctDestinations": {
+                    "type": "integer",
+                    "minimum": 10,
+                    "maximum": 1000
+                  },
+                  "maximumReviewedCoverage": {
+                    "type": "number",
+                    "minimum": 0.05,
+                    "maximum": 0.5
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "VENDOR-KNOWN-006"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "COVERAGE-GAP-007"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "parameters"
+            ],
+            "properties": {
+              "id": {
+                "const": "FRESHNESS-008"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "minimumAgeDays"
+                ],
+                "properties": {
+                  "minimumAgeDays": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "AGG-APPLE-001"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "AGG-CROSSAPP-002"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "LOC-NET-003"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "SENSOR-UNEXPECTED-004"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "UNKNOWN-HIGHFANOUT-005"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "VENDOR-KNOWN-006"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "COVERAGE-GAP-007"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "FRESHNESS-008"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    }
+  }
+}

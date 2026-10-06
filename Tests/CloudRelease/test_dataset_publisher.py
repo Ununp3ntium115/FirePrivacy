@@ -45,9 +45,9 @@ class DatasetPublisherTests(unittest.TestCase):
 
     def arguments(self, command="kb", **overrides):
         options = {"payload": str(self.payload), "private_key": str(self.key), "key_id": "test-only", "review_record": str(self.review_path), "endpoint": "https://github.com/Ununp3ntium115/FirePrivacy/raw/main/test-only.json", "output": str(self.root / "output"), "issued_at": self.now, "expires_at": self.now + 3600}
-        if command.startswith("kb"):
+        if command.startswith("kb") or command == "rules":
             options["sequence"] = 2
-            if command == "kb": options["minimum_app_version"] = "1.0.0"
+            if command in ("kb", "rules"): options["minimum_app_version"] = "1.0.0"
         else:
             options.update(version=2, tag="synthetic-test")
             if command == "filter": options["kind"] = "safariDomainsV1"
@@ -61,10 +61,14 @@ class DatasetPublisherTests(unittest.TestCase):
         args = P.parser().parse_args(self.arguments(command, **overrides))
         return P.prepare(args, now=self.now)
 
-    def verify_files(self, files, kb=True, revocations=False):
+    def verify_files(self, files, kb=True, revocations=False, rules=False):
         envelope = json.loads(files["download.json"])
         signer = P.Signer(self.key)
-        if kb:
+        if rules:
+            manifest = envelope["rules"]["manifest"]
+            signature = base64.b64decode(manifest["signatureBase64"], validate=True)
+            payload = base64.b64decode(envelope["rules"]["payloadData"], validate=True)
+        elif kb:
             item = envelope["revocations"] if revocations else envelope
             manifest = json.loads(base64.b64decode(item["manifestData" if revocations else "manifest"], validate=True))
             signature = base64.b64decode(manifest["signatureBase64"], validate=True)
@@ -76,6 +80,12 @@ class DatasetPublisherTests(unittest.TestCase):
         self.assertEqual(P.digest(payload), manifest["payloadSHA256"])
         self.assertEqual(payload, files["payload.bin" if "payload.bin" in files else "payload.json"])
         return manifest, payload, signature
+
+    def rule_payload(self):
+        value = json.loads((ROOT / "Sources/FirePrivacyCore/Resources/AnalysisRules/default-rules.json").read_bytes())
+        value["version"] = "2.0.0"
+        self.payload = self.write_json("rules.json", value)
+        return value
 
     def test_real_kb_signature_fixed_field_order_and_wire_envelope(self):
         files = self.prepare(); manifest, _, _ = self.verify_files(files)
@@ -244,6 +254,88 @@ class DatasetPublisherTests(unittest.TestCase):
         previous = self.write_json("previous.json", old)
         self.kb["datasetVersion"] = "2.0.1"; self.payload = self.write_json("payload.json", self.kb)
         with self.assertRaises(P.PublisherError): self.prepare(sequence=3, previous_artifact=previous)
+
+    def test_signed_rules_use_exact_domain_field_order_and_kb_trust_family(self):
+        self.rule_payload()
+        files = self.prepare("rules")
+        manifest, payload, signature = self.verify_files(files, rules=True)
+        expected = (
+            f"FirePrivacy.AnalysisRules.v1\n1\n2.0.0\n2\n{self.now}\n"
+            f"{self.now + 3600}\n1.0.0\n8\n{P.digest(payload)}\ntest-only\n"
+        ).encode()
+        self.assertEqual(files["signing-message.bin"], expected)
+        self.assertEqual(set(json.loads(files["download.json"])), {"rules"})
+        self.assertEqual(manifest["ruleCount"], 8)
+        reference = json.loads(files["public-key-reference.json"])
+        self.assertEqual(reference["buildVariableName"], "FIREPRIVACY_KB_PUBLIC_KEYS_JSON")
+        with self.assertRaises(P.PublisherError):
+            P.Signer(self.key).verify(
+                expected.replace(b"FirePrivacy.AnalysisRules.v1", b"FirePrivacy.KnowledgeBase.v1"),
+                signature,
+            )
+
+    def test_rules_reject_unknown_detectors_prose_and_unreviewed_parameters(self):
+        original = self.rule_payload()
+        variants = []
+        mutations = (
+            lambda x: x.update(extra="untrusted prose"),
+            lambda x: x.update(implementationVersion="ruleset-999.0.0"),
+            lambda x: x.update(rules=x["rules"][:-1]),
+            lambda x: x["rules"][0].update(id="UNREVIEWED-999"),
+            lambda x: x["rules"][0].update(parameters={"instruction": "run command"}),
+            lambda x: x["rules"][1].update(parameters={"minimumDistinctApps": 2}),
+            lambda x: x["rules"][4].update(parameters={
+                "minimumDistinctDestinations": 10, "maximumReviewedCoverage": 0.9,
+            }),
+            lambda x: x["rules"][7].update(parameters={"minimumAgeDays": 366}),
+            lambda x: x["rules"][0].update(enabled=1),
+            lambda x: x["rules"][1].update(id=x["rules"][0]["id"]),
+        )
+        for mutation in mutations:
+            value = copy.deepcopy(original)
+            mutation(value)
+            variants.append(value)
+        for value in variants:
+            self.payload = self.write_json("rules.json", value)
+            with self.subTest(value=value), self.assertRaises(P.PublisherError):
+                self.prepare("rules")
+
+    def test_rules_previous_artifact_authenticates_full_manifest_and_requires_both_versions(self):
+        value = self.rule_payload()
+        files = self.prepare("rules")
+        previous = self.write_json("previous.json", json.loads(files["download.json"]))
+        for override in (dict(sequence=3), dict(sequence=1)):
+            with self.subTest(override=override), self.assertRaises(P.PublisherError):
+                self.prepare("rules", previous_artifact=previous, **override)
+        value["version"] = "2.0.1"
+        self.payload = self.write_json("rules.json", value)
+        updated = self.prepare("rules", sequence=3, previous_artifact=previous)
+        self.assertTrue(json.loads(updated["source-review-and-changelog.json"])["previousArtifactChecked"])
+        old = json.loads(previous.read_bytes())
+        old["rules"]["manifest"]["minimumAppVersion"] = "1.1.0"
+        previous.write_bytes(P.encoded(old))
+        with self.assertRaises(P.PublisherError):
+            self.prepare("rules", sequence=3, previous_artifact=previous)
+
+    def test_rules_bound_payload_lifetime_versions_and_reject_duplicate_json_fields(self):
+        value = self.rule_payload()
+        overrides = (
+            dict(expires_at=self.now + 91 * 86400),
+            dict(minimum_app_version="1000000.0.0"),
+        )
+        for override in overrides:
+            with self.subTest(override=override), self.assertRaises(P.PublisherError):
+                self.prepare("rules", **override)
+        value["version"] = "01.0.0"
+        self.payload = self.write_json("rules.json", value)
+        with self.assertRaises(P.PublisherError):
+            self.prepare("rules")
+        self.payload.write_bytes(b" " * 16_385)
+        with self.assertRaises(P.PublisherError):
+            self.prepare("rules")
+        self.payload.write_bytes(b'{"schemaVersion":1,"schemaVersion":1}')
+        with self.assertRaises(P.PublisherError):
+            self.prepare("rules")
 
 
 if __name__ == "__main__": unittest.main()

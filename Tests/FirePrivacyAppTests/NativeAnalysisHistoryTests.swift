@@ -183,6 +183,105 @@ final class NativeAnalysisHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testFailedSelectedReportUnlinkShowsCommittedSelectionAndPrunedHistoryUntilRetry() async throws {
+        let removals = NativeHistoryControlledRemoval()
+        let fixture = fixture(fileRemoval: { try removals.remove($0) })
+        defer { fixture.removeTemporaryFiles() }
+        let engine = fixture.engine()
+        try await authorizeImport(engine)
+        let retained = try report(1), deleted = try report(2)
+        _ = try await engine.importReport(retained)
+        _ = try await engine.importReport(deleted)
+        XCTAssertEqual(engine.report?.id, deleted.id)
+        let removedCiphertext = fixture.storage.appendingPathComponent("history/\(deleted.id.uuidString).encrypted")
+        removals.block(removedCiphertext)
+
+        do {
+            try await engine.deleteReport(deleted.id)
+            XCTFail("An unlink failure must remain visible even after the workspace index commits.")
+        } catch { XCTAssertEqual(error as? ReportStoreError, .cleanupPending) }
+        XCTAssertGreaterThan(removals.failureCount, 0)
+        XCTAssertTrue(FileManager().fileExists(atPath: removedCiphertext.path), "The injected failure must leave real ciphertext pending cleanup.")
+        let committed = try await fixture.store.loadWorkspace()
+        XCTAssertEqual(committed.selectedReport?.id, retained.id)
+        XCTAssertEqual(committed.sessions.map(\.id), [retained.id])
+        XCTAssertGreaterThan(committed.pendingCleanupCount, 0)
+        XCTAssertEqual(engine.report?.id, committed.selectedReport?.id)
+        XCTAssertEqual(engine.sessions.map(\.id), committed.sessions.map(\.id))
+        XCTAssertEqual(engine.pendingStorageCleanupCount, committed.pendingCleanupCount)
+        XCTAssertEqual(engine.latestAnalysisRevision?.inputs.reportID, retained.id)
+        let saved = try await fixture.store.loadFeatureState(AnalysisHistory.self, key: "analysis-history")
+        let history = try XCTUnwrap(saved)
+        XCTAssertEqual(history, engine.analysisHistory)
+        XCTAssertEqual(Set(history.records.map { $0.inputs.reportID }), [retained.id])
+        assertNoDeletedReport(deleted, in: history)
+
+        removals.allow(removedCiphertext)
+        try await engine.retryStorageCleanup()
+        XCTAssertFalse(FileManager().fileExists(atPath: removedCiphertext.path))
+        XCTAssertEqual(engine.pendingStorageCleanupCount, 0)
+        XCTAssertEqual(engine.report?.id, retained.id)
+        XCTAssertEqual(engine.sessions.map(\.id), [retained.id])
+        XCTAssertEqual(engine.analysisHistory, history)
+        let afterRetry = try await fixture.store.loadWorkspace()
+        XCTAssertEqual(afterRetry.pendingCleanupCount, 0)
+        XCTAssertEqual(afterRetry.selectedReport?.id, retained.id)
+        let calls = await fixture.transport.callCount()
+        XCTAssertEqual(calls, 0)
+    }
+
+    @MainActor
+    func testFailedRetentionUnlinkPreservesSelectedReportAndPurgesEvictedBaselineFactsBeforeRetry() async throws {
+        let removals = NativeHistoryControlledRemoval()
+        let fixture = fixture(fileRemoval: { try removals.remove($0) })
+        defer { fixture.removeTemporaryFiles() }
+        let engine = fixture.engine()
+        try await authorizeImport(engine)
+        let evicted = try report(1), selected = try report(2)
+        _ = try await engine.importReport(evicted)
+        _ = try await engine.importReport(selected)
+        XCTAssertEqual(engine.latestAnalysisRevision?.comparison?.earlierReportID, evicted.id)
+        let evictedCiphertext = fixture.storage.appendingPathComponent("history/\(evicted.id.uuidString).encrypted")
+        removals.block(evictedCiphertext)
+        var retention = engine.retention
+        retention.maximumReports = 1
+
+        do {
+            try await engine.updateRetention(retention)
+            XCTFail("A retention cleanup failure must remain visible after its index commits.")
+        } catch { XCTAssertEqual(error as? ReportStoreError, .cleanupPending) }
+        XCTAssertGreaterThan(removals.failureCount, 0)
+        XCTAssertTrue(FileManager().fileExists(atPath: evictedCiphertext.path))
+        let committed = try await fixture.store.loadWorkspace()
+        XCTAssertEqual(committed.sessions.map(\.id), [selected.id])
+        XCTAssertEqual(committed.selectedReport?.id, selected.id)
+        XCTAssertEqual(committed.retention.maximumReports, 1)
+        XCTAssertGreaterThan(committed.pendingCleanupCount, 0)
+        XCTAssertEqual(engine.report?.id, selected.id)
+        XCTAssertEqual(engine.sessions.map(\.id), committed.sessions.map(\.id))
+        XCTAssertEqual(engine.retention.maximumReports, 1)
+        XCTAssertEqual(engine.pendingStorageCleanupCount, committed.pendingCleanupCount)
+        let saved = try await fixture.store.loadFeatureState(AnalysisHistory.self, key: "analysis-history")
+        let history = try XCTUnwrap(saved)
+        XCTAssertEqual(history, engine.analysisHistory)
+        XCTAssertNil(history.latest(for: selected.id)?.comparison)
+        XCTAssertTrue(try XCTUnwrap(history.latest(for: selected.id)).lifecycle.previousOnly.isEmpty)
+        assertNoDeletedReport(evicted, in: history)
+
+        removals.allow(evictedCiphertext)
+        try await engine.retryStorageCleanup()
+        XCTAssertFalse(FileManager().fileExists(atPath: evictedCiphertext.path))
+        XCTAssertEqual(engine.pendingStorageCleanupCount, 0)
+        XCTAssertEqual(engine.report?.id, selected.id)
+        XCTAssertEqual(engine.analysisHistory, history)
+        let afterRetry = try await fixture.store.loadWorkspace()
+        XCTAssertEqual(afterRetry.pendingCleanupCount, 0)
+        XCTAssertEqual(afterRetry.selectedReport?.id, selected.id)
+        let calls = await fixture.transport.callCount()
+        XCTAssertEqual(calls, 0)
+    }
+
+    @MainActor
     func testSampleDoesNotPersistOrCompareUnrelatedPrivateReportFacts() async throws {
         let fixture = fixture()
         defer { fixture.removeTemporaryFiles() }
@@ -222,12 +321,26 @@ final class NativeAnalysisHistoryTests: XCTestCase {
             importedAt: Date().addingTimeInterval(-3_600 + Double(number)))
     }
 
+    private func assertNoDeletedReport(_ deleted: PrivacyReport, in history: AnalysisHistory,
+                                       file: StaticString = #filePath, line: UInt = #line) {
+        do {
+            let plaintext = String(decoding: try history.encoded(), as: UTF8.self)
+            XCTAssertFalse(plaintext.contains(deleted.id.uuidString), file: file, line: line)
+            for domain in Set(deleted.observations.compactMap(\.domain)) {
+                XCTAssertFalse(plaintext.contains(domain), file: file, line: line)
+            }
+            for observation in deleted.observations {
+                XCTAssertFalse(plaintext.contains(observation.id.uuidString), file: file, line: line)
+            }
+        } catch { XCTFail("Retained analysis history must remain valid after pruning.", file: file, line: line) }
+    }
+
     @MainActor
-    private func fixture() -> NativeHistoryFixture {
+    private func fixture(fileRemoval: @escaping @Sendable (URL) throws -> Void = { try FileManager().removeItem(at: $0) }) -> NativeHistoryFixture {
         let root = FileManager().temporaryDirectory.appendingPathComponent("NativeAnalysisHistoryTests-\(UUID().uuidString)", isDirectory: true)
         let storage = root.appendingPathComponent("private-store", isDirectory: true)
         return NativeHistoryFixture(root: root, storage: storage,
-            store: EncryptedReportStore(directoryURL: storage, keyProvider: NativeHistoryMemoryKeys()),
+            store: EncryptedReportStore(directoryURL: storage, keyProvider: NativeHistoryMemoryKeys(), fileRemoval: fileRemoval),
             transport: NativeHistoryForbiddenTransport(),
             credentials: AdvisorCredentialStore(provider: NativeHistoryMemoryCredentials()),
             cleanup: ProtectionCleanupPlan(directory: root.appendingPathComponent("system-cleanup", isDirectory: true)),
@@ -263,6 +376,24 @@ private final class NativeHistoryMemoryKeys: ReportKeyProvider, @unchecked Senda
         }
     }
     func deleteKey() throws { lock.withLock { value = nil } }
+}
+
+private final class NativeHistoryControlledRemoval: @unchecked Sendable {
+    private let lock = NSLock()
+    private var blocked: Set<String> = []
+    private var failures = 0
+    var failureCount: Int { lock.withLock { failures } }
+    func block(_ path: URL) { lock.withLock { _ = blocked.insert(path.path) } }
+    func allow(_ path: URL) { lock.withLock { _ = blocked.remove(path.path) } }
+    func remove(_ path: URL) throws {
+        let shouldFail = lock.withLock {
+            guard blocked.contains(path.path) else { return false }
+            failures += 1
+            return true
+        }
+        if shouldFail { throw ReportStoreError.deletionFailed }
+        try FileManager().removeItem(at: path)
+    }
 }
 
 private actor NativeHistoryMemoryCredentials: AdvisorCredentialProvider {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="How the Fire Privacy local report app handles imported reports, encrypted storage, sharing, and deletion.">
+  <meta name="description" content="How Fire Privacy handles local reports, optional model and DNS traffic, sharing, and deletion.">
   <title>Privacy policy — Fire Privacy</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,36 +14,38 @@
     <div class="links"><a href="privacy.html" aria-current="page">Privacy policy</a><a href="support.html">Support</a></div>
   </nav></header>
   <main class="shell" id="main"><article class="document">
-    <p class="eyebrow">Your local workspace</p>
+    <p class="eyebrow">Your privacy controls</p>
     <h1>Privacy policy.</h1>
-    <p class="date">Policy version: October 5, 2026 · Applies to the Fire Privacy local report app, version 1.0.</p>
-    <p>Fire Privacy lets you import and explore an App Privacy Report that you export from iPhone or iPad Settings. Your report is processed and stored on your device. The app does not send report contents to its developer or a server.</p>
-
-    <h2>What the app reads</h2>
-    <p>The app reads the file you explicitly select in the system file picker. A report may include app identifiers, domain names, recorded sensor access, and event times. Fire Privacy organizes supported observations into a normalized report. It does not retain a separate copy of the original raw imported file.</p>
-    <p>The synthetic demo contains fictional activity. No account, advertising identifier, analytics SDK, remote model, VPN, tracking filter, or developer-operated network service is used by this app. The app does not read other apps’ current permissions or enumerate installed apps.</p>
-
-    <h2>Storage and protection</h2>
-    <p>Fire Privacy stores one normalized report at a time inside its private application storage. The stored report is encrypted with AES-GCM through Apple’s CryptoKit. Its randomly generated key is stored in the device Keychain, accessible while the device is unlocked and configured not to synchronize to iCloud or migrate to another device. Report storage uses complete file protection and is excluded from device backup.</p>
-    <p>Importing a new report replaces the saved report after a successful import and save. A report remains until you replace or delete it; there is no automatic expiry. The app does not sell, license, train a model on, or send your report to a third party.</p>
-
-    <h2>Sharing is your choice</h2>
-    <p>Export creates a readable JSON file containing the normalized report and opens the system share sheet. This export is not encrypted by Fire Privacy. Choose recipients carefully: the report can reveal your app and domain activity. A receiving app or service handles the shared copy under its own policies.</p>
-    <p>The temporary export uses file protection, is excluded from backup, and is removed after sharing or cancellation. The app also cleans up temporary exports when it next launches and when you delete all local data. Copies saved or received elsewhere remain outside the app’s control.</p>
-
-    <h2>Deleting your data</h2>
-    <p>Use the app’s delete action to remove its saved report, temporary exports, and encryption key. If removal fails, the app reports the failure so you can try again. Deletion does not remove the original report in Files, the App Privacy Report history in Settings, or a copy you previously shared. Delete those separately in the app or service that holds them.</p>
-    <p>There is no online account to close and no developer-held report database to erase. The source file remains yours; selecting it does not give the developer access to it.</p>
-
-    <h2>Report limitations</h2>
-    <p>A recorded domain contact does not reveal a payload or prove harm. A sensor event does not establish that sensor data was sent elsewhere. Reports are historical, may be incomplete, and depend on the operating system’s reporting and your settings. Fire Privacy describes the available evidence rather than claiming a security or legal conclusion.</p>
-
-    <h2>Support and this website</h2>
-    <p>You may voluntarily share information when requesting support. The <a href="support.html">support page</a> explains how to use a public project issue without disclosing a personal report. Information posted there is handled by GitHub under its own privacy policy and is visible to other people. Use a synthetic example and omit personal activity, credentials, and device identifiers.</p>
-    <p>This static website includes no analytics script, advertising, embedded third-party content, or cookies set by the page itself. Its hosting provider may process ordinary connection information such as IP addresses and server logs under the provider’s policy. Opening a support link also connects to that destination.</p>
-
-    <h2>Questions and changes</h2>
-    <p>For a question about this policy, use the <a href="support.html">support route</a> and keep sensitive information out of public messages. This policy describes the local report app. If the app’s data handling changes, the policy and App Store privacy answers must be updated before that change is released.</p>
+    <p>Draft policy for the expanded consumer build, prepared October 6, 2026. Publish this revision and verify that it matches the submitted binary before release. The separately gated URL-filter and managed editions require their own matching operator/deployment disclosures.</p>
+    <h2>Your report and local analysis</h2>
+    <p>Fire Privacy reads the App Privacy Report file you choose in Files. It may contain app identifiers, domains, sensor events, timestamps and supported context/source fields. The app normalizes supported records, preserves evidence provenance, and creates deterministic findings on your device. It does not modify the original file or read other apps&#x27; current permissions. The demo is synthetic, not personal activity.</p>
+    <p>No account, advertising identifier, advertising SDK, subscription or analytics SDK is used. The developer does not receive a report database from local analysis. Optional network operations are described below; keeping them off leaves import, analysis and offline guidance local.</p>
+    <p>Cited domain classifications are publisher knowledge, not proof of what a particular contact transmitted. Historical contacts, sensor events and missing observations do not establish payloads, current permissions, harm, safety or a legal conclusion. User-entered audits and overrides remain separate from Apple observations.</p>
+    <h2>What stays on this device</h2>
+    <p>The private workspace holds bounded normalized report history, preferences, manual audits/overrides, consent receipts, installed dataset state and local network event metadata. History defaults to ten reports with a 64 MiB report/source-ciphertext limit; its configured limits are shown by the app. Raw-source retention is off by default. You can separately consent to an encrypted original copy. Keeping a copy does not change the Files original.</p>
+    <p>Private records use CryptoKit AES-GCM encryption and a random device Keychain key accessible while unlocked, configured not to synchronize through iCloud or migrate to another device. Private files use complete file protection and backup exclusion. Data remains subject to the chosen retention/deletion controls; failed cleanup is reported. Physical-device behavior must be verified on the actual build.</p>
+    <p>Local event history is limited to recent operation purposes, endpoint hosts, times, byte counts and status. It does not include URL paths/queries, request bodies, credentials, imported identifiers, model output or server error text. Consent receipts record the feature, disclosure version, scope and grant/revoke times and remain local. They do not grant access to unrelated features.</p>
+    <h2>Optional model assistance</h2>
+    <p>Offline guidance is always available. The optional Apple on-device adapter uses SystemLanguageModel on eligible iOS/iPadOS 26 devices when Apple Intelligence and model assets are ready. That adapter does not send model input to a server. Unsupported/unready devices fall back to offline guidance. Private Cloud Compute is not enabled by this app.</p>
+    <p>A model selects presentation order/style; displayed facts, explanations, limitations, scores and actions remain authored from deterministic evidence. Invalid or stale references are rejected. A model cannot change permissions, protection settings or analysis decisions.</p>
+    <p>You can optionally configure a compatible HTTPS model endpoint you operate. Before a request, the app shows its actual destination, complete JSON, configured authentication presence and operator retention disclosure. Sending needs current feature consent and a short-lived single-use approval of that exact request. Revocation and context changes cancel future/pending work and reject stale output. There is no automatic fallback to a public cloud endpoint.</p>
+    <p>The minimized request includes model/schema settings, static presentation instructions, rule/action identifiers and versions, deterministic severity, confidence and counts, and request-local ordinal references. It excludes raw reports, domains, app identifiers, timestamps, notes, stable report/evidence IDs and the local analysis digest. These summary fields are still derived activity data, not a claim of anonymity. Configured authentication and network metadata, including IP/request timing, also reach the destination. HTTPS uses normal certificate, date and hostname checks; an optional certificate pin adds a check.</p>
+    <p>The endpoint operator can read the summary and controls server logs, storage, training and deletion. Fire Privacy cannot verify or enforce an external operator&#x27;s practices or delete its copies. Configure an endpoint you operate and understand; review any hosting/provider involvement. The app itself does not use imported reports to train a model or sell/license report data.</p>
+    <h2>Optional datasets and protection</h2>
+    <p>Knowledge-base, reviewed rule-configuration and filter downloads need separate consent and approval. Rule configurations use the knowledge-update request; they can only enable/disable compiled detectors and adjust bounded thresholds, not add executable behavior or new claims. Their GET requests have no report body. The host still receives connection metadata and any configured authentication; its stated retention policy applies. Signed public data must pass the app&#x27;s trust, validity, semantic and downgrade checks before activation. No production publisher endpoint is inferred from a domain shown in an imported report.</p>
+    <p>Safari content blocking is an optional extension you enable in Settings. It uses validated rules and explicit local allowances and does not receive your visit history. Its coverage is Safari resources, not every app. Safari can cache compiled rules; failed reload/removal means old rules may remain until you disable the extension in Settings. The app reports this rather than claiming that removal succeeded.</p>
+    <p>Encrypted DNS is optional and requires your resolver choice/consent and enabling the configuration in Settings. DNS query names leave the device and the resolver can read them, along with connection metadata. Encryption protects the connection, not against the resolver. Resolver operator, logging/retention, jurisdiction, blocking and failure behavior must be understood before enabling. Encryption alone does not block trackers. Apps using another resolver, direct IP addresses, caches or tunnels may be outside this configuration&#x27;s coverage.</p>
+    <p>Shared protection storage contains validated rules/configuration and explicit allowances, not report history, raw sources, receipts, advisor payloads, keys or credentials. Generic local reminders require separate consent and notification permission and contain no domain, app, finding or report identifiers.</p>
+    <h2>Exports and diagnostics</h2>
+    <p>You choose full or redacted JSON, CSV or Markdown exports and a system share recipient. Exports are readable, not encrypted by Fire Privacy; a full export can expose activity. Redaction does not guarantee anonymity. Sanitized diagnostic exports contain allowed version tokens, counts and error codes, not personal reports or credentials. A receiving app/service applies its own policies.</p>
+    <p>Temporary export files use protection/backup exclusion and are cleaned after sharing/cancellation, launch and deletion. Copies held by recipients remain outside Fire Privacy&#x27;s control.</p>
+    <h2>Revocation and deletion</h2>
+    <p>You can revoke optional features independently. Delete-all cancels/revokes requests, removes local reminders, attempts removal of owned OS protection configuration, and deletes private report/state files, temporary exports and the private key. Failures are reported and can require a retry after unlock or manual removal in Settings. If OS removal is incomplete, a protected, backup-excluded retry queue retains only feature names; it contains no report, endpoint, credential or receipt and is removed after successful cleanup.</p>
+    <p>Deletion cannot remove the original file in Files, Apple&#x27;s report history in Settings, previous shared copies, or data already received by an external endpoint/resolver. Remove those through their own controls. There is no app account to close or developer-held report database to erase.</p>
+    <h2>Support and hosted pages</h2>
+    <p>Use the <a href="https://github.com/Ununp3ntium115/FirePrivacy/issues">public issue tracker</a> for ordinary questions. Do not attach a real report, personal activity, credentials or a sensitive vulnerability. Use a synthetic example; request a private route before sharing sensitive details. GitHub account information and anything you post are handled by GitHub and may be public.</p>
+    <p>This page and support are hosted by GitHub, whose connection/cookie/account handling follows <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub&#x27;s privacy statement</a>. Opening a policy/support link connects through your system browser. The app does not send a report to that page. The project has not verified a private contact email or a separate legal company identity from repository text.</p>
+    <p>For policy questions use the support route without private data. Changes to the shipping app&#x27;s data handling require an updated policy and App Store privacy answers before distribution.</p>
   </article></main>
   <footer><div class="shell">Fire Privacy · <a href="index.html">Home</a> · <a href="support.html">Support</a></div></footer>
 </body>
