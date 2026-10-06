@@ -1,0 +1,23 @@
+DRAFT — verify every visible flow against the final consumer binary before entering this text in App Store Connect.
+
+Understand the activity recorded in your App Privacy Report, with evidence and clear choices.
+
+Fire Privacy imports the report you export from iPhone or iPad Settings. Explore app identifiers, domain contacts and sensor events, then inspect the observations behind a finding. Analysis runs on your device, with cited domain knowledge and clear distinctions between facts, interpretation and missing evidence.
+
+• Explore a clearly labeled synthetic demo.
+• Keep bounded encrypted report history and compare exported activity.
+• Compare recorded timestamps with supplied app-use windows, transcribed usage totals or opened/closed-event logs, with clear uncertainty and evidence links.
+• Review evidence-backed findings, explainable posture dimensions and manual Settings guidance.
+• Choose local privacy preferences without changing the recorded evidence.
+• Export JSON, CSV or Markdown, with full or redacted content choices.
+• Use optional Safari content blocking or configure an encrypted DNS resolver, with explicit coverage and data-flow disclosures.
+• Use offline guidance, optional Apple on-device presentation assistance on eligible iOS/iPadOS 26 devices, or a model endpoint you operate after approving the exact structured request.
+• Revoke optional features and delete local report data from the app.
+
+No account, ads or subscription. Optional network requests require separate consent and approval. The model cannot create new evidence, change scores or operate device controls. Encrypted DNS sends query names to your chosen resolver, and Safari protection covers Safari resources; neither makes every app anonymous or guarantees complete tracking prevention.
+
+A recorded contact does not show what data was sent or prove harm. Sensor history does not reveal another app's current permissions. Domain classifications describe cited knowledge, not what a particular contact transmitted. Missing activity is not proof that a risk disappeared.
+
+To create a report, open Settings → Privacy & Security → App Privacy Report, export/share it to Files, then select it in Fire Privacy. Availability and detail depend on your device and OS settings. Your original file, external server copies and previously shared exports remain outside the app's deletion boundary.
+
+This consumer app does not include the separately gated system URL-filter or managed-device editions.

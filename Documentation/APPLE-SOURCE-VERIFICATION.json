@@ -1,0 +1,141 @@
+{
+  "retrievedOn": "2026-10-05",
+  "transport": "HTTPS using Python urllib default certificate validation; no verification disabled",
+  "status": "Official content retrieved successfully after network configuration changed",
+  "scope": "Public Apple documentation only; no authenticated account agreements, declarations, App Review decision, or production release verified",
+  "sources": [
+    {
+      "id": "submission-requirements",
+      "url": "https://developer.apple.com/news/upcoming-requirements/",
+      "httpStatus": 200,
+      "bytes": 137188,
+      "sha256": "29ae32a9245d1e2ef22369805a43149341bef185abc6d8aeb4a69b4ece334770"
+    },
+    {
+      "id": "app-review",
+      "url": "https://developer.apple.com/app-store/review/guidelines/",
+      "httpStatus": 200,
+      "bytes": 238264,
+      "sha256": "d791e2da6de224a90a5ada3a60ddea725f2425622ba7370423cc36b5d6fc74ea"
+    },
+    {
+      "id": "app-privacy",
+      "url": "https://developer.apple.com/app-store/app-privacy-details/",
+      "httpStatus": 200,
+      "bytes": 132305,
+      "sha256": "13b2ba493b6d050c791a4676020094444e8449955daf99701290906d274f0438"
+    },
+    {
+      "id": "export-overview",
+      "url": "https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance/",
+      "httpStatus": 200,
+      "bytes": 365092,
+      "sha256": "0a2be5fcdae6579ae45e585a22ac39f58122eca76201573dbb9836936527fa98"
+    },
+    {
+      "id": "export-documentation",
+      "url": "https://developer.apple.com/help/app-store-connect/manage-app-information/determine-and-upload-app-encryption-documentation/",
+      "httpStatus": 200,
+      "bytes": 364690,
+      "sha256": "4fabb1f1516a78766f523e0454397273d818fa2617c0be2dd5d2707ac66408ba"
+    },
+    {
+      "id": "export-table",
+      "url": "https://developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption/",
+      "httpStatus": 200,
+      "bytes": 362684,
+      "sha256": "28aa9206988ce463480695a79e989fba586803dd79b9d40319294df0ef1f04db"
+    },
+    {
+      "id": "export-security",
+      "url": "https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations.md",
+      "httpStatus": 200,
+      "bytes": 4262,
+      "sha256": "4843563d50d137c9651e53eae5a4dddeb0a4200aef8bc4593320abbedbba5d72"
+    },
+    {
+      "id": "age-ratings",
+      "url": "https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions/",
+      "httpStatus": 200,
+      "bytes": 415932,
+      "sha256": "528ab8ee882c5cad50b1ab429caeab5260f950fc66e08b10c92eb6732fe65cbe"
+    },
+    {
+      "id": "screenshots",
+      "url": "https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/",
+      "httpStatus": 200,
+      "bytes": 388929,
+      "sha256": "8d8609c9b87e579b2d34ab65240e4cacb7ca9529754e53dff4f567305e48bab1"
+    },
+    {
+      "id": "eu-trader",
+      "url": "https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/",
+      "httpStatus": 200,
+      "bytes": 372708,
+      "sha256": "e96d97dc05446eba4d8008a33d480b61f81ab66c097f45ed7731ace20c62a169"
+    },
+    {
+      "id": "agreements",
+      "url": "https://developer.apple.com/support/terms/",
+      "httpStatus": 200,
+      "bytes": 150438,
+      "sha256": "964807e147837fcf0972303273193b099b964121547d002d8dcccf45fc0be534"
+    },
+    {
+      "id": "privacy-manifest",
+      "url": "https://developer.apple.com/documentation/bundleresources/privacy-manifest-files.md",
+      "httpStatus": 200,
+      "bytes": 5963,
+      "sha256": "1a8fe0c32b861a2ae9557512de3b7db95c06062bad41521a162c66d7b2b1680d"
+    },
+    {
+      "id": "required-reason-apis",
+      "url": "https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api.md",
+      "httpStatus": 200,
+      "bytes": 4588,
+      "sha256": "e5cc866c722a51e3e06f82edf65d8ef1bc96489dae5c75a88696af5261aafafb"
+    },
+    {
+      "id": "required-reason-categories",
+      "url": "https://developer.apple.com/tutorials/data/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype.json",
+      "httpStatus": 200,
+      "bytes": 50617,
+      "sha256": "19546c6db12067a6e6441140399e8323fd73d5e79d1c682e1d0b826b16da6cf5"
+    },
+    {
+      "id": "sdk-requirements",
+      "url": "https://developer.apple.com/support/third-party-SDK-requirements/",
+      "httpStatus": 200,
+      "bytes": 108849,
+      "sha256": "f5508b9fd24a3c43da8f0742bae17812710e772b39df7da09ca6f3a03295dd37"
+    },
+    {
+      "id": "accessibility",
+      "url": "https://developer.apple.com/help/app-store-connect/manage-app-accessibility/overview-of-accessibility-nutrition-labels/",
+      "httpStatus": 200,
+      "bytes": 386317,
+      "sha256": "b5de8b1956e78ffd78157d5527b61df23028a2fbb17cfc6f58312f51d377b569"
+    },
+    {
+      "id": "upload",
+      "url": "https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/",
+      "httpStatus": 200,
+      "bytes": 368673,
+      "sha256": "024696edd64ac65ee9bf9878c2fce6ef17ad2ba8cbd33bce2a2e2643c41ccddc"
+    },
+    {
+      "id": "submission",
+      "url": "https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-app/",
+      "httpStatus": 200,
+      "bytes": 362749,
+      "sha256": "23bf781e3eb4ecea95c49b293867ee356b62c96c4a355477b17d2f565958af55"
+    },
+    {
+      "id": "customer-license-agreement",
+      "url": "https://developer.apple.com/help/app-store-connect/manage-app-information/provide-a-custom-license-agreement/",
+      "httpStatus": 200,
+      "bytes": 363275,
+      "sha256": "06bc79d8ee593e237e5789eea8d4a68ae44127944007d8012f8ad6d7d5b4f684"
+    }
+  ]
+}

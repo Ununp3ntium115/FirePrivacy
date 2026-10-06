@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "references": [
+    {
+      "bundleID": "example.app",
+      "provenance": "importedUsageLog",
+      "deviceScope": "sameDeviceAsReport",
+      "coverage": {
+        "start": "2026-10-01T00:00:00Z",
+        "end": "2026-10-01T23:59:59Z"
+      },
+      "claimsCompleteForegroundWindows": false,
+      "foregroundWindows": [
+        {
+          "start": "2026-10-01T10:00:00Z",
+          "end": "2026-10-01T10:20:00Z"
+        }
+      ],
+      "sourceLabel": "Synthetic usage-log example; replace with your own evidence",
+      "suppliedAt": "2026-10-02T00:00:00Z"
+    }
+  ]
+}

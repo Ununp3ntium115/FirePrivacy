@@ -1,0 +1,95 @@
+{
+  "classifications": [
+    {
+      "categories": [
+        "dnsResolution"
+      ],
+      "confidence": 0.95,
+      "expiresAt": null,
+      "id": "cloudflare-dns",
+      "lastReviewed": "2026-10-05T23:18:53Z",
+      "notes": "This citation documents an endpoint role. A recorded domain contact does not establish its payload, a particular SDK, cross-app tracking, or harmful behavior. Exact host matching avoids assigning the vendor role to unrelated subdomains.",
+      "organization": "Cloudflare",
+      "pattern": "cloudflare-dns.com",
+      "patternKind": "exactHost",
+      "purposes": [
+        "Documented DNS-over-HTTPS resolution endpoint."
+      ],
+      "reviewStatus": "reviewed",
+      "sdkFamily": null,
+      "sourceIDs": [
+        "cloudflare-doh"
+      ]
+    },
+    {
+      "categories": [
+        "payments"
+      ],
+      "confidence": 0.95,
+      "expiresAt": null,
+      "id": "stripe-api",
+      "lastReviewed": "2026-10-05T23:18:53Z",
+      "notes": "This citation documents an endpoint role. A recorded domain contact does not establish its payload, a particular SDK, cross-app tracking, or harmful behavior. Exact host matching avoids assigning the vendor role to unrelated subdomains.",
+      "organization": "Stripe",
+      "pattern": "api.stripe.com",
+      "patternKind": "exactHost",
+      "purposes": [
+        "Documented Stripe payment-platform API server."
+      ],
+      "reviewStatus": "reviewed",
+      "sdkFamily": null,
+      "sourceIDs": [
+        "stripe-openapi"
+      ]
+    },
+    {
+      "categories": [
+        "analytics"
+      ],
+      "confidence": 0.95,
+      "expiresAt": null,
+      "id": "segment-api",
+      "lastReviewed": "2026-10-05T23:18:53Z",
+      "notes": "This citation documents an endpoint role. A recorded domain contact does not establish its payload, a particular SDK, cross-app tracking, or harmful behavior. Exact host matching avoids assigning the vendor role to unrelated subdomains.",
+      "organization": "Segment",
+      "pattern": "api.segment.io",
+      "patternKind": "exactHost",
+      "purposes": [
+        "Documented analytics event-ingestion API endpoint."
+      ],
+      "reviewStatus": "reviewed",
+      "sdkFamily": null,
+      "sourceIDs": [
+        "segment-http-api"
+      ]
+    }
+  ],
+  "datasetVersion": "1.0.0",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "excerpt": "Make programmatic DNS queries to 1.1.1.1 over HTTPS. Endpoint: https://cloudflare-dns.com/dns-query.",
+      "id": "cloudflare-doh",
+      "retrievedAt": "2026-10-05T23:18:53Z",
+      "title": "Cloudflare: make API requests to 1.1.1.1",
+      "type": "vendorDocumentation",
+      "url": "https://github.com/cloudflare/cloudflare-docs/blob/production/src/content/docs/1.1.1.1/encryption/dns-over-https/make-api-requests/index.mdx"
+    },
+    {
+      "excerpt": "The vendor-published OpenAPI servers field declares https://api.stripe.com/ as its API server.",
+      "id": "stripe-openapi",
+      "retrievedAt": "2026-10-05T23:18:53Z",
+      "title": "Stripe OpenAPI specification: API server",
+      "type": "vendorDocumentation",
+      "url": "https://github.com/stripe/openapi/blob/master/openapi/spec3.json"
+    },
+    {
+      "excerpt": "The Segment HTTP Tracking API lets you record analytics data from any website or application. The documented Track endpoint is https://api.segment.io/v1/track.",
+      "id": "segment-http-api",
+      "retrievedAt": "2026-10-05T23:18:53Z",
+      "title": "Segment: HTTP API Source (vendor-published archive)",
+      "type": "vendorDocumentation",
+      "url": "https://github.com/segment-boneyard/segment-docs/blob/develop/src/connections/sources/catalog/libraries/server/http-api/index.md"
+    }
+  ]
+}

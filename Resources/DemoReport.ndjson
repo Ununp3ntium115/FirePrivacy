@@ -1,0 +1,7 @@
+{"bundleID":"example.weather","domain":"weather.example","domainType":1,"firstTimeStamp":"2026-10-01T08:00:00Z","hits":24,"timeStamp":"2026-10-01T10:00:00Z","type":"networkActivity"}
+{"bundleID":"example.weather","domain":"metrics.example","domainType":1,"firstTimeStamp":"2026-10-01T08:00:00Z","hits":8,"timeStamp":"2026-10-01T10:00:00Z","type":"networkActivity"}
+{"bundleID":"example.journal","domain":"sync.example","domainType":1,"firstTimeStamp":"2026-10-01T08:00:00Z","hits":12,"timeStamp":"2026-10-01T10:00:00Z","type":"networkActivity"}
+{"bundleID":"example.reader","domain":"metrics.example","domainType":1,"firstTimeStamp":"2026-10-01T08:00:00Z","hits":5,"timeStamp":"2026-10-01T10:00:00Z","type":"networkActivity"}
+{"accessor":{"identifier":"example.weather","identifierType":"bundleID"},"category":"location","identifier":"synthetic-location-session","kind":"intervalBegin","timeStamp":"2026-10-01T08:00:00Z","type":"access"}
+{"accessor":{"identifier":"example.weather","identifierType":"bundleID"},"category":"location","identifier":"synthetic-location-session","kind":"intervalEnd","timeStamp":"2026-10-01T08:00:20Z","type":"access"}
+{"accessor":{"identifier":"example.journal","identifierType":"bundleID"},"category":"camera","identifier":"synthetic-camera-session","kind":"intervalBegin","timeStamp":"2026-10-01T09:00:00Z","type":"access"}

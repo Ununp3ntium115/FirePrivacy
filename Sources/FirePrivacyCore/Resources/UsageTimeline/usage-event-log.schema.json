@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fireprivacy:usage-event-log:v1",
+  "title": "FirePrivacy supplied opened/closed event-log lines v1",
+  "description": "First nonempty NDJSON line must match the coverage definition; each subsequent nonempty line must match the event definition. Additional semantic bounds and conservative pairing are enforced by the importer.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "schemaVersion",
+        "start",
+        "end",
+        "claimsCompleteForegroundWindows"
+      ],
+      "properties": {
+        "type": {
+          "const": "coverage"
+        },
+        "schemaVersion": {
+          "const": 1
+        },
+        "start": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "end": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "claimsCompleteForegroundWindows": {
+          "type": "boolean"
+        },
+        "deviceScope": {
+          "enum": [
+            "sameDeviceAsReport",
+            "otherDeviceOrCombined",
+            "unspecified"
+          ],
+          "default": "unspecified"
+        },
+        "bundleIDs": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "sourceLabel": {
+          "type": "string",
+          "maxLength": 4096
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundleID",
+        "event",
+        "timestamp"
+      ],
+      "properties": {
+        "bundleID": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "event": {
+          "enum": [
+            "opened",
+            "closed"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+        }
+      }
+    }
+  ]
+}
