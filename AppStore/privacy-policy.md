@@ -25,6 +25,25 @@ observations do not establish payloads, current permissions, harm, safety or a
 legal conclusion. User-entered audits and overrides remain separate from Apple
 observations.
 
+## Supplied app-use comparisons
+
+You may enter recollections, transcribe usage durations, or import app-use
+windows and opened/closed-event logs. These records remain in the encrypted
+private workspace and are separate from Apple's exported observations. Their
+origin, device scope and completeness claims are independently unverified.
+Same-device claims are bound to the report you explicitly select for comparison;
+they do not silently apply to another import. You can clear these references
+without deleting a report. Delete All removes their stored app copy; originals
+and external copies remain outside the app's control.
+
+The app compares supported exported timestamps with those supplied records.
+Network contact bounds do not locate every contact or reveal transmitted data.
+Activity outside supplied foreground windows, or during a period with zero
+supplied foreground duration, is context for review. It does not prove misuse,
+deception, current background state, or absence of data use. Gaps, combined-device
+usage and missing timestamps remain uncertain. The app does not automatically
+read Screen Time activity data. Usage references are not sent to an advisor.
+
 ## What stays on this device
 
 The private workspace holds bounded normalized report history, preferences,

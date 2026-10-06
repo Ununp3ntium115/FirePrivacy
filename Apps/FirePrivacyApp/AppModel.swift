@@ -42,6 +42,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var consent = ConsentState()
     @Published private(set) var protection: ProtectionSnapshot
     @Published private(set) var advisorResult: AdvisorResult?
+    @Published private(set) var usageTimeline = AppUsageTimeline.empty
+    @Published private(set) var usageComparison: AppUsageTimelineComparison?
     @Published private(set) var networkEvents: [NetworkEvent] = []
     @Published private(set) var knowledgeBaseVersion: String?
     @Published private(set) var knowledgeBaseFailure = false
@@ -226,6 +228,75 @@ final class AppModel: ObservableObject {
         await syncEngine()
     }
 
+    @discardableResult
+    func saveUsageTimeline(_ value: AppUsageTimeline) async -> Bool {
+        guard !isWorking else { return false }
+        beginWork("Comparing recorded activity with supplied app use")
+        defer { finishWork() }
+        do { try await engine.saveUsageTimeline(value); await syncEngine(); return true }
+        catch { await syncEngine(); showFailure("App-use reference could not be saved", error); return false }
+    }
+
+    @discardableResult
+    func clearUsageTimeline() async -> Bool { await saveUsageTimeline(.empty) }
+
+    func handleUsageTimelineImport(_ result: Result<[URL], Error>) async {
+        guard !isWorking else { return }
+        switch result {
+        case .failure(let error):
+            guard (error as NSError).code != NSUserCancelledError else { return }
+            showFailure("App-use file could not be opened", error)
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let selectedReportID = engine.report?.id
+            beginWork("Reading app-use references on this device")
+            defer { finishWork() }
+            do {
+                let imported = try await Task.detached(priority: .userInitiated) {
+                    let bytes: Data
+                    do { bytes = try ReportFileIO.readImportedData(from: url, maximumBytes: AppUsageTimelineImporter.maximumFileBytes) }
+                    catch ReportFileError.tooLarge { throw AppUsageError.tooLarge }
+                    if let timeline = try? AppUsageTimelineImporter.parse(bytes) {
+                        return (timeline, [String]())
+                    }
+                    let events = try AppUsageEventLogImporter.parse(bytes)
+                    var warnings = events.warnings.map(Self.usageLogWarningMessage)
+                    if events.warningsTruncated { warnings.append("Additional warnings exceeded the display limit; the log remains incomplete.") }
+                    return (events.timeline, warnings)
+                }.value
+                guard engine.report?.id == selectedReportID else { throw EngineError.staleOperation }
+                // Choosing this file explicitly supplies context for the viewed
+                // export. It does not authenticate its source or device claims.
+                let scoped: AppUsageTimeline
+                if let selectedReportID { scoped = try imported.0.bindingClaims(to: selectedReportID) }
+                else { scoped = imported.0 }
+                let combined = try engine.usageTimeline.merging(scoped)
+                try await engine.saveUsageTimeline(combined)
+                await syncEngine()
+                if !imported.1.isEmpty {
+                    notice = AppNotice(title: "App-use log imported with gaps", message: imported.1.prefix(8).joined(separator: "\n"))
+                }
+            } catch {
+                await syncEngine()
+                showFailure("App-use import needs attention", error)
+            }
+        }
+    }
+
+    nonisolated private static func usageLogWarningMessage(_ warning: AppUsageEventLogWarning) -> String {
+        let message: String
+        switch warning.code {
+        case .invalidRecord: message = "A record could not be read; its usage coverage is incomplete."
+        case .unmatchedOpened: message = "An opened event has no matching closed event."
+        case .unmatchedClosed: message = "A closed event has no matching opened event."
+        case .duplicateOpened: message = "Another opened event occurred before a matching close."
+        case .outOfOrder: message = "Events were out of time order."
+        case .outsideCoverage: message = "An event falls outside the supplied reporting period."
+        case .noEvents: message = "A listed app has no logged events; inactivity cannot be inferred."
+        }
+        return warning.line.map { "Line \($0): " + message } ?? message
+    }
+
     func assessLocally() async {
         beginWork("Preparing evidence-backed guidance")
         defer { finishWork() }
@@ -330,6 +401,8 @@ final class AppModel: ObservableObject {
         consent = engine.consent
         protection = engine.protection
         advisorResult = engine.advisorResult
+        usageTimeline = engine.usageTimeline
+        usageComparison = engine.usageComparison
         networkEvents = await engine.gate.ledger.snapshot()
         knowledgeBaseVersion = engine.knowledgeBase?.version
         knowledgeBaseFailure = engine.knowledgeBaseFailure

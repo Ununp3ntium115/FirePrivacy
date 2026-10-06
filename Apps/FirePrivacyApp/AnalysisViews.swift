@@ -202,6 +202,7 @@ struct EvidenceTimingView: View {
         FirePage {
             ReportStatusBanner()
             PageHeader(eyebrow: "Timing is context, not causation", title: "Read the recorded moments.", subtitle: "Sensor records and network windows can be close in time without sharing data. These local associations do not prove that sensor content was transmitted.")
+            NavigationLink { UsageTimelineView() } label: { Label("Activity versus app use", systemImage: "rectangle.split.2x1").foregroundStyle(FireStyle.ember).padding(.vertical, 12) }
             if let summary {
                 SectionHeading(title: "Sensor record summary", detail: "Begin/end pairs are candidate intervals, not a proven number of distinct accesses.")
                 ForEach(summary.activity) { activity in

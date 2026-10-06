@@ -9,6 +9,7 @@ The app has no account, ads, tracking SDK, subscription, or report resale. A rec
 - Bounded hostile-input import, exact reported fields, content-derived evidence IDs, source/line hashes, timestamp precision, public-suffix normalization and sensor begin/end distinctions.
 - Signed, cited knowledge; versioned deterministic findings with separate facts, inferences, uncertainty, evidence, actions and explainable posture dimensions. Preferences change relevance rather than factual confidence.
 - Profiles, self-reported permission audits, local domain overrides, encrypted session history, comparisons, weekly summaries and bounded analysis revisions.
+- Local activity-versus-usage comparison with report-bound recollections, transcribed durations and supplied opened/closed logs; timestamp precision, gaps, device scope and unverified claims stay visible. See [USAGE-COMPARISON](Documentation/USAGE-COMPARISON.md).
 - AES-GCM storage with a device-only unlocked Keychain key, optional encrypted source retention, retention limits, generation guards, recoverable key rotation, deletion and retryable cleanup.
 - JSON/CSV/Markdown full or redacted exports and opt-in sanitized diagnostics. Originals and previously shared copies remain outside the app’s control.
 - Persisted feature-specific consent, exact one-use network previews, cancellation/revocation and a bounded host/purpose/byte/status ledger. Local import and analysis need no network request.

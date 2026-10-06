@@ -34,10 +34,28 @@ missing evidence cannot produce a perfect-safety score. Report comparison and
 weekly summaries describe exported history. A missing later observation does
 not prove a finding was resolved. Temporal proximity is association, not cause.
 
+## Supplied app-use comparison
+
+The local timeline compares supported Apple observations against separately
+supplied recollections, transcribed durations or imported windows/event logs.
+References preserve unverified provenance, coverage, completeness and device
+scope. Same-device claims require explicit binding to the selected report;
+neither a label nor a user claim attests device identity. Missing log boundaries
+remain gaps. Positive usage totals do not locate exact foreground sessions.
+Network first/last bounds are not continuous traffic or per-contact timestamps.
+
+Review indicators remain separate from publisher findings, posture and advisor
+payloads. They cannot prove background state, deception, transmitted payloads,
+misuse or absence of data use. References use encrypted feature storage, support
+independent clearing and Delete All, and introduce no network request purpose.
+The consumer has no automatic Screen Time exporter. See
+[USAGE-COMPARISON](Documentation/USAGE-COMPARISON.md) for current Apple API gates.
+
 ## Private storage and retention
 
 The private workspace stores bounded report sessions, an encrypted index,
-preferences, manual audits/overrides, consent receipts, network event metadata,
+preferences, manual audits/overrides, supplied usage references, consent receipts,
+network event metadata,
 and installed dataset state. The default history policy is ten reports and
 64 MiB for report/source ciphertext; configurable source limits are at most
 20 reports and 64 MiB. Feature-state storage has separate bounded limits.

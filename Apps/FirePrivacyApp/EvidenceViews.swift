@@ -21,6 +21,7 @@ struct EvidenceView: View {
             if let report = model.report {
                 evidencePicker
                 NavigationLink { EvidenceTimingView(report: report) } label: { Label("Recorded timing & sensor intervals", systemImage: "clock.arrow.circlepath").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
+                NavigationLink { UsageTimelineView() } label: { Label("Activity versus app use", systemImage: "rectangle.split.2x1").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
                 if kind != .notes {
                     HStack(spacing: 12) {
                         Image(systemName: "magnifyingglass").foregroundStyle(FireStyle.muted).accessibilityHidden(true)

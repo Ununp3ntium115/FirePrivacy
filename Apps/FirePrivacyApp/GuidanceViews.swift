@@ -21,6 +21,7 @@ struct GuidanceView: View {
                     NavigationLink { AdvisorSettingsView() } label: { Label("Explanation advisor", systemImage: "text.bubble").foregroundStyle(FireStyle.ember).padding(.vertical, 8) }
                 }
             }
+            NavigationLink { UsageTimelineView() } label: { Label("Activity versus app use", systemImage: "rectangle.split.2x1").foregroundStyle(FireStyle.ember).padding(.vertical, 12) }
             if let report = model.report, model.analysis != nil {
                 SectionHeading(title: "From this snapshot", detail: "Review priority is not a threat verdict. Every finding includes its rule version, supporting records and limitations.")
                 Toggle("Include findings hidden by me", isOn: $includeHidden).tint(FireStyle.ember)

@@ -322,7 +322,7 @@ struct TimestampParser {
 
 /// Validates structure before Foundation can allocate an arbitrarily nested graph.
 /// Duplicate keys are rejected rather than accepting a parser's last-value choice.
-private struct BoundedJSONValidator {
+struct BoundedJSONValidator {
     let bytes: [UInt8]
     private(set) var topLevelNumbers: [String: String] = [:]
     private var index = 0

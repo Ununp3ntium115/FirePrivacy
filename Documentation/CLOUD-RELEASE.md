@@ -10,8 +10,8 @@ Keep browser tabs for [PR #2](https://github.com/Ununp3ntium115/FirePrivacy/pull
 [App Store Connect](https://appstoreconnect.apple.com/). The existing public
 [policy](https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md)
 and [support](https://github.com/Ununp3ntium115/FirePrivacy/issues) returned HTTP 200
-without login on October 5, 2026. The policy describes the earlier MVP: publish
-the revised matching policy before expanded distribution. `gh-pages` source
+without login on October 6, 2026. The expanded consumer policy is published;
+verify the matching usage-comparison revision before distribution. `gh-pages` source
 exists, but standalone Pages hosting was not enabled by this integration.
 
 ## Select the actual edition

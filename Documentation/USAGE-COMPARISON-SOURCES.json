@@ -1,0 +1,1134 @@
+{
+  "retrievedOn": "2026-10-06",
+  "scope": "Official Apple APR, Screen Time, DeviceActivity/FamilyControls and Shortcuts boundaries for local usage comparison; source retrieval is not runtime/entitlement approval",
+  "transport": "curl HTTPS with normal TLS verification; public read-only endpoints",
+  "sources": [
+    {
+      "id": "familycontrols",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols.json",
+      "httpStatus": 200,
+      "bytes": 17378,
+      "sha256": "7efaef32e77f8a6b2cba7e11149053d0581df972ffd0220a261b33dba6afa3ba",
+      "retrievedAtUTC": "2026-10-06T00:58:44.897512+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Family Controls",
+      "availability": [
+        {
+          "beta": false,
+          "introducedAt": "15.0",
+          "name": "iOS"
+        },
+        {
+          "beta": false,
+          "introducedAt": "15.0",
+          "name": "iPadOS"
+        },
+        {
+          "beta": false,
+          "introducedAt": "15.0",
+          "name": "Mac Catalyst"
+        }
+      ],
+      "textualEvidence": [
+        "To authorize your parental controls app, use a shared AuthorizationCenter instance. You can authorize parental controls on any device.",
+        "You must add the Family Controls capability to your app before you call the requestAuthorization(for:) or revokeAuthorization(completionHandler:) methods. This capability adds the Family Controls entitlement to your app. Before submitting your app to the App Store, you must request permission to use the entitlement. For more information, see Adding capabilities to your app.",
+        "Authorizing parental controls for a child requires approval from a parent or guardian in the same Family Sharing group. The system displays an authentication sheet on the child’s device, and the parent or guardian approves or denies the authorization request. The system sends the result to your app’s AuthorizationCenter.",
+        "Authorizing parental controls for an individual requires approval from the owner of the device. The system displays a biometric authentication alert on the individual’s device after the individual approves or denies the authorization request. The system sends the result to your app’s AuthorizationCenter.",
+        "The Family Controls framework prevents child users, authorized by a parent or guardian, from performing actions that might circumvent the parental controls settings. For example, authorizing an app prevents the child user from deleting the app that provides parental controls. In addition, while a device has at least one app authorized for parental controls by a parent or guardian, the user can’t sign out of iCloud.",
+        "In a compatible iPad or iPhone app running in visionOS, authorization attempts always fail."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols"
+    },
+    {
+      "id": "authorizationcenter",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/authorizationcenter.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/authorizationcenter.json",
+      "httpStatus": 200,
+      "bytes": 19462,
+      "sha256": "b5b441f162a8bce11298c8f9235e019fc43a3b60a1b26f58b76158f2c7293914",
+      "retrievedAtUTC": "2026-10-06T00:58:44.918846+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "AuthorizationCenter",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "To authorize your app so that it can provide parental controls, access the shared AuthorizationCenter instance.",
+        "You must add the Family Controls capability to your app before you call the requestAuthorization(for:) or revokeAuthorization(completionHandler:) methods. This capability adds the Family Controls entitlement to your app. In a compatible iPad or iPhone app running in visionOS, authorization attempts always fail. For more information, see Adding capabilities to your app.",
+        "Next, to request authorization to provide parental controls, call requestAuthorization(completionHandler:)",
+        "or requestAuthorization(for:).",
+        "Always request authorization when your app first launches. If the user’s parent or guardian hasn’t previously authorized your app, the system displays an alert. If the parent or guardian chooses to continue, it displays an authentication sheet. When a parent or guardian either approves or cancels the request, the system sends the result back to the requestAuthorization(completionHandler:) method’s completion handler.",
+        "If you’re authenticating an individual who hasn’t previously authorized your app, the system displays an alert. If the individual chooses to continue, the device asks to authorize that individual using Face ID or Touch ID.",
+        "After your app has been authorized, additional calls to requestAuthorization(for:) don’t display the authentication sheet or ask to authorize that individual using Face ID or Touch ID. Instead, the system sets the authorization status.",
+        "To observe changes to the authorization status, use the authorizationStatus property.",
+        "The status may change due to external events, such as a child graduating to an adult account, or a parent or guardian changing the status in Settings. You can also revoke authorization by calling revokeAuthorization(completionHandler:)"
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols/authorizationcenter"
+    },
+    {
+      "id": "requestauthorization",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/authorizationcenter/requestauthorization(for:).json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/authorizationcenter/requestauthorization(for:).json",
+      "httpStatus": 200,
+      "bytes": 11802,
+      "sha256": "1fd2d7fb540937bf38d5794727122ee14692720ff0eb7891ebab810a5cd15155",
+      "retrievedAtUTC": "2026-10-06T00:58:44.885145+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "requestAuthorization(for:)",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "The FamilyControlsMember that requests authorization",
+        "With this function you can authorize parental controls for a FamilyControlsMember.child that’s signed into the iCloud account on the device or a FamilyControlsMember.individual. A parent or guardian must authenticate a child’s account, while individuals can authenticate their own account. For more information, see FamilyControlsMember.",
+        "Call this method when your app first launches.",
+        "If the FamilyControlsMember.individual hasn’t authorized your app previously, the device tries to authorize that individual using Face ID or Touch ID. After the user approves or cancels the request, the system either sets the authorization status or throws an error.",
+        "After a FamilyControlsMember.individual authorizes your app, additional calls to requestAuthorization(for:) no longer ask to authorize that individual using Face ID or Touch ID. Additionally, the system removes any restrictions that prevent the user from bypassing parental controls so the user can delete an authorized app or sign out of iCloud as needed.",
+        "You can revoke authorization by calling revokeAuthorization(completionHandler:)."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols/authorizationcenter/requestauthorization(for:)"
+    },
+    {
+      "id": "family-entitlement",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/requesting-the-family-controls-entitlement.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/requesting-the-family-controls-entitlement.json",
+      "httpStatus": 200,
+      "bytes": 11928,
+      "sha256": "6550e0a0591fc13658209f9461583bc6a502935dca9f6131e13ecd4f278989ee",
+      "retrievedAtUTC": "2026-10-06T00:58:44.884607+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Requesting the Family Controls entitlement",
+      "availability": [],
+      "textualEvidence": [
+        "Before you distribute an app that uses Family Controls, your Apple Developer Account Holder must request permission to use the Family Controls entitlement, and update your Xcode project to use the entitlement.",
+        "Request the Family Controls entitlement at Family Controls distribution. If your app includes a Screen Time API app extension such as Device Activity Monitor, Device Activity Report, Shield Action, or Shield Configuration, submit the same request for the extension. For more information on the Screen Time APIs, see Screen Time Technology Frameworks.",
+        "You can also use the Capability Requests tab in Certificates, Identifiers & Profiles to request permission to use the Family Controls entitlement for distribution. For more information, see Capability Requests.",
+        "Apple reviews your app, and if it’s approved, adds the entitlement to your developer account using managed capabilities. For more information, see Provisioning with capabilities.",
+        "To check your request status, follow the steps in Check the status of your request in Capability Requests, then select Family Controls from the Capabilities list. When Apple approves your request, Certificates, Identifiers & Profiles displays an Assigned status for this capability.",
+        "Click the info button next to the capability. In the dialog that appears, check that Provisioning Support lists all the distribution methods you need.",
+        "When you receive the Family Controls entitlement, update your Xcode project to use it. For more information, see Configuring Family Controls.",
+        "If your Xcode project already includes the Family Controls capability for development and you use automatic signing, Xcode automatically updates your app to use this capability for distribution."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols/requesting-the-family-controls-entitlement"
+    },
+    {
+      "id": "familyactivitypicker",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/familyactivitypicker.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/familyactivitypicker.json",
+      "httpStatus": 200,
+      "bytes": 20743,
+      "sha256": "df6ef9dffad4906d998b784cecf1a6c54107666e696e422e51782643c1d7f408",
+      "retrievedAtUTC": "2026-10-06T00:58:44.902789+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "FamilyActivityPicker",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "To prompt the user for their selection, create a binding to a FamilyActivitySelection instance, and use the binding to create a FamilyActivityPicker instance. You can then display the picker like any SwiftUI view.",
+        "A FamilyActivityPicker shown on a parent device only displays applications and websites from authorized child devices within the Family Sharing Group. A FamilyActivityPicker shown on an individually authorized device includes applications and websites from that same device.",
+        "To streamline this process, call the familyActivityPicker(isPresented:selection:) modifier on a view in your user interface. This modifier displays the picker view as a sheet over your user interface when the isPresented binding is true.",
+        "When you present the FamilyActivityPicker, the system displays a view where the user can select categories, applications, and web domains. As soon as the user confirms their selection, the system updates the FamilyActivitySelection binding with the user’s selections. To protect the user’s privacy, the system uses opaque values to represent the selections.",
+        "Your app passes the selected values to the appropriate instances and methods from the Managed Settings and Device Activity frameworks."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols/familyactivitypicker"
+    },
+    {
+      "id": "deviceactivityreport",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityreport.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityreport.json",
+      "httpStatus": 200,
+      "bytes": 16404,
+      "sha256": "f626f8580eb64de05569cc45dbabd1b820299bf322ca9ec9a12efee985c82778",
+      "retrievedAtUTC": "2026-10-06T00:58:44.901760+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityReport",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "When you create a report, the system asks your app’s device activity report extension to provide a View representing the user’s device activity. To protect the user’s privacy, your extension runs in a sandbox. This sandbox prevents your extension from making network requests or moving sensitive content outside the extension’s address space. The extension point identifier for all device activity report extensions is com.apple.deviceactivityui.report-extension. You can configure a report with a custom context and filter, and then display the report like any SwiftUI view.",
+        "The system will only provide your extension with device activity data if the user has authorized your app for family controls on their device or on the device(s) of children in their iCloud family. See AuthorizationCenter for more details."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivityreport"
+    },
+    {
+      "id": "deviceactivitydata",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata.json",
+      "httpStatus": 200,
+      "bytes": 19063,
+      "sha256": "19892a0e3009e1b53fc5893c2346e78dd219a370b626825f22f5ff4cdf291fed",
+      "retrievedAtUTC": "2026-10-06T00:58:45.152079+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityData",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata"
+    },
+    {
+      "id": "activitysegment",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment.json",
+      "httpStatus": 200,
+      "bytes": 14913,
+      "sha256": "d0a8f17af6796481e05e92599af9c463000269ab7e378fc8a52b50945b6cd179",
+      "retrievedAtUTC": "2026-10-06T00:58:45.126924+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityData.ActivitySegment",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "This type contains all of the activity details for a particular person on a particular device during dateInterval."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/activitysegment"
+    },
+    {
+      "id": "applicationactivity",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/applicationactivity.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/applicationactivity.json",
+      "httpStatus": 200,
+      "bytes": 10858,
+      "sha256": "63c0e9a6cbe7a18a4161b17bd72e374605300b3225696dc7ec14234e4113755b",
+      "retrievedAtUTC": "2026-10-06T00:58:45.139284+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityData.ApplicationActivity",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/applicationactivity"
+    },
+    {
+      "id": "segment-dateinterval",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment/dateinterval.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment/dateinterval.json",
+      "httpStatus": 200,
+      "bytes": 6847,
+      "sha256": "ea7c087c1d8847e035299647e25a475bf56d4f9e92ed945b98953782136700ca",
+      "retrievedAtUTC": "2026-10-06T00:58:45.062761+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "dateInterval",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "The DeviceActivityFilter.SegmentInterval that your app requests determines this value."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/activitysegment/dateinterval"
+    },
+    {
+      "id": "segment-longestactivity",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment/longestactivity.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment/longestactivity.json",
+      "httpStatus": 200,
+      "bytes": 8102,
+      "sha256": "af4597fd8d9dbd03098deabdd883c9422299a6fc7b5451492a1f5b2f093d3363",
+      "retrievedAtUTC": "2026-10-06T00:58:45.076309+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "longestActivity",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "This value may be nil if the person didn’t use this device during dateInterval."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/activitysegment/longestactivity"
+    },
+    {
+      "id": "segment-firstpickup",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment/firstpickup.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitysegment/firstpickup.json",
+      "httpStatus": 200,
+      "bytes": 8036,
+      "sha256": "e2affc37679d04566fab17b84b5c4e7bc0343799b3ee3a47a250fc892bf77a81",
+      "retrievedAtUTC": "2026-10-06T00:58:45.085753+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "firstPickup",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "This value may be nil if the person never picked up the device during dateInterval."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/activitysegment/firstpickup"
+    },
+    {
+      "id": "app-duration",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/applicationactivity/totalactivityduration.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/applicationactivity/totalactivityduration.json",
+      "httpStatus": 200,
+      "bytes": 6310,
+      "sha256": "0dc9ac8ab7cda57325dcc75310713bcd1ca1d42d2c8758972e858a3b14ad11b6",
+      "retrievedAtUTC": "2026-10-06T00:58:45.206548+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "totalActivityDuration",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/applicationactivity/totalactivityduration"
+    },
+    {
+      "id": "segmentinterval",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityfilter/segmentinterval-swift.enum.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityfilter/segmentinterval-swift.enum.json",
+      "httpStatus": 200,
+      "bytes": 8928,
+      "sha256": "a562dca6e69cb66aebb329f4f3290d4c8140dffc91a4d6eaaf01b741987e39df",
+      "retrievedAtUTC": "2026-10-06T00:58:45.232340+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityFilter.SegmentInterval",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivityfilter/segmentinterval-swift.enum"
+    },
+    {
+      "id": "hourly",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityfilter/segmentinterval-swift.enum/hourly(during:).json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityfilter/segmentinterval-swift.enum/hourly(during:).json",
+      "httpStatus": 200,
+      "bytes": 7231,
+      "sha256": "bd69a41576942bc03bc6e2222e51f6f8d7f9351e04d211ed2e3cf3370b73e18d",
+      "retrievedAtUTC": "2026-10-06T00:58:45.250529+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityFilter.SegmentInterval.hourly(during:)",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "If you do not provide an interval, then the system aggregates device activity into hour-long segments for the current day. The system disregards any date components in the interval that are smaller than .hour and instead uses the start of the hour specified by interval.start and the end of the hour specified by interval.end."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivityfilter/segmentinterval-swift.enum/hourly(during:)"
+    },
+    {
+      "id": "lastupdated",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/lastupdateddate.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/lastupdateddate.json",
+      "httpStatus": 200,
+      "bytes": 7751,
+      "sha256": "94786189ac027d231f1dc1a0d8b131b96e75891e7ffd79f7c4b0667a8925834a",
+      "retrievedAtUTC": "2026-10-06T00:58:45.295975+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "lastUpdatedDate",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/lastupdateddate"
+    },
+    {
+      "id": "monitor-limits",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityevent.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityevent.json",
+      "httpStatus": 200,
+      "bytes": 17234,
+      "sha256": "8158a7192e306fbd1efd14b441a1b855aca8e97f6c6ea34044b187b495bc5cf9",
+      "retrievedAtUTC": "2026-10-06T00:58:45.308736+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityEvent",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "Device activity is the amount of time an application, category, or web domain is frontmost on the screen and accumulates based on the time zone of the scheduled start date. Web domain activity includes domains visited in Safari or any third-party browser that contributes web usage via a STWebpageController."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivityevent"
+    },
+    {
+      "id": "deviceactivitycenter",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitycenter.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitycenter.json",
+      "httpStatus": 200,
+      "bytes": 16935,
+      "sha256": "b7d410f994886a1be2b1baba837a8c07061b7035be651b4a61260d71611bdd70",
+      "retrievedAtUTC": "2026-10-06T00:58:45.324734+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityCenter",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "15.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "Activity begins when someone first uses a device within the scheduled time interval and ends when someone first uses the device outside of the interval. The system only invokes the intervalDidStart(for:) and intervalDidEnd(for:) when the device is in use. Likewise, the system invokes the eventDidReachThreshold(_:activity:) function when an event reaches its threshold."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitycenter"
+    },
+    {
+      "id": "deviceactivityauthorization",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityauthorization.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityauthorization.json",
+      "httpStatus": 200,
+      "bytes": 13213,
+      "sha256": "4fef771d196146c46cbd7738e6a7ed6745bba278432435f5ff5fab78a86a3815",
+      "retrievedAtUTC": "2026-10-06T00:58:45.378035+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityAuthorization",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "17.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "17.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "17.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "14.0",
+          "name": "macOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivityauthorization"
+    },
+    {
+      "id": "activity-authorizing",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityauthorizing.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivityauthorizing.json",
+      "httpStatus": 200,
+      "bytes": 6153,
+      "sha256": "7854175ea2b4254dccfcf0b70c9f137f1f2a36db9ac37673545a1769588182d7",
+      "retrievedAtUTC": "2026-10-06T00:58:45.380020+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityAuthorizing",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "17.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "17.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "17.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "14.0",
+          "name": "macOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivityauthorizing"
+    },
+    {
+      "id": "activitydata-filtered",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitydata(filteredby:using:).json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/activitydata(filteredby:using:).json",
+      "httpStatus": 200,
+      "bytes": 14308,
+      "sha256": "312e7f7487f876c146919ade55a3f318e65e25a6a16a70ee1c1c1cd11c1b5f67",
+      "retrievedAtUTC": "2026-10-06T00:58:45.506841+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "activityData(filteredBy:using:)",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "The filter to use when fetching activity data.",
+        "The policy to use when fetching activity data.",
+        "A sequence of device activity data for the given filter.",
+        "Use this method to export family activity data, for use in another app or platform.",
+        "You can develop and test an app that uses this method on devices in any region. Customer installations of your app can only use the method on devices located in the EU that are signed in with an Apple Account with an EU country or region. Otherwise, it throws an error.",
+        "Your app’s authorization status needs to be AuthorizationStatus.approvedWithDataAccess to use this method.",
+        "Your app needs the Family Controls App and Website Usage entitlement to use this method. Enable the capability on your Xcode target to add the entitlement to your app. For more information, see Adding capabilities to your app."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/activitydata(filteredby:using:)"
+    },
+    {
+      "id": "familyactivitydata",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/familyactivitydata.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/familyactivitydata.json",
+      "httpStatus": 200,
+      "bytes": 13215,
+      "sha256": "09be68ca8ac4314c9d7db32af62cc6f97856f1a41efb5cd277bc47c58947e55a",
+      "retrievedAtUTC": "2026-10-06T00:58:45.514068+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "FamilyActivityData",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "To fetch a person’s family activity data, use installedApplications, visitedWebDomains, or activityCategories based on the type of data you need.",
+        "You can develop and test an app that uses this class on devices in any region. Customer installations of your app can only use the class on devices located in the EU that are signed in with an Apple Account with an EU country or region.",
+        "Your app’s authorization status needs to be AuthorizationStatus.approvedWithDataAccess to use this class.",
+        "Your app needs the Family Controls App and Website Usage entitlement to use this class. Enable the capability on your Xcode target to add the entitlement to your app. For more information, see Adding capabilities to your app."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols/familyactivitydata"
+    },
+    {
+      "id": "activity-access-entitlement",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/bundleresources/entitlements/com.apple.developer.family-controls.app-and-website-usage.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/bundleresources/entitlements/com.apple.developer.family-controls.app-and-website-usage.json",
+      "httpStatus": 200,
+      "bytes": 11108,
+      "sha256": "800d167c30a57a6fba147fa4dcb763a61f849f6d44ed07c39b2dc354f4ca917b",
+      "retrievedAtUTC": "2026-10-06T00:58:45.468339+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Family Controls App and Website Usage",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "You must add this entitlement to your app before you access app and website usage information through the Family Controls and Device Activity frameworks. This includes obtaining the AuthorizationStatus.approvedWithDataAccess authorization status, which lets your app use FamilyActivityData to retrieve the actual bundle identifiers of installed applications, domain names of visited websites, and display names of activity categories. Your app requires explicit authorization from the person before it can access any of this data.",
+        "Add this entitlement to your app by enabling the Family Controls App And Website Usage on your target in Xcode. For more information, see Adding capabilities to your app."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.family-controls.app-and-website-usage"
+    },
+    {
+      "id": "approved-data-access",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/authorizationstatus/approvedwithdataaccess.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/authorizationstatus/approvedwithdataaccess.json",
+      "httpStatus": 200,
+      "bytes": 14541,
+      "sha256": "e14a57afaf4bc866b07c47934ae43ab9b292f4e278d06771f8876a9e6fdfb544",
+      "retrievedAtUTC": "2026-10-06T00:58:45.474472+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "AuthorizationStatus.approvedWithDataAccess",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "This status grants everything that AuthorizationStatus.approved allows, and additionally lets your app use FamilyActivityData to fetch the actual bundle identifiers of installed applications, domain names of visited websites, and display names of activity categories instead of the opaque, tokenized representations returned under AuthorizationStatus.approved. It also grants access to activityData(filteredBy:using:).",
+        "Only one app at a time can hold this authorization status on a given device. If a person grants data access to a different app, your app’s status reverts to .notDetermined.",
+        "You may develop and test an app that achieves this status on devices in all regions by using an Apple-provided provisioning profile. Customer installations of your app can only achieve this status on devices located in the EU that are signed in with an Apple Account with an EU country or region. On devices outside the EU, authorizationStatus never returns approvedWithDataAccess, and any attempt to access FamilyActivityDataproperties fails with FamilyControlsError.unavailable.",
+        "Add the Family Controls App and Website Usage capability to your app before accessing FamilyActivityData. For more information, see Adding capabilities to your app."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols/authorizationstatus/approvedwithdataaccess"
+    },
+    {
+      "id": "installed-applications",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/familyactivitydata/installedapplications.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/familycontrols/familyactivitydata/installedapplications.json",
+      "httpStatus": 200,
+      "bytes": 9300,
+      "sha256": "96a76fee30675935ea7a1697bb9e19ec8f2d8ce2183b572c7b32fb66e60c569f",
+      "retrievedAtUTC": "2026-10-06T00:58:45.522848+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "installedApplications",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "Each application contains both a bundleIdentifier and a token.",
+        "Authorize your app with AuthorizationCenter and ensure data access is available before accessing this variable. Otherwise, it always throws an error."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/familycontrols/familyactivitydata/installedapplications"
+    },
+    {
+      "id": "policy-live",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/policy/live.json",
+      "effectiveURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/policy/live.json",
+      "httpStatus": 200,
+      "bytes": 5523,
+      "sha256": "d7aca86a01db7468419c6f2cbf9058ec72acc497dc35f65ae21e64887f0d3247",
+      "retrievedAtUTC": "2026-10-06T00:58:45.441901+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityData.Policy.live",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "26.4",
+          "name": "iPadOS",
+          "unavailable": false
+        }
+      ],
+      "textualEvidence": [
+        "A request to fetch live data may return cached data if the system updated the cache recently."
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/policy/live"
+    },
+    {
+      "id": "apr-support",
+      "requestedURL": "https://support.apple.com/en-us/102188",
+      "effectiveURL": "https://support.apple.com/en-us/102188",
+      "httpStatus": 200,
+      "bytes": 165596,
+      "sha256": "a2fc31534592b8ce5a3fd214952265202b076a1fdcbb8c1d4d870fcb988c374b",
+      "retrievedAtUTC": "2026-10-06T00:58:45.588500+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "About App Privacy Report",
+      "textualEvidence": "About App Privacy Report Learn how App Privacy Report helps give you visibility into the ways that apps use the privacy permissions you've granted them, as well as their network activity. What is App Privacy Report? With iOS 15.2 or later and iPadOS 15.2 or later, you can turn on App Privacy Report to see details about how often apps access your data — like your location, camera, microphone, and more. You can also see information about each app's network activity and website network activity, as well as the web domains that all apps contact most frequently. Together with Privacy Nutrition Labels , App Privacy Report helps give you a more complete picture of how the apps you use treat your data. Turn on App Privacy Report In Settings, tap Privacy & Security. Scroll down and tap App Privacy Report. Tap Turn on App Privacy Report. App Privacy Report starts gathering information only after you turn it on, so it may take a little time for details to appear. You’ll see more info as you continue using apps on your device. The data in your App Privacy Report is encrypted and stored only on your device. You can turn off App Privacy Report at any time in Settings > Privacy & Security > App Privacy Report. Doing so will also clear the report data from your device. What's in your App Privacy Report? App Privacy Report includes information about the following: Data & Sensor Access Data & Sensor Access shows how many times and when an app accessed privacy-sensitive data or device sensors in the past 7 days. This may include details about an app’s access to Location, Photos, Camera, Microphone, Contacts, and more. You can tap each app and data type to learn more. Apple apps use Contacts data in various ways on your device to provide features to you. For example, Apple TV, Apple Music, Apple Podcasts, Fitness, and Apple Books use your Me card from Contacts to display your profile photo in those apps. Notes, Reminders, and Messages personalize your experience on each device with names from your Contacts. Camera and Photos use Contacts to identify people in photos for albums, Memories, and other features that are personalized on your device. Fitness and Health use Contacts to enable sharing features. Calendar uses Contacts to display birthdays. Safari uses Contacts to offer to complete forms using AutoFill. In these cases, contact names and photos are kept on your device and aren't sent to Apple. Network Activity App Privacy Report includes information about domains that have been contacted either by apps you’ve used or websites you’ve visited within those apps. A domain is the name of a website that allows it to be found on the internet. This information also helps provide visibility into domains that may be collecting data about you across different apps and websites. App Network Activity shows domains that have been contacted either directly or from content within an app in the past 7 days. Domains that have been contacted from content could include things like tapping on an article in a social app’s news feed or playing a video that’s embedded in an app. Website Network Activity shows domains that have been contacted by websites you’ve visited within apps in the past 7 days. Most Contacted Domains lists the web domains most frequently contacted by all your apps, either directly or from in-app web content, in the past 7 days. App Privacy Report doesn't include network activity from private browsing sessions in browser apps. Network activity and websites visited in non-browser apps that provide private modes are displayed in App Privacy Report. How to update privacy settings App Privacy Report is designed to give you more visibility into how apps access your data. If an app appears to be accessing your data in a way or at a time that you didn't expect, you can update your privacy settings or revoke permission. Learn how to update privacy settings on your iPhone, iPad, or iPod touch or on your Mac . If you need more information about why an app wants access to particular data or how that access is used, you can check the app’s privacy policy, read the app’s Privacy Nutrition Label on its App Store product page, or contact the app developer for more information. Note that in some cases, an app may have access to data from your device without the app developer collecting that data. For example, if the data is kept only on your device. You can read more about what constitutes data being collected by a developer in the Privacy Nutrition Label documentation . Learn more Learn more about Apple and privacy Information about products not manufactured by Apple, or independent websites not controlled or tested by Apple, is provided without recommendation or endorsement. Apple assumes no responsibility with regard to the selection, performance, or use of third-party websites or products. Apple makes no representations regarding third-party website accuracy or reliability. Contact the vendor for additional information. Published Date: December 19, 2025 "
+    },
+    {
+      "id": "iphone-view-screen-time",
+      "requestedURL": "https://support.apple.com/guide/iphone/view-your-screen-time-summary-iphbfa595995/ios",
+      "effectiveURL": "https://support.apple.com/guide/iphone/set-up-screen-time-for-yourself-iphbfa595995/ios",
+      "httpStatus": 200,
+      "bytes": 1444526,
+      "sha256": "de97ce3ac9341a0de37b82ab468963968310e9945aac69a26a29c0bc022d6440",
+      "retrievedAtUTC": "2026-10-06T00:58:45.763308+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Set up Screen Time for yourself on iPhone",
+      "textualEvidence": "Set up Screen Time for yourself on iPhone With Screen Time, you can get information about how much time you spend on your devices—including which apps and websites you use and for how long. You can use Time Allowances to balance time across entertainment, games, and social media apps. You can also set schedules to manage when those apps are available, and content restrictions to manage what can be accessed. Note: To use all the latest Screen Time features, you need iOS 27, iPadOS 27, macOS 27, watchOS 27, visionOS 27, or later on all your Apple devices. If you’re setting up these features in a Family Sharing group, all devices must be upgraded to iOS 27, iPadOS 27, macOS 27, watchOS 27, visionOS 27, or later. Learn how to update your Apple devices . If you want to set up Screen Time or parental control features for your child, see Apple Devices for Kids and Families . Turn on Screen Time Go to the Settings app on your iPhone. Tap Screen Time, then do any of the following: Tap Screen Time Schedule, then tap Turn On App & Website Activity. Tap Time Allowances, then tap Turn On App & Website Activity. Tap Manage Screen Time, then tap Turn On App & Website Activity. Note: You can quickly check your device use by adding a Screen Time widget to your Home Screen. Use Screen Time across your devices You can sync your Screen Time settings and reports across your iPhone, iPad, and Mac where you’re signed in to the same Apple Account. This means your screen time schedules, time allowances, and usage data are shared across your devices. You can also see your combined Screen Time activity across devices. Go to the Settings app on your iPhone. Tap Screen Time, tap Manage Screen Time, then turn on Share Across Devices. When Share Across Devices is on, any Screen Time limits or schedules you set apply to your iPhone, iPad, and Mac. If you turn off Share Across Devices, each device has its own Screen Time settings. Note: To use Share Across Devices, you need iOS 27, iPadOS 27, macOS 27, watchOS 27, visionOS 27, or later on all your Apple devices. If you’re setting up these features in a Family Sharing group, all devices must be upgraded to iOS 27, iPadOS 27, macOS 27, watchOS 27, visionOS 27, or later. Learn how to update your Apple devices . View Screen Time summaries After you turn on Screen Time , you can get a weekly report with an overview of the time you spend on your devices, your most used apps, how often you pick up your iPhone and other devices, and more. Go to the Settings app on your iPhone. Tap Screen Time, then tap Daily Average. Tap Week to show a summary of weekly use, or tap Day to show a summary of daily use. You can also scroll down to view a report of your Pickups and Notifications to see how many times you picked up your devices and how many notifications you received. You can swipe left and right on your summaries to view your history. Turn off Screen Time Go to the Settings app on your iPhone. Tap Screen Time, then do any of the following: Turn off Screen Time: Tap Manage Screen Time, then tap Turn Off App & Website Activity. Turn off your Screen Time schedule: Tap Screen Time Schedule, then turn off Schedule. Turn off your Time Allowances for apps: Tap Time Allowances, tap Manage Categories, select a category, then select Delete (your category name) Category. You can also view your summary by tapping a Screen Time Weekly Report notification when one appears on your screen. (If the notification disappears, you can find it in Notification Center .) See also Create, change, or remove a Screen Time passcode on iPhone Set up Family Sharing on iPhone Apple Devices for Kids and Families Previous Share locations with family and locate lost devices Next Set schedules and time allowances "
+    },
+    {
+      "id": "shortcuts-app-triggers-26",
+      "requestedURL": "https://support.apple.com/guide/shortcuts/apde31e9638b/9.0/ios/26",
+      "effectiveURL": "https://support.apple.com/guide/shortcuts/setting-triggers-apde31e9638b/9.0/ios/26",
+      "httpStatus": 200,
+      "bytes": 642719,
+      "sha256": "237bc749ce03f8136dc907edac4f228e4a18d9c4745765950dd1f68e3059e401",
+      "retrievedAtUTC": "2026-10-06T00:58:45.657719+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Setting triggers in Shortcuts on iPhone or iPad",
+      "textualEvidence": "Setting triggers in Shortcuts on iPhone or iPad Use a setting trigger to run an automation when you change a setting on your device. The Wi-Fi trigger has one option: Network: Tap Choose, then select one or more Wi-Fi networks. When you connect to a selected network, your automation triggers. You can also choose Any Network to launch your automation whenever you connect to any Wi-Fi network. The Bluetooth trigger has one option: Device: Tap Choose, then select one or more Bluetooth devices. When you connect to a selected device, your automation triggers. You can also choose Any Device to launch your automation whenever you connect to any Bluetooth device. The Focus triggers activate a personal automation when you turn on or turn off the Focus feature in iOS and iPadOS. (For more information, see Set up Focus on iPhone in the iPhone User Guide.) In Shortcuts, these triggers have the following options: When Turning On: Triggers your automation when you turn on Focus. When Turning Off: Triggers your automation when you turn off Focus. The Low Power Mode trigger has the following options: Is Turned On: Triggers your automation when you turn on Lower Power Mode. Is Turned Off: Triggers your automation when you turn off Lower Power Mode. The Battery Level trigger has the following options: Equals: Triggers your automation when the battery percentage equals the value set in the percentage slider. Rises Above: Triggers your automation when the battery percentage rises above the value set in the percentage slider. Falls Below: Triggers your automation when the battery percentage falls below the value set in the percentage slider. The Charger trigger is activated when you start or stop charging—whether with a cable, wirelessly, or with a charging case. The Charger trigger has the following options: Is Connected: Triggers your automation when you connect a charger. Is Disconnected: Triggers your automation when you disconnect from a charger. The NFC trigger has one option: NFC Tag: Triggers your automation when you scan a near-field communication tag. After you initially scan the NFC tag, you can name it for future reference. Other than the unique identifier, the contents of the NFC tag are ignored. Note: Not all devices support NFC. The App trigger has the following options: App: Tap Choose, then select an app from the list. Is Opened: Triggers your automation when you open or switch to the selected app. Is Closed: Triggers your automation when you close or switch from the selected app. The Airplane Mode trigger has the following options: Is Turned On: Triggers your automation when you turn on Airplane Mode. Is Turned Off: Triggers your automation when you turn off Airplane Mode. Previous Transaction trigger Next Intro to home automation "
+    },
+    {
+      "id": "shortcuts-add-26",
+      "requestedURL": "https://support.apple.com/guide/shortcuts/apdfbdbd7123/9.0/ios/26",
+      "effectiveURL": "https://support.apple.com/guide/shortcuts/create-a-new-personal-automation-apdfbdbd7123/9.0/ios/26",
+      "httpStatus": 200,
+      "bytes": 643898,
+      "sha256": "d0a98f11e418b77ac999e155ffcbf98c2763a1cb3cba2ea04e5f2b3e1f6452cc",
+      "retrievedAtUTC": "2026-10-06T00:58:45.746124+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Create a new personal automation in Shortcuts on iPhone or iPad",
+      "textualEvidence": "Create a new personal automation in Shortcuts on iPhone or iPad Personal automation is similar to a shortcut; however, rather than being launched manually, personal automation is triggered by an event. Create a new personal automation In the Shortcuts app on your iPhone or iPad, do one of the following: If this is your first automation: Tap Automation . If you’ve previously created an automation: Tap Automation , then tap in the upper-right corner. Tap Create Personal Automation. Choose a trigger, such as Time of Day or Arrive. See Event triggers , Travel triggers , Communication triggers , or Setting triggers . Select the options for the trigger, then tap Next. Options appear for creating a blank automation, a suggested automation, or use an existing shortcut. Tap Add Action, then browse available actions in the Categories or Apps list, or search for a specific action by tapping and entering a search term. To add an action to your automation, touch and hold an action in the list, then drag it to the position where you want it in the automation editor. You can also tap an action to add it to the bottom of the action list in the automation editor. Add as many actions as you need for your automation. Tap at the top of the actions browser to return to the Categories or Apps list. Tip: You can change the order of actions by dragging them to different locations in the shortcut editor. To test your automation, tap . To stop the automation, tap . Tap Next. A summary of your automation appears. Tap Done. The new automation is added to the Automation screen. Previous Intro to personal automation Next Enable or disable a personal automation "
+    },
+    {
+      "id": "shortcuts-share-actions",
+      "requestedURL": "https://support.apple.com/guide/shortcuts/share-actions-apdaf74d75a5/ios",
+      "httpStatus": 200,
+      "bytes": 647061,
+      "sha256": "6a9217c755217ecc2865e84588c7073ce258e723e292d006542432366644a797",
+      "retrievedAtUTC": "2026-10-06T01:01:36.401692+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "About share actions in Shortcuts on iPhone or iPad",
+      "textualEvidence": "About share actions in Shortcuts on iPhone or iPad After get actions bring content into the shortcut and transform actions modify that content, share actions send your content to a new place. Share actions comprise the largest group of actions in Shortcuts and include a variety of integrations with other apps and services (including third-party apps and services) that widen the capabilities of your shortcuts. These actions are commonly used near the end of a shortcut to pass the content into another app as the final step in accomplishing your goal. The most straightforward sharing actions are Share and Share with Extensions. As you build your shortcut, you can search the list of actions using keywords like add , create , post , share , send , and log for making new items, save and append for working with files, and open for launching other apps. Share actions for adding new items Share actions let you add or create items in other apps. For example, Add New Event adds an event to the Calendar app, Create Playlist creates a playlist in the Music app, and Save to Photo Album adds photos to a specified album in the Photos app. Some share actions are used for posting content to social media services. Other share actions are used for logging data, including Log Health Sample and Log Workout. Share actions for file management File-related share actions include Save File and Save to Photo Album. In some cases, share actions can append data to existing files, namely the Append to Note action and some third-party actions. You can search for file-related share actions using the keyword save . Share actions for launching content in another app Share actions that launch content in another app include Open URLs, Open App, Open In, and so on. You can search for these share actions using the keyword open . For example, Open URLs takes any links passed as input and opens them in Safari. Open URLs also supports URL schemes provided by other apps you’ve installed. The Open In action sends a copy of your work to another app that supports documents. Perhaps you want your shortcut to fetch a webpage, convert it from HTML to Rich Text, and then send it to Pages or another word processor. Open in Books is similarly useful for saving PDFs or ebooks in Apple Books. See also Ideas for custom shortcuts on iPhone or iPad Previous Transform actions Next Test your actions ",
+      "priorAttempt": {
+        "status": "retrieval_failed",
+        "curlExitCode": 22
+      },
+      "status": "serial_retry_succeeded"
+    },
+    {
+      "id": "shortcuts-format-date",
+      "requestedURL": "https://support.apple.com/guide/shortcuts/format-date-timestamps-apdfb33b0e17/ios",
+      "effectiveURL": "https://support.apple.com/guide/shortcuts/format-date-timestamps-apdfb33b0e17/ios",
+      "httpStatus": 200,
+      "bytes": 646085,
+      "sha256": "f4605a7d3e7703f9f174b60601228a8ebfa6eef533fcbbd850478993453f031a",
+      "retrievedAtUTC": "2026-10-06T00:58:45.818427+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Handling timestamps using Format Date in Shortcuts on iPhone or iPad",
+      "textualEvidence": "Handling timestamps using Format Date in Shortcuts on iPhone or iPad Some time and date information in some API responses appear as long numbers with many digits. This is because the time is formatted in UNIX time (or Epoch time ), which represents the time as the number of seconds that have elapsed since 00:00:00 UTC, Thursday, January 1, 1970. UNIX time is used as a standard for all computers as a way to measure time from the same spot, or the start date of Coordinated Universal Time (UTC), and is also considered the birthday of the UNIX operating system. In Shortcuts, you can convert from the UNIX time format to a more human-readable time format by using the Date, Adjust Date, and Format Date actions. The Date action is set to 00:00:00 UTC Jan 1, 1970. Add the UNIX Time variable to the UTC date to get the adjusted date. Next, use Format Date to remove the time component (as they are all 00:00:00). Note: Other APIs might use other time formats such as ISO 8601. For more information, see About date and time formatting in Shortcuts on iPhone or iPad . Not all apps, services, and content are available in all countries or regions. Previous API limitations Next Dictionaries "
+    },
+    {
+      "id": "screen-time-summary-26",
+      "requestedURL": "https://support.apple.com/guide/iphone/iphbfa595995/26.0/ios/26",
+      "httpStatus": 200,
+      "bytes": 1466796,
+      "sha256": "7dcb5e447e58246389f8edf50d533ec35310720d1abe7e40b9f2458772fa10a1",
+      "retrievedAtUTC": "2026-10-06T01:01:36.405160+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Get started with Screen Time on iPhone",
+      "textualEvidence": "Get started with Screen Time on iPhone You can get information about how much time you spend on your devices—including which apps and websites are used and for how long. You can also set schedules and set limits for usage. Here’s an overview of what you can do with Screen Time: Schedule time away from your device: You can customize Screen Time settings during specific days of the week, like on weekdays or weekends. See Set schedules with Screen Time . Set limits for app use: You can set time limits for certain apps or app categories—like Messages or Games. See Set limits for app use . Manage who can get in touch with you: You can limit who you communicate with during certain times of the day. See Block calls and messages with Screen Time . Block apps, downloads, and websites: You can restrict access to certain apps, features, websites, and purchases. See Block apps, app downloads, websites, and purchases . Check for sensitive images and videos: You can block sensitive images and videos when they appear on your screen. See Check for sensitive images and videos in Screen Time . Help protect your vision health: You can help reduce the risk of myopia (nearsightedness) or eyestrain. See Help protect your vision health with Screen Distance . You can also Set up Screen Time for a child . Turn on Screen Time Go to the Settings app on your iPhone. Tap Screen Time. If you want to turn on Screen Time for your child, tap your child's name. Tap App & Website Activity, then tap Turn On App & Website Activity. Use Screen Time across your devices You can sync your Screen Time settings and reports across your iPhone, iPad, and Mac where you're signed in to the same Apple Account. This means your downtime schedules, limits, and usage data are shared across your devices. You can also see your combined Screen Time activity across devices. Go to the Settings app on your iPhone. Tap Screen Time. If you want to turn this feature on for your child, tap your child's name. Turn on Share Across Devices. (You may need to scroll down.) When Share Across Devices is on, any Screen Time limits or schedules you set apply to your iPhone, iPad, and Mac. If you turn off Share Across Devices, each device maintains its own separate Screen Time settings. View a Screen Time summary Any time after you turn on Screen Time , you can view a report of your device use, including how much time you spend using certain kinds of apps, how often you pick up your iPhone and other devices, which apps send you the most notifications, and more. Go to the Settings app on your iPhone. Tap Screen Time. If you want to view Screen Time summaries for your child, tap your child's name. Tap See All App & Website Activity, then tap Devices to select which device you want to see usage for. Tap Week to show a summary of weekly use, or tap Day to show a summary of daily use. Screen Time automatically groups your activity into categories—like Entertainment and Creativity. Note: Screen Time activity that doesn’t fit into a category may appear grey in your Screen Time summary. You can swipe left and right on your Screen Time summary to view your history. Turn off Screen Time Go to the Settings app on your iPhone. Tap Screen Time. If you want to turn off Screen Time for your child, tap your child's name. Do any of the following: Turn off App & Website Activity: Scroll down, then tap Turn Off App & Website Activity. Tip: The easiest way to turn off Screen Time is to turn off App & Website Activity. Turning off App and Website Activity turns off reporting, Downtime, App Limits, and Always Allowed. Turn off Downtime: Tap Downtime, then turn off Scheduled. Turn off App Limits: Tap App Limits, swipe left on a limit, then tap Delete. Use the Screen Time widget to check your device use at a glance You can quickly check your device use by adding a Screen Time widget to your Home Screen. The widget displays information from your Screen Time summary—the larger the widget you add, the more information it displays. If you set up Screen Time for a child through Family Sharing, you can tap the widget to see a list of the people in your family group. Tap the name of a child whose report you want to view. You can also view your summary by tapping a Screen Time Weekly Report notification when one appears on your screen. (If the notification disappears, you can find it in Notification Center .) See also Create, manage, and keep track of a Screen Time passcode on iPhone Set up Family Sharing on iPhone Previous Share age ranges with apps Next Protect your vision health with Screen Distance "
+    },
+    {
+      "id": "shortcuts-enable-26",
+      "requestedURL": "https://support.apple.com/guide/shortcuts/enable-or-disable-a-personal-automation-apd602971e63/9.0/ios/26",
+      "httpStatus": 200,
+      "bytes": 643067,
+      "sha256": "caa2738574601e57694e40e200ba67436034b1e41490984141a0710b87286914",
+      "retrievedAtUTC": "2026-10-06T01:01:36.409044+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Enable or disable a personal automation in Shortcuts on iPhone or iPad",
+      "textualEvidence": "Enable or disable a personal automation in Shortcuts on iPhone or iPad After you create an automation, you can edit it to temporarily disable it or to allow it to run automatically. Disable an automation In the Shortcuts app on your iPhone or iPad, tap Automation . Tap the automation you want to disable. Turn off Enable This Automation. Tap Done. The automation will not notify you or run automatically. Enable an automation In the Shortcuts app on your iPhone or iPad, tap Automation . Tap the automation you want to enable. Turn on Enable This Automation. Tap Done. When triggered, the automation will run or will ask you to run it, depending on the setting you choose in the next task, below. Enable an automation to run without asking Some personal automations can run without asking you for confirmation when they’re triggered. In the Shortcuts app on your iPhone or iPad, tap Automation . Tap the automation you want to run automatically. Turn off Ask Before Running, then tap Don’t Ask to confirm your choice. Tap Done. The automation will not notify you when it’s triggered. The following automations can be run automatically: Time of Day Alarm Sleep Arrive Leave CarPlay Email Message Transaction Wi-Fi Bluetooth Apple Watch Workout NFC App Airplane Mode Do Not Disturb Low Power Mode Battery Level Charger Sound Recognition Note: You also may need to set individual actions to run automatically. The following automation cannot be run automatically: Before I Commute Previous Create a new personal automation Next Delete a personal automation "
+    },
+    {
+      "id": "device-identity",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/deviceactivity/deviceactivitydata/device-swift.struct.json",
+      "httpStatus": 200,
+      "bytes": 10989,
+      "sha256": "157efe346784bfd417a39f8f44f4e5e3f1028520e8e5f7ed16358cbfa9481e92",
+      "retrievedAtUTC": "2026-10-06T01:01:36.410525+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "DeviceActivityData.Device",
+      "availability": [
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "iPadOS",
+          "unavailable": false
+        },
+        {
+          "beta": false,
+          "deprecated": false,
+          "introducedAt": "16.0",
+          "name": "Mac Catalyst",
+          "unavailable": false
+        }
+      ],
+      "properties": [
+        {
+          "title": "DeviceActivityData.Device.Model",
+          "url": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/device-swift.struct/model-swift.enum"
+        },
+        {
+          "title": "model",
+          "url": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/device-swift.struct/model-swift.property"
+        },
+        {
+          "title": "name",
+          "url": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/device-swift.struct/name"
+        }
+      ],
+      "officialDocumentationURL": "https://developer.apple.com/documentation/deviceactivity/deviceactivitydata/device-swift.struct"
+    },
+    {
+      "id": "screentime-framework",
+      "requestedURL": "https://developer.apple.com/tutorials/data/documentation/screentime.json",
+      "officialDocumentationURL": "https://developer.apple.com/documentation/screentime",
+      "httpStatus": 200,
+      "bytes": 10377,
+      "sha256": "c7eaf08dcf30497b4baa00857b98e5699049ff6680c014e0c286b360c71d71c5",
+      "retrievedAtUTC": "2026-10-06T01:08:30.250206+00:00",
+      "tlsVerification": "normal curl certificate-chain/hostname verification; no insecure bypass",
+      "title": "Screen Time",
+      "availability": [
+        {
+          "beta": false,
+          "introducedAt": "14.0",
+          "name": "iOS"
+        },
+        {
+          "beta": false,
+          "introducedAt": "14.0",
+          "name": "iPadOS"
+        },
+        {
+          "beta": false,
+          "introducedAt": "14.0",
+          "name": "Mac Catalyst"
+        },
+        {
+          "beta": false,
+          "introducedAt": "11.0",
+          "name": "macOS"
+        }
+      ],
+      "textualEvidence": [
+        "The Screen Time framework gives you the tools you need to help parents and guardians supervise their children’s web usage. Use this framework to:",
+        "Report web-usage data.",
+        "Delete history.",
+        "Take action when a parent or guardian blocks a URL or begins enforcing child restrictions.",
+        "In a compatible iPad or iPhone app running in visionOS, the APIs of this framework do nothing."
+      ]
+    }
+  ]
+}

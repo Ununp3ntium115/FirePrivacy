@@ -85,6 +85,7 @@ struct ManualPermissionAuditView: View {
     var body: some View {
         FirePage {
             PageHeader(eyebrow: "A dated statement by you", title: "Review permissions yourself.", subtitle: "Apple Settings shows current permission choices. This audit records what you report; it is never treated as an automatic reading of another app’s permission.")
+            NavigationLink { UsageTimelineView() } label: { Label("Activity versus app use", systemImage: "rectangle.split.2x1").foregroundStyle(FireStyle.ember).padding(.vertical, 12) }
             FireCard {
                 VStack(alignment: .leading, spacing: 16) {
                     SettingsTextField(title: "App bundle identifier", text: $bundleID)

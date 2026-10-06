@@ -25,6 +25,31 @@ final class FirePrivacyUITests: XCTestCase {
     }
 
     @MainActor
+    func testUsageComparisonOpensWithExplicitSampleAndSourceBoundaries() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo"]
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any)["demo-report-badge"].firstMatch.waitForExistence(timeout: 15))
+        navigationItem(in: app, identifier: "evidence-tab", label: "Evidence").tap()
+        let timeline = app.staticTexts["Activity versus app use"].firstMatch
+        for _ in 0..<3 {
+            if timeline.exists && timeline.isHittable { break }
+            app.descendants(matching: .any)["evidence-screen"].firstMatch.swipeUp()
+        }
+        XCTAssertTrue(timeline.waitForExistence(timeout: 5))
+        timeline.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["usage-timeline-screen"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["demo-report-badge"].firstMatch.exists)
+        let imported = app.buttons["usage-import-button"].firstMatch
+        for _ in 0..<5 {
+            if imported.exists && imported.isHittable { break }
+            app.descendants(matching: .any)["usage-timeline-screen"].firstMatch.swipeUp()
+        }
+        XCTAssertTrue(imported.exists)
+        XCTAssertFalse(imported.isEnabled, "Synthetic reports must not accept private usage context as fictional evidence.")
+    }
+
+    @MainActor
     func testDeletingDemoClearsPreviouslyOpenedEvidence() {
         let app = XCUIApplication()
         app.launchArguments = ["--demo"]

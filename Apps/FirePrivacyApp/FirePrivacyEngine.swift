@@ -55,6 +55,11 @@ private struct StoredRuleConfiguration: Codable, Sendable {
     let highWaterMark: RuleConfigurationHighWaterMark
 }
 
+private struct StoredUsageTimeline: Codable, Sendable {
+    let version: Int
+    let timeline: AppUsageTimeline
+}
+
 private struct StoredKnowledgeBaseRevocations: Codable, Sendable {
     let signed: SignedKnowledgeBaseRevocations
     let highWaterMark: KnowledgeBaseRevocationHighWaterMark
@@ -103,6 +108,8 @@ final class FirePrivacyEngine {
     private(set) var retention = WorkspaceRetentionPolicy()
     private(set) var pendingStorageCleanupCount = 0
     private(set) var report: PrivacyReport?
+    private(set) var usageTimeline = AppUsageTimeline.empty
+    private(set) var usageComparison: AppUsageTimelineComparison?
     private(set) var protection: ProtectionSnapshot
     private var operationGeneration = UUID()
     private var didRestore = false
@@ -198,6 +205,11 @@ final class FirePrivacyEngine {
                 nextPreferences = saved
             }
             let nextConsent = try await store.loadFeatureState(ConsentState.self, key: "consent") ?? ConsentState()
+            var nextUsageTimeline = AppUsageTimeline.empty
+            if let saved = try await store.loadFeatureState(StoredUsageTimeline.self, key: "usage-timeline") {
+                guard saved.version == 1 else { throw ReportStoreError.unsupportedFormat }
+                nextUsageTimeline = try AppUsageTimeline(references: saved.timeline.references)
+            }
             let events = try await store.loadFeatureState([NetworkEvent].self, key: "network-events") ?? []
             var nextRevocations = KnowledgeBaseRevocations()
             var nextRevocationsCurrent = true
@@ -253,6 +265,7 @@ final class FirePrivacyEngine {
             preferences = nextPreferences
             preferences.pendingProtectionRemoval = pendingSystemCleanup
             consent = nextConsent
+            usageTimeline = nextUsageTimeline
             knowledgeBase = nextKnowledge
             knowledgeBaseBaseline = nextKnowledge?.highWaterMark
             knowledgeBaseFailure = nextKnowledgeFailure
@@ -346,6 +359,7 @@ final class FirePrivacyEngine {
             }
             try await requireCurrent(operation, storageGeneration: storageGeneration)
             analysis = nil; lifecycle = nil; advisorResult = nil
+            usageComparison = nil
             latestAnalysisRevision = nil; analysisHistory = history; analysisHistoryCapacityExceeded = false
             try await gate.updateContext(reportIdentity: nil, configurationIdentity: "local-only-v1")
             return
@@ -388,7 +402,13 @@ final class FirePrivacyEngine {
                 expectedCurrent: snapshot.precondition)
         }
         try await requireCurrent(operation, storageGeneration: storageGeneration)
+        let suppliedUsage = usageTimeline
+        let usageResult = await Task.detached(priority: .userInitiated) {
+            AppUsageTimelineAnalyzer.analyze(report: report, timeline: suppliedUsage)
+        }.value
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
         analysis = current
+        usageComparison = usageResult
         analysisHistory = history
         latestAnalysisRevision = revision
         analysisHistoryCapacityExceeded = capacityExceeded
@@ -490,6 +510,24 @@ final class FirePrivacyEngine {
             expectedCurrent: previous.precondition)
         try await requireCurrent(operation, storageGeneration: storageGeneration)
         preferences = value
+        try await rebuildAnalysis()
+    }
+
+    /// Supplied app-use references are private local context, not verified OS
+    /// permission state or evidence that a contact transmitted a payload.
+    func saveUsageTimeline(_ value: AppUsageTimeline) async throws {
+        guard !isDeleting else { throw EngineError.staleOperation }
+        let validated = try AppUsageTimeline(references: value.references)
+        operationGeneration = UUID()
+        let operation = operationGeneration
+        await gate.cancelAllRequests()
+        let storageGeneration = await store.currentStorageGeneration()
+        let previous = try await store.loadFeatureSnapshot(StoredUsageTimeline.self, key: "usage-timeline")
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
+        try await store.saveFeatureState(StoredUsageTimeline(version: 1, timeline: validated), key: "usage-timeline",
+            expectedGeneration: storageGeneration, expectedCurrent: previous.precondition)
+        try await requireCurrent(operation, storageGeneration: storageGeneration)
+        usageTimeline = validated
         try await rebuildAnalysis()
     }
 
@@ -1076,6 +1114,7 @@ final class FirePrivacyEngine {
         try await store.deleteAll()
         report = nil; sessions = []; preferences = EnginePreferences(); consent = ConsentState()
         knowledgeBase = nil; analysis = nil; lifecycle = nil; advisorResult = nil
+        usageTimeline = .empty; usageComparison = nil
         analysisHistory = AnalysisHistory(); latestAnalysisRevision = nil; analysisHistoryCapacityExceeded = false
         knowledgeBaseFailure = false
         knowledgeBaseRevocations = KnowledgeBaseRevocations(); knowledgeBaseRevocationsCurrent = true

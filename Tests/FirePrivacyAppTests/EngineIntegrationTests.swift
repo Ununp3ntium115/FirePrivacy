@@ -300,6 +300,98 @@ final class EngineIntegrationTests: XCTestCase {
     }
 
     @MainActor
+    func testUsageComparisonRestoresFromEncryptedPrivateStateWithoutTransmission() async throws {
+        let transport = EngineFixtureTransport()
+        let harness = makeHarness(transport: transport)
+        defer { harness.removeTemporaryFiles() }
+        try await configure(harness.engine, report: usageReport())
+        let timeline = try usageReference(for: XCTUnwrap(harness.engine.report).id)
+        try await harness.engine.saveUsageTimeline(timeline)
+        let comparison = try XCTUnwrap(harness.engine.usageComparison)
+        XCTAssertEqual(comparison.apps.first { $0.bundleID == "example.engine.alpha" }?.outsideClaimedWindowActivities, 1)
+        let cache = harness.storageDirectory.appendingPathComponent("features/usage-timeline.encrypted")
+        let encrypted = try Data(contentsOf: cache)
+        let text = String(decoding: encrypted, as: UTF8.self)
+        XCTAssertFalse(text.contains("example.engine.alpha"))
+        XCTAssertFalse(text.contains("foregroundWindows"))
+        let saved = try await harness.store.loadFeatureState(EngineUsageFixtureState.self, key: "usage-timeline")
+        XCTAssertEqual(saved?.timeline, timeline)
+        let restored = FirePrivacyEngine(store: harness.store, transport: transport,
+            cleanupPlan: ProtectionCleanupPlan(directory: harness.cleanupDirectory),
+            credentialStore: harness.credentialStore, credentialCleanupMarker: harness.credentialCleanupMarker)
+        _ = try await restored.restore()
+        XCTAssertEqual(restored.usageTimeline, timeline)
+        XCTAssertEqual(restored.usageComparison, comparison)
+        XCTAssertEqual(try Data(contentsOf: cache), encrypted)
+        let calls = await transport.callCount()
+        XCTAssertEqual(calls, 0)
+    }
+
+    @MainActor
+    func testUsageEditsInvalidatePreparedRequestAndClearDerivedReferences() async throws {
+        let transport = EngineFixtureTransport()
+        let harness = makeHarness(transport: transport)
+        defer { harness.removeTemporaryFiles() }
+        try await configure(harness.engine, report: usageReport())
+        let findings = try XCTUnwrap(harness.engine.analysis).findings
+        let prepared = try await harness.engine.prepareSelfHostedAssessment()
+        try await grantExactAdvisorConsent(harness.engine, prepared: prepared)
+        try await harness.engine.saveUsageTimeline(usageReference(for: XCTUnwrap(harness.engine.report).id))
+        do { _ = try await harness.engine.send(prepared); XCTFail("A context edit must invalidate a prepared request.") }
+        catch { assertStaleOperation(error) }
+        XCTAssertEqual(harness.engine.analysis?.findings, findings, "Usage claims must not change publisher facts or posture rules.")
+        try await harness.engine.saveUsageTimeline(.empty)
+        XCTAssertTrue(harness.engine.usageTimeline.references.isEmpty)
+        let comparison = try XCTUnwrap(harness.engine.usageComparison)
+        XCTAssertTrue(comparison.apps.flatMap(\.activities).allSatisfy { $0.sourceAssessments.isEmpty && !$0.reviewSuggested })
+        let saved = try await harness.store.loadFeatureState(EngineUsageFixtureState.self, key: "usage-timeline")
+        XCTAssertEqual(saved?.timeline, .empty)
+        let calls = await transport.callCount()
+        XCTAssertEqual(calls, 0)
+    }
+
+    @MainActor
+    func testUsageComparisonFollowsSelectedReportAndDeleteAllRemovesItsState() async throws {
+        let transport = EngineFixtureTransport()
+        let harness = makeHarness(transport: transport)
+        defer { harness.removeTemporaryFiles() }
+        let first = try usageReport()
+        try await configure(harness.engine, report: first)
+        try await harness.engine.saveUsageTimeline(usageReference(for: first.id))
+        let second = try ReportImporter.parse(Data("{\"type\":\"networkActivity\",\"bundleID\":\"example.different.app\",\"domain\":\"another.example\",\"hits\":1,\"timeStamp\":\"2026-10-06T13:00:00Z\"}".utf8))
+        _ = try await harness.engine.importReport(second)
+        XCTAssertEqual(harness.engine.usageComparison?.reportID, second.id)
+        XCTAssertTrue(try XCTUnwrap(harness.engine.usageComparison).apps.flatMap(\.activities).allSatisfy { $0.sourceAssessments.isEmpty })
+        _ = try await harness.engine.selectReport(first.id)
+        XCTAssertEqual(harness.engine.usageComparison?.reportID, first.id)
+        XCTAssertEqual(harness.engine.usageComparison?.apps.first { $0.bundleID == "example.engine.alpha" }?.outsideClaimedWindowActivities, 1)
+        try await harness.engine.deleteAll()
+        XCTAssertNil(harness.engine.usageComparison)
+        XCTAssertEqual(harness.engine.usageTimeline, .empty)
+        XCTAssertFalse(FileManager().fileExists(atPath: harness.storageDirectory.path))
+        let saved = try await harness.store.loadFeatureState(EngineUsageFixtureState.self, key: "usage-timeline")
+        XCTAssertNil(saved)
+        XCTAssertNil(harness.keys.currentKey)
+        let calls = await transport.callCount()
+        XCTAssertEqual(calls, 0)
+    }
+
+    private func usageReport() throws -> PrivacyReport {
+        let lines = ["alpha", "beta", "gamma"].map { app in
+            "{\"type\":\"networkActivity\",\"bundleID\":\"example.engine.\(app)\",\"domain\":\"shared-usage.example\",\"hits\":1,\"timeStamp\":\"2026-10-06T13:00:00Z\"}"
+        }
+        return try ReportImporter.parse(Data(lines.joined(separator: "\n").utf8))
+    }
+
+    private func usageReference(for reportID: UUID) throws -> AppUsageTimeline {
+        let coverage = try UsageTimeRange(startTimestampText: "2026-10-06T12:00:00Z", endTimestampText: "2026-10-06T14:00:00Z")
+        let foreground = try UsageTimeRange(startTimestampText: "2026-10-06T12:00:00Z", endTimestampText: "2026-10-06T12:30:00Z")
+        return try AppUsageTimeline(references: [AppUsageReference(bundleID: "example.engine.alpha", provenance: .userRecollection,
+            coverage: coverage, claimsCompleteForegroundWindows: true, foregroundWindows: [foreground],
+            deviceScope: .sameDeviceAsReport, comparisonReportID: reportID)])
+    }
+
+    @MainActor
     private func configure(_ engine: FirePrivacyEngine, report: PrivacyReport? = nil) async throws {
         _ = try await engine.restore()
         try await engine.grant(.localImport, scope: "local-import-v1")
@@ -360,6 +452,11 @@ final class EngineIntegrationTests: XCTestCase {
         default: XCTFail("Expected staleOperation.", file: file, line: line)
         }
     }
+}
+
+private struct EngineUsageFixtureState: Codable, Sendable {
+    let version: Int
+    let timeline: AppUsageTimeline
 }
 
 @MainActor

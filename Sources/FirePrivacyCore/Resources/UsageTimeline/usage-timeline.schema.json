@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fireprivacy:usage-timeline:v1",
+  "title": "FirePrivacy supplied usage references v1",
+  "description": "Independent supplied evidence, not an Apple-certified Screen Time export. The implementation additionally validates calendar fields, finite totals within coverage, windows within coverage, unique IDs, maximum 8 references per bundleID and 2048 windows total.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "references"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "references": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bundleID",
+          "provenance",
+          "coverage",
+          "claimsCompleteForegroundWindows",
+          "foregroundWindows"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bundleID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "provenance": {
+            "enum": [
+              "userRecollection",
+              "userTranscribedSystemUsage",
+              "importedUsageLog"
+            ]
+          },
+          "deviceScope": {
+            "enum": [
+              "sameDeviceAsReport",
+              "otherDeviceOrCombined",
+              "unspecified"
+            ],
+            "default": "unspecified"
+          },
+          "coverage": {
+            "$ref": "#/$defs/range"
+          },
+          "claimsCompleteForegroundWindows": {
+            "type": "boolean"
+          },
+          "foregroundWindows": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/$defs/range"
+            }
+          },
+          "aggregateForegroundSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "sourceLabel": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "suppliedAt": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+          },
+          "comparisonReportID": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "required": [
+                "aggregateForegroundSeconds"
+              ]
+            },
+            "then": {
+              "properties": {
+                "foregroundWindows": {
+                  "maxItems": 0
+                },
+                "claimsCompleteForegroundWindows": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "end": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+        }
+      }
+    }
+  }
+}

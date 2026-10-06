@@ -6,6 +6,7 @@ Fire Privacy imports the report you export from iPhone or iPad Settings. Explore
 
 • Explore a clearly labeled synthetic demo.
 • Keep bounded encrypted report history and compare exported activity.
+• Compare recorded timestamps with supplied app-use windows, transcribed usage totals or opened/closed-event logs, with clear uncertainty and evidence links.
 • Review evidence-backed findings, explainable posture dimensions and manual Settings guidance.
 • Choose local privacy preferences without changing the recorded evidence.
 • Export JSON, CSV or Markdown, with full or redacted content choices.
