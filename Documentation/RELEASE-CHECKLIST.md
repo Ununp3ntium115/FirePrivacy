@@ -7,18 +7,18 @@ expanded architecture. Screenshots are paused until functionality is verified.
 
 ## Current evidence
 
-- [x] Expanded portable checkpoint: 149 core tests and 76 cloud-release Python
-      tests passed, as reported October 5, 2026. Later lifecycle/security fixes
-      require the final rerun; see [VALIDATION](VALIDATION.md).
-- [x] Official current Apple requirements and optional-feature documentation
-      were retrieved with normal TLS; see [APPLE-REQUIREMENTS](APPLE-REQUIREMENTS.md).
-- [x] The existing GitHub policy/support URLs are public and returned HTTP 200.
-      The live policy still describes the earlier MVP; publication of the new
-      matching policy remains pending.
-- [ ] Final expanded source passes portable checks after all security fixes.
-- [ ] Expanded consumer, URL-filter and managed source targets pass required
-      Xcode 26.2/iPhone/iPad SDK checks; no inactive edition is reported available.
-- [ ] Consumer native storage, coordinator, UI and privacy regression tests pass.
+- [x] Final portable source passed 277 Core XCTest and 111 cloud-release Python
+      cases on October 6; project/manifests/privacy guard passed. See
+      [VALIDATION](VALIDATION.md) for exact native revisions and later results.
+- [x] Official current Apple requirements and optional-feature/usage documentation
+      were retrieved with normal TLS; see [APPLE-REQUIREMENTS](APPLE-REQUIREMENTS.md)
+      and [USAGE-COMPARISON](USAGE-COMPARISON.md).
+- [x] Matching expanded consumer policy, including usage comparisons, is published
+      on gh-pages. GitHub-rendered policy/support routes returned HTTPS 200.
+- [x] Expanded rules/AI/cleanup checkpoint `a77b574` passed all three edition builds
+      and both consumer simulator families. Later usage source needs its own run.
+- [ ] Final source, including usage controls, passes all three native edition
+      builds and consumer storage/coordinator/UI tests on iPhone and iPad.
 
 ## Actual product and privacy behavior
 

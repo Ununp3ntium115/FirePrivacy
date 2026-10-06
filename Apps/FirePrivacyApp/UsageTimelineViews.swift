@@ -7,8 +7,10 @@ struct UsageTimelineView: View {
     @EnvironmentObject private var model: AppModel
     @State private var selectedApp = ""
     @State private var showImporter = false
+    @State private var importReportID: UUID?
     @State private var showClearConfirmation = false
     @State private var editing: AppUsageReference?
+    @State private var editorReportID: UUID?
     @State private var showEditor = false
     @State private var includeOtherReferences = false
     @State private var activityPage = 0
@@ -29,13 +31,20 @@ struct UsageTimelineView: View {
             FireCard {
                 VStack(alignment: .leading, spacing: 14) {
                     SectionHeading(title: "Supply your context", detail: "A recollection, a manual transcription or an imported log remains unverified. Aggregate Screen Time durations never become invented session timestamps.")
-                    PrimaryButton(title: "Import app-use JSON or event log", symbol: "square.and.arrow.down") { showImporter = true }.disabled(model.isDemo || model.isWorking).accessibilityIdentifier("usage-import-button")
+                    PrimaryButton(title: "Import app-use JSON or event log", symbol: "square.and.arrow.down") {
+                        importReportID = model.report?.id
+                        showImporter = true
+                    }.disabled(model.report == nil || model.isDemo || model.isWorking).accessibilityIdentifier("usage-import-button")
                     if let report = model.report, !report.apps.isEmpty {
                         Picker("App identifier from this import", selection: $selectedApp) {
                             Text("Choose an app identifier").tag("")
                             ForEach(report.apps) { app in Text(verbatim: app.bundleID).tag(app.bundleID) }
                         }.pickerStyle(.menu)
-                        QuietButton(title: "Enter my app-use information", symbol: "pencil") { editing = nil; showEditor = true }.disabled(selectedApp.isEmpty || model.isDemo || model.isWorking)
+                        QuietButton(title: "Enter my app-use information", symbol: "pencil") {
+                            editing = nil
+                            editorReportID = model.report?.id
+                            showEditor = true
+                        }.disabled(selectedApp.isEmpty || model.isDemo || model.isWorking)
                         Text("Identifiers come from the displayed export, not an installed-app inventory. Choose a real imported report to save your own usage information.").font(.footnote).foregroundStyle(FireStyle.muted)
                     } else {
                         Text("Import an App Privacy Report to select app identifiers and compare recorded evidence.").foregroundStyle(FireStyle.muted)
@@ -65,10 +74,12 @@ struct UsageTimelineView: View {
         .onChange(of: model.usageComparison?.timelineDigest) { _, _ in activityPage = 0 }
         .onChange(of: model.report?.id) { _, _ in selectedApp = model.report?.apps.first?.bundleID ?? ""; activityPage = 0 }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json, .plainText, UTType("com.firesoftwaresolutions.FirePrivacy.ndjson") ?? .plainText], allowsMultipleSelection: false) { result in
-            Task { await model.handleUsageTimelineImport(result) }
+            let expectedReportID = importReportID
+            importReportID = nil
+            Task { await model.handleUsageTimelineImport(result, expectedReportID: expectedReportID) }
         }
         .sheet(isPresented: $showEditor) {
-            NavigationStack { UsageReferenceEditor(bundleID: editing?.bundleID ?? selectedApp, reference: editing) }
+            NavigationStack { UsageReferenceEditor(bundleID: editing?.bundleID ?? selectedApp, reference: editing, expectedReportID: editorReportID) }
         }
         .confirmationDialog("Clear supplied app-use information?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
             Button("Clear app-use information", role: .destructive) { Task { _ = await model.clearUsageTimeline() } }
@@ -109,7 +120,11 @@ struct UsageTimelineView: View {
                             }.tint(FireStyle.ember)
                         }
                         if reference.provenance != .importedUsageLog {
-                            QuietButton(title: "Edit my reference", symbol: "pencil") { editing = reference; showEditor = true }.disabled(model.isWorking || model.isDemo)
+                            QuietButton(title: "Edit my reference", symbol: "pencil") {
+                                editing = reference
+                                editorReportID = model.report?.id
+                                showEditor = true
+                            }.disabled(model.isWorking || model.isDemo)
                                 .accessibilityLabel("Edit usage reference for " + reference.bundleID + ", " + usageProvenanceTitle(reference.provenance) + ", reporting period beginning " + usageDate(reference.coverage.start))
                         }
                         Button("Remove this reference", role: .destructive) { removeReference(reference.id) }.frame(minHeight: 44).disabled(model.isWorking)
@@ -265,6 +280,7 @@ private struct UsageReferenceEditor: View {
     @Environment(\.dismiss) private var dismiss
     let bundleID: String
     let reference: AppUsageReference?
+    let expectedReportID: UUID?
     @State private var provenance = AppUsageProvenance.userRecollection
     @State private var coverageStart = Calendar.current.startOfDay(for: Date())
     @State private var coverageEnd = Calendar.current.startOfDay(for: Date()).addingTimeInterval(24 * 60 * 60)
@@ -294,58 +310,107 @@ private struct UsageReferenceEditor: View {
             }
             FireCard {
                 VStack(alignment: .leading, spacing: 18) {
-                    Picker("Source of my information", selection: $provenance) {
-                        Text("My recollection").tag(AppUsageProvenance.userRecollection)
-                        Text("Manually transcribed system usage").tag(AppUsageProvenance.userTranscribedSystemUsage)
-                    }.pickerStyle(.menu)
-                    Text("A transcription is still user-entered and cannot authenticate Apple origin. Screen Time totals or hourly aggregates are not exact session timestamps.").font(.footnote).foregroundStyle(FireStyle.muted)
-                    Picker("Device source", selection: $deviceScope) {
-                        Text("Not sure / unspecified").tag(AppUsageDeviceScope.unspecified)
-                        Text("I’m comparing the same device as this report").tag(AppUsageDeviceScope.sameDeviceAsReport)
-                        Text("Other device or combined devices").tag(AppUsageDeviceScope.otherDeviceOrCombined)
-                    }.pickerStyle(.menu)
-                    Text("Screen Time can combine devices when Share Across Devices is on. Comparison review flags require your explicit same-device claim; Fire Privacy cannot verify it. Other or unspecified device scope stays unknown.").font(.footnote).foregroundStyle(FireStyle.muted)
-                    if let reference, reference.deviceScope == .sameDeviceAsReport, reference.comparisonReportID != editingReportID {
-                        Text("This reference was not bound to the report selected for this editor. The device choice starts at ‘Not sure’ here. Choose the same-device option only if you intend to rebind this edited reference to that import; saving replaces its previous local declaration.").font(.footnote).foregroundStyle(FireStyle.gold)
-                    }
-                    SettingsTextField(title: "Optional private source label", text: $sourceLabel)
-                    DatePicker("Reporting period starts", selection: $coverageStart, displayedComponents: [.date, .hourAndMinute])
-                    DatePicker("Reporting period ends", selection: $coverageEnd, displayedComponents: [.date, .hourAndMinute])
-                    Text("Time zone: " + TimeZone.current.identifier + ". Include dates for periods crossing midnight.").font(.footnote).foregroundStyle(FireStyle.muted)
-                    Text("The initial reporting-period suggestion follows the report’s import date, which can differ from its activity dates. Set the period from your actual source rather than treating that suggestion as verified coverage.").font(.footnote).foregroundStyle(FireStyle.muted)
+                    sourceSection
+                    deviceSection
+                    coverageSection
                     Toggle("I have an aggregate duration, not exact windows", isOn: $aggregateOnly).tint(FireStyle.ember)
-                    if aggregateOnly {
-                        TextField("Aggregate hours", value: $aggregateHours, format: .number).keyboardType(.numberPad).textFieldStyle(.roundedBorder).accessibilityLabel("Aggregate hours")
-                        Stepper("Aggregate minutes: \(aggregateMinutes)", value: $aggregateMinutes, in: 0...59)
-                        TextField("Additional seconds", value: $aggregateSeconds, format: .number.precision(.significantDigits(1...17))).keyboardType(.decimalPad).textFieldStyle(.roundedBorder).accessibilityLabel("Additional aggregate seconds")
-                        Text("Entered total: " + String(Double(aggregateHours) * 3_600 + Double(aggregateMinutes) * 60 + aggregateSeconds) + " seconds").font(.footnote).foregroundStyle(FireStyle.muted)
-                        Text("A zero aggregate is a supplied claim for this reporting period. It can provide review context but cannot reveal exact sessions, verify no use, or prove that recorded background activity was improper.").font(.footnote).foregroundStyle(FireStyle.muted)
-                    } else {
-                        DatePicker("App-use window starts", selection: $windowStart, displayedComponents: [.date, .hourAndMinute])
-                        DatePicker("App-use window ends", selection: $windowEnd, displayedComponents: [.date, .hourAndMinute])
-                        QuietButton(title: "Add this foreground window", symbol: "plus") { addWindow() }.disabled(windowStart >= windowEnd || windows.count >= 128)
-                        ForEach(Array(windows.enumerated()), id: \.offset) { index, window in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(usageDate(window.start) + " → " + usageDate(window.end)).foregroundStyle(FireStyle.text)
-                                Button("Remove window", role: .destructive) { windows.remove(at: index) }.frame(minHeight: 44)
-                                    .accessibilityLabel("Remove foreground window from " + usageDate(window.start) + " to " + usageDate(window.end))
-                            }
-                        }
-                        Toggle("I supplied every foreground window for this app during this reporting period", isOn: $complete).tint(FireStyle.ember)
-                        Text("Completeness is your declaration and is not verified by Fire Privacy. Leave this off if the record is partial or you are unsure. Time outside the reporting period always remains unknown.").font(.footnote).foregroundStyle(FireStyle.muted)
-                    }
-                    PrimaryButton(title: "Save encrypted usage reference", symbol: "checkmark") { save() }.disabled(coverageStart >= coverageEnd || model.isWorking || !reportContextIsCurrent)
-                    Text("This is stored separately from imported report evidence in the encrypted workspace. It does not enable Screen Time access, create a network request or alter another app’s settings.").font(.footnote).foregroundStyle(FireStyle.muted)
+                    if aggregateOnly { aggregateSection } else { windowSection }
+                    saveSection
                 }
             }
-        }.navigationTitle("App-use reference").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+        .navigationTitle("App-use reference")
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         .onAppear {
             guard !capturedReportContext else { return }
-            editingReportID = model.report?.id
             capturedReportContext = true
             load()
         }
     }
+
+    private var sourceSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Picker("Source of my information", selection: $provenance) {
+                Text("My recollection").tag(AppUsageProvenance.userRecollection)
+                Text("Manually transcribed system usage").tag(AppUsageProvenance.userTranscribedSystemUsage)
+            }.pickerStyle(.menu)
+            Text("A transcription is still user-entered and cannot authenticate Apple origin. Screen Time totals or hourly aggregates are not exact session timestamps.").font(.footnote).foregroundStyle(FireStyle.muted)
+            SettingsTextField(title: "Optional private source label", text: $sourceLabel)
+        }
+    }
+
+    private var deviceSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Picker("Device source", selection: $deviceScope) {
+                Text("Not sure / unspecified").tag(AppUsageDeviceScope.unspecified)
+                Text("I’m comparing the same device as this report").tag(AppUsageDeviceScope.sameDeviceAsReport)
+                Text("Other device or combined devices").tag(AppUsageDeviceScope.otherDeviceOrCombined)
+            }.pickerStyle(.menu)
+            Text("Screen Time can combine devices when Share Across Devices is on. Comparison review flags require your explicit same-device claim; Fire Privacy cannot verify it. Other or unspecified device scope stays unknown.").font(.footnote).foregroundStyle(FireStyle.muted)
+            if let reference, reference.deviceScope == .sameDeviceAsReport, reference.comparisonReportID != editingReportID {
+                Text("This reference was not bound to the report selected for this editor. The device choice starts at ‘Not sure’ here. Choose the same-device option only if you intend to rebind this edited reference to that import; saving replaces its previous local declaration.").font(.footnote).foregroundStyle(FireStyle.gold)
+            }
+        }
+    }
+
+    private var coverageSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            DatePicker("Reporting period starts", selection: $coverageStart, displayedComponents: [.date, .hourAndMinute])
+            DatePicker("Reporting period ends", selection: $coverageEnd, displayedComponents: [.date, .hourAndMinute])
+            Text("Time zone: " + TimeZone.current.identifier + ". Include dates for periods crossing midnight.").font(.footnote).foregroundStyle(FireStyle.muted)
+            Text("The initial reporting-period suggestion follows the report’s import date, which can differ from its activity dates. Set the period from your actual source rather than treating that suggestion as verified coverage.").font(.footnote).foregroundStyle(FireStyle.muted)
+        }
+    }
+
+    private var enteredAggregateSeconds: Double {
+        Double(aggregateHours) * 3_600 + Double(aggregateMinutes) * 60 + aggregateSeconds
+    }
+
+    private var secondsFormat: FloatingPointFormatStyle<Double> {
+        .number.precision(.significantDigits(1...17))
+    }
+
+    private var aggregateSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            TextField("Aggregate hours", value: $aggregateHours, format: IntegerFormatStyle<Int>.number)
+                .keyboardType(.numberPad).textFieldStyle(.roundedBorder).accessibilityLabel("Aggregate hours")
+            Stepper("Aggregate minutes: \(aggregateMinutes)", value: $aggregateMinutes, in: 0...59)
+            TextField("Additional seconds", value: $aggregateSeconds, format: secondsFormat)
+                .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).accessibilityLabel("Additional aggregate seconds")
+            Text("Entered total: " + String(enteredAggregateSeconds) + " seconds").font(.footnote).foregroundStyle(FireStyle.muted)
+            Text("A zero aggregate is a supplied claim for this reporting period. It can provide review context but cannot reveal exact sessions, verify no use, or prove that recorded background activity was improper.").font(.footnote).foregroundStyle(FireStyle.muted)
+        }
+    }
+
+    private var windowSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            DatePicker("App-use window starts", selection: $windowStart, displayedComponents: [.date, .hourAndMinute])
+            DatePicker("App-use window ends", selection: $windowEnd, displayedComponents: [.date, .hourAndMinute])
+            QuietButton(title: "Add this foreground window", symbol: "plus") { addWindow() }.disabled(windowStart >= windowEnd || windows.count >= 128)
+            ForEach(Array(windows.enumerated()), id: \.offset) { index, window in
+                foregroundWindowRow(index: index, window: window)
+            }
+            Toggle("I supplied every foreground window for this app during this reporting period", isOn: $complete).tint(FireStyle.ember)
+            Text("Completeness is your declaration and is not verified by Fire Privacy. Leave this off if the record is partial or you are unsure. Time outside the reporting period always remains unknown.").font(.footnote).foregroundStyle(FireStyle.muted)
+        }
+    }
+
+    private func foregroundWindowRow(index: Int, window: UsageTimeRange) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(usageDate(window.start) + " → " + usageDate(window.end)).foregroundStyle(FireStyle.text)
+            Button("Remove window", role: .destructive) { windows.remove(at: index) }.frame(minHeight: 44)
+                .accessibilityLabel("Remove foreground window from " + usageDate(window.start) + " to " + usageDate(window.end))
+        }
+    }
+
+    private var saveSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            PrimaryButton(title: "Save encrypted usage reference", symbol: "checkmark") { save() }
+                .disabled(coverageStart >= coverageEnd || model.isWorking || !reportContextIsCurrent)
+            Text("This is stored separately from imported report evidence in the encrypted workspace. It does not enable Screen Time access, create a network request or alter another app’s settings.").font(.footnote).foregroundStyle(FireStyle.muted)
+        }
+    }
+
     private func addWindow() {
         do { windows.append(try UsageTimeRange(start: windowStart, end: windowEnd)) }
         catch { model.notice = AppNotice(title: "Window needs attention", message: error.localizedDescription) }
@@ -369,6 +434,7 @@ private struct UsageReferenceEditor: View {
         } catch { model.notice = AppNotice(title: "Usage reference needs attention", message: error.localizedDescription) }
     }
     private func load() {
+        editingReportID = expectedReportID
         if let reference {
             provenance = reference.provenance; coverageStart = reference.coverage.start; coverageEnd = reference.coverage.end
             windows = reference.foregroundWindows; complete = reference.claimsCompleteForegroundWindows; sourceLabel = reference.sourceLabel ?? ""

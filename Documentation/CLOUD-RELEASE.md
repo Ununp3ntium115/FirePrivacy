@@ -11,8 +11,10 @@ Keep browser tabs for [PR #2](https://github.com/Ununp3ntium115/FirePrivacy/pull
 [policy](https://github.com/Ununp3ntium115/FirePrivacy/blob/gh-pages/privacy-policy.md)
 and [support](https://github.com/Ununp3ntium115/FirePrivacy/issues) returned HTTP 200
 without login on October 6, 2026. The expanded consumer policy is published;
-verify the matching usage-comparison revision before distribution. `gh-pages` source
-exists, but standalone Pages hosting was not enabled by this integration.
+the matching usage-comparison section is visible on the GitHub-rendered route.
+Pages metadata now reports a built standalone deployment; its direct HTTPS
+check in this instance was blocked by proxy CONNECT403. Use the verified
+GitHub policy route until standalone reachability is verified.
 
 ## Select the actual edition
 

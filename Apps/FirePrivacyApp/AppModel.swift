@@ -240,7 +240,7 @@ final class AppModel: ObservableObject {
     @discardableResult
     func clearUsageTimeline() async -> Bool { await saveUsageTimeline(.empty) }
 
-    func handleUsageTimelineImport(_ result: Result<[URL], Error>) async {
+    func handleUsageTimelineImport(_ result: Result<[URL], Error>, expectedReportID: UUID?) async {
         guard !isWorking else { return }
         switch result {
         case .failure(let error):
@@ -248,7 +248,12 @@ final class AppModel: ObservableObject {
             showFailure("App-use file could not be opened", error)
         case .success(let urls):
             guard let url = urls.first else { return }
-            let selectedReportID = engine.report?.id
+            guard let expectedReportID, engine.report?.id == expectedReportID,
+                  engine.report?.metadata?.isSyntheticDemo != true else {
+                showFailure("The selected privacy report changed", EngineError.staleOperation)
+                return
+            }
+            let selectedReportID = expectedReportID
             beginWork("Reading app-use references on this device")
             defer { finishWork() }
             do {
@@ -267,9 +272,7 @@ final class AppModel: ObservableObject {
                 guard engine.report?.id == selectedReportID else { throw EngineError.staleOperation }
                 // Choosing this file explicitly supplies context for the viewed
                 // export. It does not authenticate its source or device claims.
-                let scoped: AppUsageTimeline
-                if let selectedReportID { scoped = try imported.0.bindingClaims(to: selectedReportID) }
-                else { scoped = imported.0 }
+                let scoped = try imported.0.bindingClaims(to: selectedReportID)
                 let combined = try engine.usageTimeline.merging(scoped)
                 try await engine.saveUsageTimeline(combined)
                 await syncEngine()
