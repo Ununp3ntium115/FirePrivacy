@@ -5,9 +5,9 @@ signing and App Store Connect upload; no local Mac session is required to run
 it. Actual Apple authorization is still required. A team identifier is not a
 certificate/private key, profile, capability grant or upload credential.
 
-[APPLE-REGISTRATION](APPLE-REGISTRATION.md) records the proposed exact consumer
-IDs, shared-browser provisioning blocker, read-only cloud account check and
-Apple's supported registration routes.
+[APPLE-REGISTRATION](APPLE-REGISTRATION.md) records the owner-confirmed consumer
+main ID/app record, remaining Safari/App Group checks, shared-browser blocker
+and Apple's supported registration routes.
 
 The owner has now reported creating [App Store Connect app 6819892589](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight)
 for `com.firesoftwaresolutions.FirePrivacy`. This main ID is the consumer
@@ -51,8 +51,9 @@ ASC `.p8`, key ID and issuer ID for upload. A certificate without its private ke
 sign. Each profile must be unexpired, explicit App Store distribution, match the
 team/ID/group/capabilities, and share the selected valid signing certificate.
 
-The release workflow first runs `cloud-signing.py check-bindings`. This reports
-all missing binding names together without opening keys/profiles, creating
+After its signing-helper unit tests, the release workflow runs
+`cloud-signing.py check-bindings` before opening credentials. This reports all
+missing binding names together without opening keys/profiles, creating
 private files, signing, or contacting Apple. It accepts the existing aggregate
 extension-profile alternative as present; the later signing preparation still
 validates its exact selected-target coverage and credential contents. Presence
@@ -60,37 +61,40 @@ does not establish valid credentials, registered identifiers or upload access.
 The existing configuration, native-test, profile/signature and archive/export
 checks remain required before upload.
 
-Actual consumer **upload-mode** [run 37540319978](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37540319978)
-at `018902e7e4c3b766aad18343d94b5381914180d4` passed all 39 signing-helper tests
-on macOS, then reported eight unavailable bindings together:
-`APP_BASE_BUNDLE_ID`, `APPLE_DISTRIBUTION_P12_BASE64`,
-`APPLE_DISTRIBUTION_P12_PASSWORD`, `APPLE_PROVISION_PROFILE_BASE64`,
-`APPLE_SAFARI_PROVISION_PROFILE_BASE64`, `ASC_PRIVATE_KEY_BASE64`, `ASC_KEY_ID`,
-`ASC_ISSUER_ID`. No aggregate extension-profile alternative was available.
-Configuration, signing, native archive and export/upload steps were skipped;
-cleanup passed. No signed archive, IPA or Apple upload was produced. These are
-observed runner prerequisites, rather than an inference from metadata HTTP403.
+Latest consumer **upload-mode** [run 37548094861](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548094861)
+at `0f8d244` passed all 39 signing-helper tests on macOS and resolved the
+owner-confirmed main ID `com.firesoftwaresolutions.FirePrivacy`. Only these
+seven signing/API bindings were unavailable to that runner:
+`APPLE_DISTRIBUTION_P12_BASE64`, `APPLE_DISTRIBUTION_P12_PASSWORD`,
+`APPLE_PROVISION_PROFILE_BASE64`, `APPLE_SAFARI_PROVISION_PROFILE_BASE64`,
+`ASC_PRIVATE_KEY_BASE64`, `ASC_KEY_ID`, `ASC_ISSUER_ID`. No aggregate
+extension-profile alternative was available. Credential preparation, signing,
+archive/export and upload were skipped; cleanup passed. No signed archive,
+IPA or Apple upload was produced.
 
-Configure the exact registered `APP_BASE_BUNDLE_ID` in GitHub Actions Variables
-and the seven signing/API bindings above in Secrets, either at repository level
-or in environment `app-store`. Verify the actual registered group, matching
-capability profiles and App Store Connect app record described in
-[APPLE-REGISTRATION](APPLE-REGISTRATION.md). Then rerun the workflow in `upload`
-mode with the intended marketing version and an unused build number. A logged-in
-Apple browser tab alone does not bind credentials to GitHub Actions.
+The owner now reports having the P12, profiles and API credentials. Whether
+those existing materials are securely configured and usable in Actions remains
+unverified. Configure or verify the seven Secrets bindings at repository level
+or in environment `app-store`, reusing valid existing materials. The consumer
+main ID already has a workflow fallback; set `APP_BASE_BUNDLE_ID` only to
+supply an intended registered override. Verify actual Safari/App Group grants
+from the matching profiles, then rerun in `upload` mode with the intended
+marketing version and an unused build number. A logged-in Apple browser tab
+alone does not bind credentials to Actions.
 
 Use repository Settings → Secrets and variables → Actions or environment `app-store`.
 Existing environment protections are honored; the workflow adds no invented
 approval gate. Never put secrets in chat/commits/issues/screenshots/workflow
 inputs or ordinary variables. This integration's secret/variable metadata
-requests returned HTTP 403: bindings remain unknown until actual runtime evidence.
-Reuse usable existing bindings rather than assuming absence.
+requests returned HTTP 403 and could not inventory Secrets. The later runner
+check establishes which bindings were unavailable at that attempt; it does not
+establish whether the owner has since configured them. Reuse valid existing
+credentials rather than generating replacements unnecessarily.
 
-Subsequent read-only account [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
-passed its 18 genuine-token/request-boundary tests on macOS, then confirmed all
-three ASC bindings unavailable to the `app-store` workflow. No Apple request or
-registration occurred. P12/profile availability remains untested; the earlier
-archive preflight stopped before signing preparation.
+Historical read-only account [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
+passed 18 genuine-token/request-boundary tests, then stopped because its three
+ASC bindings were unavailable. No Apple request or registration occurred. The
+latest upload-mode check above provides the newer seven-binding evidence.
 
 | Secret | Purpose |
 | --- | --- |
@@ -143,13 +147,13 @@ pins, knowledge/filter ID collisions or different app/provider filter maps.
 
 ## Manual archive or upload
 
-The [Signed App Store build](https://github.com/Ununp3ntium115/FirePrivacy/actions/workflows/release.yml) workflow is registered and active on main after PR #2 merged.
-The final native run 37401191529 passed both families at `6f66780`; merge commit
-`c66f2a5` has the same tree. Actual consumer archive preflight 37402216199 stopped
-at identifier validation because `APP_BASE_BUNDLE_ID` was empty. Signing and
-upload stages were not reached, so their bindings remain unknown. Configure the
-exact registered identifier in Actions variables, verify selected-edition
-profiles/credentials, then rerun on the reviewed production source.
+The [Signed App Store build](https://github.com/Ununp3ntium115/FirePrivacy/actions/workflows/release.yml)
+workflow is registered and active on main. Latest
+[native run 37548308269](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548308269)
+passed both families at `48e8c45`, including the iPad deletion/navigation
+regression. Exact per-family counts and simulator limitations are in
+[VALIDATION](VALIDATION.md). The latest upload attempt stopped at the seven
+missing bindings above; no signing or upload success is implied.
 
 In Actions → Signed App Store build → Run workflow:
 
@@ -162,10 +166,11 @@ In Actions → Signed App Store build → Run workflow:
    being validated. Later enable only to capture actual synthetic build screens.
 5. Run and inspect actual step results, errors and Apple processing.
 
-Hosted tooling uses macos-26/Xcode 26.2. Signing checks, portable checks and native
-iPhone/iPad tests precede the archive. Failed checks stop release; no test bypass
-is provided. Exact edition/embedded-target/profile/entitlement identities are
-validated again before export. Optional screenshots are prepared before upload
+Hosted tooling uses macos-26/Xcode 26.2. Binding inventory and identifier checks
+run before credentials are opened. Matching credential/profile validation,
+portable checks and native iPhone/iPad tests precede the archive. Failed checks
+stop release; no test bypass is provided. Exact edition/embedded-target/profile/
+entitlement identities are validated again before export. Optional screenshots are prepared before upload
 when requested, but App Store screenshots are not a prerequisite for initial
 TestFlight upload.
 

@@ -17,7 +17,7 @@ The app has no account, ads, tracking SDK, subscription, or report resale. A rec
 - Safari content blocking and optional encrypted DNS with real OS activation checks. Separate URL-filter and managed editions contain their own providers and distribution gates.
 - Local notification reminders and secure, explicitly retained endpoint credentials. Report data and credentials never enter the protection App Group.
 
-[FEATURE-COVERAGE](Documentation/FEATURE-COVERAGE.md) maps the original concepts to source, integration and external prerequisites. [VALIDATION](Documentation/VALIDATION.md) separates portable tests, native SDK/simulator checks, signing and hardware QA. The expanded UI and native implementation are undergoing hosted validation; source presence is not App Store acceptance.
+[FEATURE-COVERAGE](Documentation/FEATURE-COVERAGE.md) maps the original concepts to source, integration and external prerequisites. [VALIDATION](Documentation/VALIDATION.md) separates portable tests, native SDK/simulator checks, signing and hardware QA. [Native run 37548308269](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548308269) passed all three unsigned edition builds and the consumer's iPhone/iPad tests. Physical-device checks, distribution signing and App Store acceptance still require their own evidence.
 
 ## Develop in the cloud
 
@@ -34,7 +34,9 @@ On macOS, open `FirePrivacy.xcodeproj`. The consumer and managed app support iOS
 
 The manual signed-build workflow can archive or upload a validated build to **App Store Connect**. It does not submit for review or release the app. Apple Developer manages identifiers, capabilities and signing; App Store Connect receives builds and handles TestFlight and review.
 
-Team `LYDVWU62G4` was supplied by the developer. The proposed bundle identifier remains provisional until its registration and App Store Connect record are verified. Matching distribution credentials belong in the private GitHub Actions environment, never in source or chat.
+Team `LYDVWU62G4` was supplied by the developer. The owner reports creating [App Store Connect app 6819892589](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight) for `com.firesoftwaresolutions.FirePrivacy`; that ID is now the consumer workflow default. Extension/group registration and matching capability profiles still need confirmation. Distribution credentials belong in the private GitHub Actions environment, never in source or chat.
+
+To build from GitHub, open [Signed App Store build](https://github.com/Ununp3ntium115/FirePrivacy/actions/workflows/release.yml), select **Run workflow**, `main`, and `consumer`. Choose `archive` for a checked signed archive/IPA or `upload` to also send it to App Store Connect. Supply the signing/API secrets listed in [CLOUD-RELEASE](Documentation/CLOUD-RELEASE.md); a portal login does not bind them to GitHub. The workflow inventories required bindings and validates identifiers before opening credentials, then checks signing credentials and tests both device families before archive and export.
 
 [RELEASE-CHECKLIST](Documentation/RELEASE-CHECKLIST.md) covers the current Apple requirements and remaining release evidence. Draft listing/policy/review material is in `AppStore/`; standalone public-page source is in `website/`. Policies must match the exact edition before submission.
 

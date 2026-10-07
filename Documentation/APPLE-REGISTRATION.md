@@ -6,14 +6,16 @@ after receiving the main bundle ID below. Record ID: **6819892589**.
 [Owner-provided app version page](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight).
 This is owner confirmation; no authenticated Apple API/browser verification has
 occurred in this cloud session. Safari/App Group registration, capabilities and
-distribution profiles remain unconfirmed.
+distribution-profile grants remain unconfirmed. The owner now reports having
+the P12, profiles and API credentials; their secure Actions bindings and actual
+validity have not yet been verified.
 
 | Item | Consumer value |
 | --- | --- |
-| Main explicit App ID | `com.firesoftwaresolutions.FirePrivacy` |
+| Main explicit App ID | `com.firesoftwaresolutions.FirePrivacy` (owner-confirmed) |
 | App Store Connect app ID | `6819892589` (owner-reported) |
-| Safari explicit App ID | `com.firesoftwaresolutions.FirePrivacy.SafariContentBlocker` |
-| Shared App Group | `group.com.firesoftwaresolutions.FirePrivacy.protection` |
+| Safari explicit App ID | `com.firesoftwaresolutions.FirePrivacy.SafariContentBlocker` (expected; registration unverified) |
+| Shared App Group | `group.com.firesoftwaresolutions.FirePrivacy.protection` (configured default; registration unverified) |
 | Team | `LYDVWU62G4` |
 | App Store app name | Fire Privacy, subject to availability |
 | Platform | iOS, with the existing universal iPhone/iPad target |
@@ -63,18 +65,25 @@ Provisioning access: Apple requires an authorized **team API key** for
 Provisioning endpoints; individual keys cannot use them. Supply missing values
 through GitHub Actions Secrets, never chat or normal workflow inputs.
 
-Actual [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
-ran at `a42b009` on hosted macOS. All 18 token/request-boundary tests passed.
-The live account check then returned `missingBindings` for all three ASC names;
-no Apple API request was made. Those credentials are unavailable to this
-`app-store` workflow, rather than merely unknown from metadata. Subsequent
-upload-mode [run 37540319978](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37540319978)
-passed all 39 signing-helper tests on macOS, then confirmed the base ID,
-distribution P12/password, main/Safari profile and all three ASC bindings
-unavailable to this runner. No aggregate extension-profile alternative was
-provided. Signing and upload were skipped. Exact secure settings are in
-[CLOUD-RELEASE](CLOUD-RELEASE.md); the presence check does not decode credentials
-or certify registration, capability grants or Apple account authority.
+Historical [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
+passed all 18 token/request-boundary cases on macOS, then reported the three ASC
+bindings unavailable before any Apple API request.
+
+Latest consumer upload-mode [run 37548094861](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548094861)
+at `0f8d244` passed 39 signing-helper cases and resolved the owner-confirmed
+main ID. Seven signing/API bindings were unavailable: P12/password, main/Safari
+profiles and the three ASC values. No aggregate extension-profile alternative
+was supplied. Credential preparation, signing, archive/export and upload were
+skipped. The owner has since reported possessing these credentials; whether
+they are bound securely and usable in Actions remains to be checked. Exact
+Secrets names and rerun instructions are in [CLOUD-RELEASE](CLOUD-RELEASE.md).
+A presence check does not decode credentials or certify capability grants or
+Apple account authority.
+
+Latest unsigned native [run 37548308269](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548308269)
+at `48e8c45` passed on iPhone and iPad, including the deletion UI regression.
+These results do not supply signing credentials or demonstrate active
+Safari/DNS/App Group grants. See [VALIDATION](VALIDATION.md).
 
 ## Supported registration routes
 
@@ -92,14 +101,17 @@ Once authorized account access exists:
    IDs before creating missing explicit app/Safari IDs.
 2. Register the shared App Group and assign it to both IDs. Enable DNS Settings
    for the main app and inspect the resulting entitlements.
-3. Create the iOS app record in App Store Connect with the matching main ID,
-   available app name, primary language, unique SKU and intended access. Actual
-   account fields and existing records determine these choices.
-4. Supply matching Apple Distribution private key/P12 and App Store profiles for
-   app and Safari. Apple's certificate API cannot recover the private key.
-5. Set `APP_BASE_BUNDLE_ID` and the registered App Group in Actions variables.
-   Run the checked [archive/upload workflow](CLOUD-RELEASE.md). Upload goes to
-   App Store Connect; public release requires processing, QA and App Review.
+3. Verify the existing owner-reported app record `6819892589` uses the matching
+   main ID and intended actual account fields. Do not create a duplicate record.
+4. Bind the owner's existing matching Apple Distribution private key/P12, app/
+   Safari profiles and API credentials securely in Actions. Apple's certificate
+   API cannot recover a missing private key. Validate contents and grants.
+5. Set the actual registered App Group in Actions variables if it differs from
+   the configured default. The confirmed consumer main ID already has a
+   fallback; `APP_BASE_BUNDLE_ID` is an optional registered override for it.
+   Run the checked [archive/upload workflow](CLOUD-RELEASE.md) in upload mode.
+   Verify processing/TestFlight availability; public release requires physical
+   QA and App Review.
 
 Official sources: [OpenAPI specification](https://developer.apple.com/sample-code/app-store-connect/app-store-connect-openapi-specification.zip),
 [team API keys](https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api),
