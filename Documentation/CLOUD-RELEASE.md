@@ -72,24 +72,33 @@ extension-profile alternative was available. Credential preparation, signing,
 archive/export and upload were skipped; cleanup passed. No signed archive,
 IPA or Apple upload was produced.
 
-The owner now reports having the P12, profiles and API credentials. Whether
-those existing materials are securely configured and usable in Actions remains
-unverified. Configure or verify the seven Secrets bindings at repository level
-or in environment `app-store`, reusing valid existing materials. The consumer
-main ID already has a workflow fallback; set `APP_BASE_BUNDLE_ID` only to
-supply an intended registered override. Verify actual Safari/App Group grants
-from the matching profiles, then rerun in `upload` mode with the intended
-marketing version and an unused build number. A logged-in Apple browser tab
-alone does not bind credentials to Actions.
+The newer owner-relayed Hermes report says the Mac has Xcode 26.5 and a valid
+Apple Distribution identity for `LYDVWU62G4`. Its local provisioning profiles
+belong to another app and cannot sign these targets; no ASC `.p8` was found.
+Hermes reports `gh secret list` was empty and did not add Actions secrets. These
+are external reports, not this session's authenticated inspection or a new
+cloud run. The passing hosted tests still used Xcode 26.2.
+
+Export that existing distribution identity, including its private key, as a
+password-protected P12. Obtain matching main/Safari App Store profiles with the
+actual App Group/DNS grants. Locate an authorized ASC team key or create/download
+one if none is available, then populate the seven Secrets bindings at repository
+level or in environment `app-store`. The consumer main ID already has a workflow
+fallback; set `APP_BASE_BUNDLE_ID` only for an intended registered override.
+Rerun in `upload` mode with the intended version and an unused build number.
+No Actions secrets were added by this cloud session or by the reported Hermes
+operation; a logged-in Apple tab alone does not provide them to the runner.
 
 Use repository Settings → Secrets and variables → Actions or environment `app-store`.
 Existing environment protections are honored; the workflow adds no invented
 approval gate. Never put secrets in chat/commits/issues/screenshots/workflow
 inputs or ordinary variables. This integration's secret/variable metadata
 requests returned HTTP 403 and could not inventory Secrets. The later runner
-check establishes which bindings were unavailable at that attempt; it does not
-establish whether the owner has since configured them. Reuse valid existing
-credentials rather than generating replacements unnecessarily.
+check establishes which bindings were unavailable at that attempt. The newer
+external report also says no Secrets were added, but credential contents and
+account authority still require actual workflow validation. Reuse the reported
+valid distribution identity; other-app profiles cannot substitute for the
+required Fire Privacy profiles.
 
 Historical read-only account [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
 passed 18 genuine-token/request-boundary tests, then stopped because its three

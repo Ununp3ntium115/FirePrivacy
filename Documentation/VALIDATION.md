@@ -5,8 +5,9 @@ The current hosted iPhone/iPad validation passed at
 [run 37548308269](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548308269).
 The latest consumer upload attempt resolved the owner-confirmed main bundle ID,
 then stopped because seven signing/API bindings were unavailable to Actions.
-The owner reports having those credentials; their secure Actions configuration
-and validity have not yet been demonstrated.
+The newer owner-relayed Mac report identifies a distribution identity, but no
+usable Fire Privacy profiles, local ASC key or added Actions secrets. That report
+is not authenticated verification by this cloud session; no new run occurred.
 
 No signed distribution archive, IPA, App Store Connect upload, Apple review
 approval or public App Store release has been demonstrated. Final store
@@ -25,7 +26,7 @@ legal compliance.
 | Simulator skips and model evidence | Both families skipped physical Data Protection and actual guided generation on eligible physical Apple Intelligence hardware. iPad additionally skipped the unavailable-only adapter rejection case because that simulator reported model readiness; iPhone exercised it successfully. Actual availability/coordinator fallback cases ran, but readiness does not establish usable generation assets or successful physical inference. |
 | Screenshots and artifacts | Screenshot-capture steps were skipped on both families. Test-result retention and job cleanup passed. Existing UI diagnostic attachments are not asserted to be store-ready screenshots. |
 | Consumer upload preflight | [Run 37548094861](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548094861), revision `0f8d244`, passed all 39 signing-helper tests on hosted macOS. The consumer main ID resolved to `com.firesoftwaresolutions.FirePrivacy`; only seven signing/API bindings were unavailable. Credential preparation, signing, archive/export and upload did not run. No signed archive, IPA or Apple upload was produced. Exact names are in [CLOUD-RELEASE](CLOUD-RELEASE.md). |
-| Apple app record and credentials | The owner reports creating [ASC app 6819892589](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight) for that main ID and having the P12, profiles and API credentials. These are owner reports, not authenticated account or credential validation by this session. Actual Safari/App Group registration, profile grants and usable Actions bindings remain unverified. |
+| Apple app record and newer Mac report | The owner reports creating [ASC app 6819892589](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight) for that main ID. Their newer Hermes report identifies Xcode 26.5 and a valid Apple Distribution identity for `LYDVWU62G4`, but local profiles belong to another app, no ASC `.p8` was found, `gh secret list` was empty and no Actions secrets were added. This is external reporting, not this session's authenticated Mac/account inspection. Actual Safari/App Group grants and usable Actions credentials remain unverified; no new run is asserted. |
 | Read-only Apple account tooling | The 18 genuine-P256/request-boundary helper cases passed. Actual [account preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756) reported the three ASC bindings unavailable before any Apple request. The later upload presence check supplies the current seven-binding evidence. No authenticated Apple registration was performed by this cloud session. |
 | Required-reason API audit | Owned app-container rotation durability uses `Darwin.fstat`; the app manifest declares FileTimestamp reason `C617.1`. Current Apple text/source audit: [REQUIRED-REASON-API-AUDIT](REQUIRED-REASON-API-AUDIT.md). Signed-archive privacy reporting and Apple processing remain separate checks. |
 | Public policy/support | The GitHub-rendered expanded consumer policy and public issue tracker returned unauthenticated HTTPS 200 on October 6, with the matching usage-comparison section visible. GitHub Pages metadata reports a built standalone deployment; this cloud instance's direct HTTPS check was blocked by proxy CONNECT 403, so standalone reachability is not asserted. |
@@ -65,9 +66,10 @@ against the official key set and signer.
 
 ## Remaining runtime and release checks
 
-- Bind the owner's existing authorized signing/API material securely in Actions,
-  validate matching main/Safari profiles and actual App Group/DNS grants, then
-  produce a signed archive/upload and inspect App Store Connect processing.
+- Export the reported distribution identity as a password-protected P12, obtain
+  matching main/Safari App Store profiles and locate or create an authorized ASC
+  team key. Bind them securely in Actions, validate actual App Group/DNS grants,
+  then produce a signed archive/upload and inspect App Store Connect processing.
 - Use current physical iPhone/iPad Apple exports and supplied usage records to
   check parsing, evidence, history/comparison, retention, sharing/redaction,
   consent/revocation and deletion failures/recovery.

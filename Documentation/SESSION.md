@@ -37,13 +37,18 @@ at `0f8d244` passed 39 signing-helper tests and resolved the main ID, then
 reported seven unavailable signing/API bindings. It produced no signed archive,
 IPA or upload.
 
-The owner now reports having the P12, profiles and API credentials. Whether
-those existing materials are securely configured and usable in GitHub Actions
-is still pending verification. Follow [CLOUD-RELEASE](CLOUD-RELEASE.md) for the
-exact seven Secrets names and rerun the consumer upload with the intended
-version/unused build number. Keep credentials outside chat/source. Earlier
-metadata HTTP 403 meant unknown bindings; the latest runner presence check is
-the specific observed evidence, not proof that the owner lacks credentials.
+The newer owner-relayed Hermes report says the Mac has Xcode 26.5 and a valid
+Apple Distribution identity for `LYDVWU62G4`, but its local profiles belong to
+another app, no ASC `.p8` was found, and `gh secret list` was empty. Hermes did
+not add Actions secrets. This is an external report; the cloud session has not
+inspected those Mac materials or run another upload.
+
+Export that identity as a password-protected P12, obtain matching main/Safari
+App Store profiles and locate or create an authorized ASC team API key. Populate
+the seven Secrets names in [CLOUD-RELEASE](CLOUD-RELEASE.md), then rerun consumer
+upload with the intended version/unused build number. Keep credential contents
+outside chat/source. The latest actual runner check still establishes seven
+unavailable bindings; no secrets or usable profiles are asserted configured.
 
 [APPLE-REGISTRATION](APPLE-REGISTRATION.md) covers the owner-reported record and
 remaining registration checks. Shared-browser activation was blocked by missing

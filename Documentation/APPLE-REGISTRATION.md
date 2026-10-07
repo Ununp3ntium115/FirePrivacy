@@ -6,9 +6,14 @@ after receiving the main bundle ID below. Record ID: **6819892589**.
 [Owner-provided app version page](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight).
 This is owner confirmation; no authenticated Apple API/browser verification has
 occurred in this cloud session. Safari/App Group registration, capabilities and
-distribution-profile grants remain unconfirmed. The owner now reports having
-the P12, profiles and API credentials; their secure Actions bindings and actual
-validity have not yet been verified.
+distribution-profile grants remain unconfirmed. The newer owner-relayed Hermes
+report says Xcode 26.5 and a valid Apple Distribution identity for this team are
+on the Mac, but its local profiles belong to another app, no ASC `.p8` was found,
+and `gh secret list` was empty. Hermes did not add Actions secrets. This is an
+external report, not authenticated verification by this cloud session.
+
+Use the [Hermes signing handoff](HERMES-SIGNING-HANDOFF.md) for the exact local
+preparation order, target grants and secure Secret mappings.
 
 | Item | Consumer value |
 | --- | --- |
@@ -74,9 +79,12 @@ at `0f8d244` passed 39 signing-helper cases and resolved the owner-confirmed
 main ID. Seven signing/API bindings were unavailable: P12/password, main/Safari
 profiles and the three ASC values. No aggregate extension-profile alternative
 was supplied. Credential preparation, signing, archive/export and upload were
-skipped. The owner has since reported possessing these credentials; whether
-they are bound securely and usable in Actions remains to be checked. Exact
-Secrets names and rerun instructions are in [CLOUD-RELEASE](CLOUD-RELEASE.md).
+skipped. The newer owner-relayed Mac report identifies a distribution identity,
+but no usable Fire Privacy profiles, local ASC key or added Actions secrets.
+Export the existing identity as a password-protected P12, obtain matching main/
+Safari App Store profiles and locate or create an authorized ASC API key before
+securely populating Actions. Exact Secrets names and rerun instructions are in
+[CLOUD-RELEASE](CLOUD-RELEASE.md).
 A presence check does not decode credentials or certify capability grants or
 Apple account authority.
 
@@ -103,9 +111,13 @@ Once authorized account access exists:
    for the main app and inspect the resulting entitlements.
 3. Verify the existing owner-reported app record `6819892589` uses the matching
    main ID and intended actual account fields. Do not create a duplicate record.
-4. Bind the owner's existing matching Apple Distribution private key/P12, app/
-   Safari profiles and API credentials securely in Actions. Apple's certificate
-   API cannot recover a missing private key. Validate contents and grants.
+4. Export the reported Apple Distribution identity, including its private key,
+   as a password-protected P12. Obtain `IOS_APP_STORE` profiles for the exact
+   main/Safari IDs, matching certificate and group/capabilities; the reported
+   other-app profiles cannot be used. Locate an authorized ASC team `.p8` or
+   create/download a team API key if none is available. Bind the P12/password,
+   both profiles and ASC key/ID/issuer securely in Actions, then validate them.
+   Apple's certificate API cannot recover a missing private key.
 5. Set the actual registered App Group in Actions variables if it differs from
    the configured default. The confirmed consumer main ID already has a
    fallback; `APP_BASE_BUNDLE_ID` is an optional registered override for it.
