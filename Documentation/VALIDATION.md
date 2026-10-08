@@ -3,11 +3,16 @@
 The current hosted iPhone/iPad validation passed at
 `48e8c45e31b03bfac5c5a65034595c9c86193825` in
 [run 37548308269](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548308269).
-The latest consumer upload attempt resolved the owner-confirmed main bundle ID,
-then stopped because seven signing/API bindings were unavailable to Actions.
-The newer owner-relayed Mac report identifies a distribution identity, but no
-usable Fire Privacy profiles, local ASC key or added Actions secrets. That report
-is not authenticated verification by this cloud session; no new run occurred.
+The latest October 8 upload attempt passed 43 signing-helper tests, resolved
+the consumer main ID and stopped because seven signing/API bindings were
+unavailable at that run. Name-only repository/environment Secrets and Variables queries all returned
+HTTP 403, preventing a direct inventory; the fresh workflow establishes which
+bindings were unavailable to its runner.
+Multiple read-only Apple probes using uploaded/pasted candidate keys reached
+Apple but returned HTTP 401 `NOT_AUTHORIZED`, without authentication or account
+changes. Uploaded Safari-profile metadata is promising but does not establish
+Apple signing trust; a separate main profile and distribution P12 are still
+needed.
 
 No signed distribution archive, IPA, App Store Connect upload, Apple review
 approval or public App Store release has been demonstrated. Final store
@@ -25,9 +30,10 @@ legal compliance.
 | Deletion UI regression | Earlier [run 37540289734](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37540289734), revision `018902e7e4c3b766aad18343d94b5381914180d4`, failed the iPad Evidence navigation tap after Delete All confirmation, before checking the empty-evidence assertion. The test-only `48e8c45` fix waits for the completed deletion state and enabled/hittable navigation. `testDeletingDemoClearsPreviouslyOpenedEvidence` then passed on iPhone (38.483 seconds) and iPad (73.970 seconds). No production code was changed by that fix. |
 | Simulator skips and model evidence | Both families skipped physical Data Protection and actual guided generation on eligible physical Apple Intelligence hardware. iPad additionally skipped the unavailable-only adapter rejection case because that simulator reported model readiness; iPhone exercised it successfully. Actual availability/coordinator fallback cases ran, but readiness does not establish usable generation assets or successful physical inference. |
 | Screenshots and artifacts | Screenshot-capture steps were skipped on both families. Test-result retention and job cleanup passed. Existing UI diagnostic attachments are not asserted to be store-ready screenshots. |
-| Consumer upload preflight | [Run 37548094861](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548094861), revision `0f8d244`, passed all 39 signing-helper tests on hosted macOS. The consumer main ID resolved to `com.firesoftwaresolutions.FirePrivacy`; only seven signing/API bindings were unavailable. Credential preparation, signing, archive/export and upload did not run. No signed archive, IPA or Apple upload was produced. Exact names are in [CLOUD-RELEASE](CLOUD-RELEASE.md). |
-| Apple app record and newer Mac report | The owner reports creating [ASC app 6819892589](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight) for that main ID. Their newer Hermes report identifies Xcode 26.5 and a valid Apple Distribution identity for `LYDVWU62G4`, but local profiles belong to another app, no ASC `.p8` was found, `gh secret list` was empty and no Actions secrets were added. This is external reporting, not this session's authenticated Mac/account inspection. Actual Safari/App Group grants and usable Actions credentials remain unverified; no new run is asserted. |
-| Read-only Apple account tooling | The 18 genuine-P256/request-boundary helper cases passed. Actual [account preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756) reported the three ASC bindings unavailable before any Apple request. The later upload presence check supplies the current seven-binding evidence. No authenticated Apple registration was performed by this cloud session. |
+| Consumer upload preflight | October 8 [run 37847693882](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37847693882), revision `f976de1`, passed all 43 signing-helper tests in 0.481 seconds on hosted macOS, then reported `missingBindings` for the same seven unavailable signing/API bindings, with no aggregate extension-profile alternative. The owner-confirmed main ID resolved; credential preparation, signing, archive/export and upload were skipped, and cleanup succeeded. No signed archive, IPA or Apple upload was produced. Exact binding names are in [CLOUD-RELEASE](CLOUD-RELEASE.md). |
+| App record, Safari profile and remaining signing material | The owner reports ASC app 6819892589 for the confirmed main ID and an existing distribution identity on their Mac. The uploaded profile reports the expected Safari target/team/shared group, App Store distribution and an unexpired date; Safari does not require DNS entitlement. CMS cryptographic integrity was inspected without establishing Apple chain trust. macOS Apple trust/profile checks remain mandatory; a separate matching main profile and distribution P12/private key are still needed. |
+| Read-only Apple account evidence | Multiple uploaded/pasted candidates parsed as P256 and signed successfully, but fresh read-only Apple requests returned HTTP 401 `NOT_AUTHORIZED`, `authenticated=false`. Both Team and Individual JWT forms were tried against a fixed app GET; a later differently named upload also failed with its exact filename-derived ID and supplied issuer. Verified TLS and aligned independent clock checks did not establish authentication. No account mutations occurred; controlled temporary signing material and the later owned downloaded copy were cleaned. No key/identifier/issuer values are published. |
+| Current GitHub binding visibility | All four name-only repository/environment Secrets/Variables list requests returned HTTP 403. This does not establish absence or confirm added values. Fresh run 37847693882 directly established that the same seven bindings were unavailable to its runner; it does not expose stored secret values. |
 | Required-reason API audit | Owned app-container rotation durability uses `Darwin.fstat`; the app manifest declares FileTimestamp reason `C617.1`. Current Apple text/source audit: [REQUIRED-REASON-API-AUDIT](REQUIRED-REASON-API-AUDIT.md). Signed-archive privacy reporting and Apple processing remain separate checks. |
 | Public policy/support | The GitHub-rendered expanded consumer policy and public issue tracker returned unauthenticated HTTPS 200 on October 6, with the matching usage-comparison section visible. GitHub Pages metadata reports a built standalone deployment; this cloud instance's direct HTTPS check was blocked by proxy CONNECT 403, so standalone reachability is not asserted. |
 | Apple requirement sources | Official Apple sources were retrieved with normal TLS and dated/digested evidence. See [APPLE-REQUIREMENTS](APPLE-REQUIREMENTS.md), [base source record](APPLE-SOURCE-VERIFICATION.json), [optional API source record](APPLE-OPTIONAL-SOURCE-VERIFICATION.json) and [usage sources](USAGE-COMPARISON-SOURCES.json). Retrieval is not Apple approval or legal certification. |
@@ -44,6 +50,21 @@ logs, result bundles and production credentials are not published as repository
 files. Failed preflight attempts do not establish that the owner lacks Apple
 credentials; the latest attempt establishes that its runner lacked the named
 bindings at that time.
+
+The official Apple JWT guide shows a ten-character Key ID example but does not
+state that exact length as a requirement. API Key ID validation now accepts
+bounded, unchanged ASCII alphanumeric input of 1–64 characters;
+team/prefix ten-character validation and issuer/profile/certificate gates remain.
+This correction does not authenticate the rejected candidates. The targeted
+checks passed 22 account-preflight and 43 cloud-signing cases (65 total), and
+the full Python release suite passed 145 cases in 10.219 seconds. These counts
+overlap and must not be added. Tests use genuine generated-key JWT signatures
+and mocked GET responses, preserving exact Key IDs/filenames and verifying
+cleanup and rejection of unsafe IDs; they do not establish real Apple account
+authentication. App/Core source, targets and dependencies are unchanged, so
+the passing native `48e8c45` run still matches the runtime. No extra native
+rerun or successful Apple authentication is claimed. See
+[APPLE-REGISTRATION](APPLE-REGISTRATION.md).
 
 ## Supporting coverage
 
@@ -67,8 +88,8 @@ against the official key set and signer.
 ## Remaining runtime and release checks
 
 - Export the reported distribution identity as a password-protected P12, obtain
-  matching main/Safari App Store profiles and locate or create an authorized ASC
-  team key. Bind them securely in Actions, validate actual App Group/DNS grants,
+  the separate matching main App Store profile, validate the uploaded Safari
+  profile through macOS Apple trust checks and obtain usable ASC authorization. Bind them securely in Actions, validate actual App Group/DNS grants,
   then produce a signed archive/upload and inspect App Store Connect processing.
 - Use current physical iPhone/iPad Apple exports and supplied usage records to
   check parsing, evidence, history/comparison, retention, sharing/redaction,

@@ -61,8 +61,9 @@ does not establish valid credentials, registered identifiers or upload access.
 The existing configuration, native-test, profile/signature and archive/export
 checks remain required before upload.
 
-Latest consumer **upload-mode** [run 37548094861](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548094861)
-at `0f8d244` passed all 39 signing-helper tests on macOS and resolved the
+Latest consumer **upload-mode** [run 37847693882](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37847693882)
+on October 8 at `f976de1` passed all 43 signing-helper tests in 0.481 seconds
+on hosted macOS and resolved the
 owner-confirmed main ID `com.firesoftwaresolutions.FirePrivacy`. Only these
 seven signing/API bindings were unavailable to that runner:
 `APPLE_DISTRIBUTION_P12_BASE64`, `APPLE_DISTRIBUTION_P12_PASSWORD`,
@@ -72,16 +73,18 @@ extension-profile alternative was available. Credential preparation, signing,
 archive/export and upload were skipped; cleanup passed. No signed archive,
 IPA or Apple upload was produced.
 
-The newer owner-relayed Hermes report says the Mac has Xcode 26.5 and a valid
+The earlier owner-relayed Hermes report says the Mac has Xcode 26.5 and a valid
 Apple Distribution identity for `LYDVWU62G4`. Its local provisioning profiles
 belong to another app and cannot sign these targets; no ASC `.p8` was found.
 Hermes reports `gh secret list` was empty and did not add Actions secrets. These
-are external reports, not this session's authenticated inspection or a new
-cloud run. The passing hosted tests still used Xcode 26.2.
+are external reports, not this session's authenticated Mac inspection. The
+passing hosted tests still used Xcode 26.2. Later read-only Apple requests are
+recorded below; they did not authenticate or change account state.
 
 Export that existing distribution identity, including its private key, as a
-password-protected P12. Obtain matching main/Safari App Store profiles with the
-actual App Group/DNS grants. Locate an authorized ASC team key or create/download
+password-protected P12. Obtain the matching main App Store profile with the
+actual App Group/DNS grants and validate the supplied Safari profile through
+macOS Apple trust checks. Locate an authorized ASC team key or create/download
 one if none is available, then populate the seven Secrets bindings at repository
 level or in environment `app-store`. The consumer main ID already has a workflow
 fallback; set `APP_BASE_BUNDLE_ID` only for an intended registered override.
@@ -94,11 +97,43 @@ Existing environment protections are honored; the workflow adds no invented
 approval gate. Never put secrets in chat/commits/issues/screenshots/workflow
 inputs or ordinary variables. This integration's secret/variable metadata
 requests returned HTTP 403 and could not inventory Secrets. The later runner
-check establishes which bindings were unavailable at that attempt. The newer
-external report also says no Secrets were added, but credential contents and
-account authority still require actual workflow validation. Reuse the reported
+check establishes which bindings were unavailable at that attempt. The earlier
+external report said Hermes added no Secrets; current bindings cannot be
+inventoried through this integration. Credential contents and account authority
+still require actual workflow validation. Reuse the reported
 valid distribution identity; other-app profiles cannot substitute for the
 required Fire Privacy profiles.
+
+Multiple read-only Apple probes used uploaded/pasted P256 candidate keys and
+verified TLS, but returned HTTP 401 `NOT_AUTHORIZED`, `authenticated=false`.
+Team and Individual JWT forms against a fixed app GET both failed; a later
+filename-derived candidate also failed. Clock checks aligned with server time.
+No account mutations occurred, and controlled temporary material/owned copies
+were cleaned. Candidate identifiers, issuer values and key contents are omitted.
+
+The uploaded profile reports the expected Safari target/team/shared group,
+App Store distribution and an unexpired date. Safari does not need DNS grants.
+CMS integrity was inspected without establishing Apple chain trust; macOS
+trust/profile checks remain mandatory. The separate main profile and
+password-protected distribution P12/private key are still needed.
+
+All four current name-only repository/environment Secrets/Variables queries
+returned HTTP 403. This blocks visibility, not proof of missing or configured
+values. Fresh run 37847693882 directly confirms the same seven bindings were
+unavailable to its runner. Uploading files here does not itself populate
+GitHub Actions Secrets.
+
+Apple's ten-character Key ID example is not a stated exact-length requirement.
+Local API Key ID validation now accepts bounded unchanged ASCII alphanumeric
+input of 1–64 characters. Team/prefix ten-character checks and
+issuer/profile/certificate/native gates remain. This corrects a local input
+restriction; it does not authenticate the rejected candidates. The
+full 145-case Python release suite passed, including generated-key JWT and
+mocked-request checks for unchanged IDs/filenames, cleanup and unsafe input.
+This is helper validation, not successful Apple authentication. Runtime app/
+Core source, targets and dependencies are unchanged from the passing native
+run. See [VALIDATION](VALIDATION.md) and
+[APPLE-REGISTRATION](APPLE-REGISTRATION.md).
 
 Historical read-only account [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37403403756)
 passed 18 genuine-token/request-boundary tests, then stopped because its three

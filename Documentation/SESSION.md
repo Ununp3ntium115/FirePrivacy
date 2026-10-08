@@ -32,23 +32,55 @@ capability/operator/deployment conditions.
 macOS/Xcode without moving this chat to a local Mac. The registered
 [Signed App Store build](https://github.com/Ununp3ntium115/FirePrivacy/actions/workflows/release.yml)
 workflow supports archive and upload modes. Latest consumer upload attempt
-[37548094861](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548094861)
-at `0f8d244` passed 39 signing-helper tests and resolved the main ID, then
+[37847693882](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37847693882)
+on October 8 at `f976de1` passed 43 signing-helper tests in 0.481 seconds and
+resolved the main ID, then
 reported seven unavailable signing/API bindings. It produced no signed archive,
 IPA or upload.
 
-The newer owner-relayed Hermes report says the Mac has Xcode 26.5 and a valid
+The earlier owner-relayed Hermes report says the Mac has Xcode 26.5 and a valid
 Apple Distribution identity for `LYDVWU62G4`, but its local profiles belong to
 another app, no ASC `.p8` was found, and `gh secret list` was empty. Hermes did
 not add Actions secrets. This is an external report; the cloud session has not
-inspected those Mac materials or run another upload.
+inspected those Mac materials. The later upload preflight above again stopped
+before signing; the read-only Apple requests below did not authenticate.
 
-Export that identity as a password-protected P12, obtain matching main/Safari
-App Store profiles and locate or create an authorized ASC team API key. Populate
+Export that identity as a password-protected P12, obtain the matching main
+App Store profile, validate the supplied Safari profile through macOS Apple
+trust checks and locate or create an authorized ASC team API key. Populate
 the seven Secrets names in [CLOUD-RELEASE](CLOUD-RELEASE.md), then rerun consumer
 upload with the intended version/unused build number. Keep credential contents
 outside chat/source. The latest actual runner check still establishes seven
 unavailable bindings; no secrets or usable profiles are asserted configured.
+
+Multiple read-only Apple requests with uploaded/pasted P256 candidates reached
+Apple over verified TLS but returned HTTP 401 `NOT_AUTHORIZED`,
+`authenticated=false`. Team and Individual JWT fixed-app GETs both failed;
+a later exact-filename-derived candidate also failed. Clock checks aligned.
+No account changes occurred; controlled temporary material/owned copies were
+cleaned. Usable ASC authorization remains unresolved, and no candidate values
+or private material are included here.
+
+Uploaded Safari-profile metadata reports the expected target/team/shared group,
+App Store distribution and an unexpired date, with no DNS grant expected for
+Safari. CMS integrity was inspected without Apple chain trust; mandatory
+macOS trust checks remain. A separate main profile and distribution P12/private
+key are still needed.
+
+Four name-only repository/environment Secrets/Variables list calls returned
+HTTP 403, so this session cannot confirm whether bindings were added. Fresh run
+37847693882 establishes that the same seven bindings were unavailable to its
+runner, with no aggregate extension-profile alternative.
+
+The API Key ID guard now accepts unchanged ASCII alphanumeric input of 1–64
+characters: Apple's ten-character example is not a documented exact
+length requirement. Team/prefix and issuer/profile/certificate/native gates
+remain. The guard correction does not authenticate the rejected candidates.
+The full Python release suite passed 145 cases (10.219 seconds), including
+genuine generated-key JWT/mocked-request, exact-ID/filename, cleanup and
+unsafe-input checks. This does not establish Apple authentication. App/Core,
+target and dependency source is unchanged; native `48e8c45` still matches the
+runtime. Exact overlapping test scope is in [VALIDATION](VALIDATION.md).
 
 [APPLE-REGISTRATION](APPLE-REGISTRATION.md) covers the owner-reported record and
 remaining registration checks. Shared-browser activation was blocked by missing

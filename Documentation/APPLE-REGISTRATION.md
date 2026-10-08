@@ -6,7 +6,7 @@ after receiving the main bundle ID below. Record ID: **6819892589**.
 [Owner-provided app version page](https://appstoreconnect.apple.com/apps/6819892589/distribution/ios/version/inflight).
 This is owner confirmation; no authenticated Apple API/browser verification has
 occurred in this cloud session. Safari/App Group registration, capabilities and
-distribution-profile grants remain unconfirmed. The newer owner-relayed Hermes
+distribution-profile grants remain unconfirmed. The earlier owner-relayed Hermes
 report says Xcode 26.5 and a valid Apple Distribution identity for this team are
 on the Mac, but its local profiles belong to another app, no ASC `.p8` was found,
 and `gh secret list` was empty. Hermes did not add Actions secrets. This is an
@@ -74,19 +74,48 @@ Historical [preflight 37403403756](https://github.com/Ununp3ntium115/FirePrivacy
 passed all 18 token/request-boundary cases on macOS, then reported the three ASC
 bindings unavailable before any Apple API request.
 
-Latest consumer upload-mode [run 37548094861](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548094861)
-at `0f8d244` passed 39 signing-helper cases and resolved the owner-confirmed
-main ID. Seven signing/API bindings were unavailable: P12/password, main/Safari
-profiles and the three ASC values. No aggregate extension-profile alternative
-was supplied. Credential preparation, signing, archive/export and upload were
-skipped. The newer owner-relayed Mac report identifies a distribution identity,
-but no usable Fire Privacy profiles, local ASC key or added Actions secrets.
-Export the existing identity as a password-protected P12, obtain matching main/
-Safari App Store profiles and locate or create an authorized ASC API key before
-securely populating Actions. Exact Secrets names and rerun instructions are in
-[CLOUD-RELEASE](CLOUD-RELEASE.md).
-A presence check does not decode credentials or certify capability grants or
-Apple account authority.
+Latest consumer upload-mode [run 37847693882](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37847693882)
+on October 8 at `f976de1` passed 43 signing-helper cases in 0.481 seconds and
+resolved the owner-confirmed main ID. The same seven signing/API bindings were
+unavailable. Credential preparation, signing, archive/export and upload were
+skipped; cleanup succeeded. This run did not produce an IPA or contact Apple
+for a signed upload. Exact Secrets names are in [CLOUD-RELEASE](CLOUD-RELEASE.md).
+
+Multiple October 8 read-only probes with uploaded/pasted candidate keys parsed
+and signed as P256 over verified TLS but returned HTTP 401 `NOT_AUTHORIZED`,
+`authenticated=false`. Team and Individual JWT forms against a fixed app GET
+both failed; a later differently named upload also failed using its exact
+filename-derived ID and supplied issuer. Independent clock checks were aligned.
+No account mutations occurred; controlled temporary signing material and the
+later owned downloaded copy were cleaned. Real identifiers, issuer values and
+key material are excluded from these public records. Matching usable ASC
+credentials and team authority remain unverified.
+
+The uploaded profile reports the expected consumer Safari target, team, shared
+group, App Store distribution and unexpired status. No DNS entitlement is
+expected for Safari. CMS cryptographic integrity was inspected without Apple
+chain trust; mandatory macOS trust/profile checks remain outstanding. A
+separate matching main profile and distribution P12/private key are still needed.
+
+All four name-only repository/environment Secrets and Variables list calls
+returned HTTP 403. Current bindings cannot be inventoried by this integration;
+do not infer absence or claim they were added. Fresh run 37847693882 directly reported seven unavailable bindings to its
+runner, with no aggregate extension-profile alternative. Stored values remain
+unknown; the fresh runner result establishes runtime availability at that run.
+
+Apple's [JWT guide](https://developer.apple.com/documentation/appstoreconnectapi/generating-tokens-for-api-requests)
+shows a ten-character Key ID example without mandating that length. Copy the
+Key ID unchanged from the same team key that supplied the private key and
+Issuer ID. Local API Key ID validation now accepts bounded 1–64 unchanged
+ASCII alphanumeric characters; do not pad, truncate, change case or substitute
+a team ID to pass validation. Team/App ID prefix validation remains ten
+characters, and issuer/profile/certificate/native gates remain unchanged. The
+syntax correction alone does not establish valid authentication. The targeted
+65 helper cases and full 145-case Python release suite passed; genuine
+generated-key JWT/mocked-request tests check preservation, filename handling,
+cleanup and unsafe-ID rejection. See [VALIDATION](VALIDATION.md). These results
+do not establish real Apple authentication, and the app/Core/target/dependency
+source still matches the passing native run.
 
 Latest unsigned native [run 37548308269](https://github.com/Ununp3ntium115/FirePrivacy/actions/runs/37548308269)
 at `48e8c45` passed on iPhone and iPad, including the deletion UI regression.
