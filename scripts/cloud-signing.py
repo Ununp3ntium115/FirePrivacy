@@ -35,6 +35,7 @@ UUID_PATTERN = re.compile(
     r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
 )
 APPLE_ID_PATTERN = re.compile(r"[A-Z0-9]{10}")
+KEY_ID_PATTERN = re.compile(r"[A-Za-z0-9]{1,64}")
 BUNDLE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+")
 ASC_BINDINGS = ("ASC_PRIVATE_KEY_BASE64", "ASC_KEY_ID", "ASC_ISSUER_ID")
 APP_GROUP_DEFAULT = "group.com.firesoftwaresolutions.FirePrivacy.protection"
@@ -436,7 +437,7 @@ def prepare() -> None:
     if needs_asc:
         key_id = required("ASC_KEY_ID")
         issuer_id = required("ASC_ISSUER_ID")
-        if not APPLE_ID_PATTERN.fullmatch(key_id) or not UUID_PATTERN.fullmatch(issuer_id):
+        if not KEY_ID_PATTERN.fullmatch(key_id) or not UUID_PATTERN.fullmatch(issuer_id):
             raise SigningError("ASC_KEY_ID or ASC_ISSUER_ID has an invalid format.")
         asc_data = decode_binding("ASC_PRIVATE_KEY_BASE64", 256 * 1024)
 

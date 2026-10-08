@@ -29,6 +29,7 @@ from urllib.request import HTTPSHandler, HTTPRedirectHandler, Request, build_ope
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://api.appstoreconnect.apple.com"
 BINDINGS = ("ASC_PRIVATE_KEY_BASE64", "ASC_KEY_ID", "ASC_ISSUER_ID")
+KEY_ID_PATTERN = re.compile(r"[A-Za-z0-9]{1,64}")
 DEFAULT_BUNDLE = "com.firesoftwaresolutions.FirePrivacy"
 DEFAULT_TEAM = "LYDVWU62G4"
 MAXIMUM_RESPONSE = 262_144
@@ -67,7 +68,7 @@ def credentials(environment: dict) -> tuple[bytes, str, str]:
     if missing:
         raise PreflightError("missingBindings", bindings=missing)
     key_id, issuer = environment[BINDINGS[1]], environment[BINDINGS[2]]
-    if not isinstance(key_id, str) or not re.fullmatch(r"[A-Z0-9]{10}", key_id):
+    if not isinstance(key_id, str) or not KEY_ID_PATTERN.fullmatch(key_id):
         raise PreflightError("invalidBindings", bindings=(BINDINGS[1],))
     if not isinstance(issuer, str) or not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", issuer):
         raise PreflightError("invalidBindings", bindings=(BINDINGS[2],))
@@ -124,6 +125,8 @@ def der_to_raw(signature: bytes) -> bytes:
 
 
 def jwt(key: bytes, key_id: str, issuer: str, *, now: int | None = None) -> str:
+    if not isinstance(key_id, str) or not KEY_ID_PATTERN.fullmatch(key_id):
+        raise PreflightError("invalidBindings", bindings=(BINDINGS[1],))
     timestamp = int(time.time()) if now is None else now
     if not isinstance(timestamp, int) or isinstance(timestamp, bool) or not 0 <= timestamp <= 253_402_300_499:
         raise PreflightError("invalidClock")

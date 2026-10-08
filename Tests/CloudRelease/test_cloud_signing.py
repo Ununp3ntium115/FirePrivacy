@@ -256,6 +256,71 @@ class CloudSigningTests(unittest.TestCase):
             )
             SIGNING.cleanup()
 
+    def test_mixed_case_twelve_character_key_id_keeps_filename_and_prepared_identity(self):
+        with signing_fixture() as (root, environment_file, profile, commands, security, output):
+            key_id = "AbC123xyZ789"
+            os.environ.update(RELEASE_MODE="upload", ASC_KEY_ID=key_id, ASC_ISSUER_ID=UUID,
+                              ASC_PRIVATE_KEY_BASE64=base64.b64encode(b"dummy-p8").decode())
+            SIGNING.prepare()
+            directory = Path(os.environ["FIREPRIVACY_SIGNING_DIR"])
+            expected_path = directory / f"AuthKey_{key_id}.p8"
+            self.assertEqual(expected_path.read_bytes(), b"dummy-p8")
+            self.assertEqual(expected_path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(os.environ["ASC_KEY_ID"], key_id)
+            published = dict(line.split("=", 1) for line in environment_file.read_text().splitlines())
+            self.assertEqual(published["ASC_KEY_PATH"], str(expected_path))
+            self.assertIn(["/usr/bin/openssl", "pkey", "-in", str(expected_path), "-noout", "-check"], commands.calls)
+            self.assertNotIn(key_id, output.getvalue())
+            SIGNING.cleanup()
+            self.assertFalse(expected_path.exists())
+
+    def test_key_id_length_boundaries_accept_ascii_alphanumeric_without_normalization(self):
+        for key_id in ("a", "Ab" * 32):
+            with self.subTest(length=len(key_id)), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                os.environ.update(RELEASE_MODE="upload", ASC_KEY_ID=key_id, ASC_ISSUER_ID=UUID,
+                                  ASC_PRIVATE_KEY_BASE64=base64.b64encode(b"dummy-p8").decode())
+                SIGNING.prepare()
+                directory = Path(os.environ["FIREPRIVACY_SIGNING_DIR"])
+                expected_path = directory / f"AuthKey_{key_id}.p8"
+                self.assertTrue(expected_path.is_file())
+                self.assertEqual(os.environ["ASC_KEY_ID"], key_id)
+                self.assertIn(f"ASC_KEY_PATH={expected_path}\n", environment_file.read_text())
+                SIGNING.cleanup()
+
+    def test_unsafe_key_ids_fail_before_private_files_or_signing_mutations(self):
+        unsafe_ids = ("", "A" * 65, " ABC123", "ABC123 ", "ABC\t123", "ABC\n123", "ABC\r123",
+                      "ABC/123", "../123", "ABC\\123", "ABC-123", "ABC_123", "ümlautABC",
+                      "ＡBC123", "ABC\x7f123", "ABC\x01123")
+        for index, key_id in enumerate(unsafe_ids):
+            with self.subTest(case=index), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                os.environ.update(RELEASE_MODE="upload", ASC_KEY_ID=key_id, ASC_ISSUER_ID=UUID,
+                                  ASC_PRIVATE_KEY_BASE64=base64.b64encode(b"dummy-p8").decode())
+                with (mock.patch.object(SIGNING, "private_write", wraps=SIGNING.private_write) as private_write,
+                      mock.patch.object(SIGNING.tempfile, "mkdtemp", wraps=SIGNING.tempfile.mkdtemp) as make_directory):
+                    self.assertEqual(prepare_with_main(), 1)
+                    private_write.assert_not_called()
+                    make_directory.assert_not_called()
+                self.assertFalse(commands.calls)
+                self.assertFalse(security.calls)
+                self.assertNotIn("FIREPRIVACY_SIGNING_DIR", os.environ)
+                self.assertEqual(environment_file.read_text(), "")
+                self.assertEqual(list(root.iterdir()), [environment_file])
+
+    def test_flexible_key_id_does_not_relax_team_or_issuer_validation(self):
+        for variable, value in (("TEAM_ID", "AbC123xyZ789"), ("TEAM_ID", "abcd123456"),
+                                ("ASC_ISSUER_ID", "AbC123xyZ789")):
+            with self.subTest(variable=variable), signing_fixture() as fixture:
+                root, environment_file, profile, commands, security, output = fixture
+                os.environ.update(RELEASE_MODE="upload", ASC_KEY_ID="AbC123xyZ789", ASC_ISSUER_ID=UUID,
+                                  ASC_PRIVATE_KEY_BASE64=base64.b64encode(b"dummy-p8").decode())
+                os.environ[variable] = value
+                self.assertEqual(prepare_with_main(), 1)
+                self.assertFalse(commands.calls)
+                self.assertNotIn("FIREPRIVACY_SIGNING_DIR", os.environ)
+                self.assertEqual(environment_file.read_text(), "")
+
     def test_partial_asc_configuration_is_rejected_before_mutation(self):
         with signing_fixture() as (root, environment_file, profile, commands, security, output):
             os.environ["ASC_KEY_ID"] = "ABC1234567"

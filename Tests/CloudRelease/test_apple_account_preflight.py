@@ -112,6 +112,24 @@ class AppleAccountPreflightTests(unittest.TestCase):
         return {"ASC_PRIVATE_KEY_BASE64": base64.b64encode(self.key).decode(),
                 "ASC_KEY_ID": KEY_ID, "ASC_ISSUER_ID": ISSUER}
 
+    def verify_token(self, token, *, tamper=False):
+        header, claims, signature = token.split(".")
+        raw = base64.urlsafe_b64decode(signature + "=" * (-len(signature) % 4))
+        self.assertEqual(len(raw), 64)
+        parts = []
+        for integer in (raw[:32], raw[32:]):
+            value = integer.lstrip(b"\0") or b"\0"
+            if value[0] & 0x80:
+                value = b"\0" + value
+            parts.append(b"\x02" + bytes([len(value)]) + value)
+        sequence = b"".join(parts)
+        signature_file = self.directory / "fixture-signature.der"
+        signature_file.write_bytes(b"\x30" + bytes([len(sequence)]) + sequence)
+        result = subprocess.run([self.openssl, "dgst", "-sha256", "-verify", str(self.public),
+            "-signature", str(signature_file)], input=(header + "." + claims + ("tampered" if tamper else "")).encode(),
+            capture_output=True)
+        return result.returncode
+
     def main(self, *, opener=None, environment=None):
         output = io.StringIO()
         with mock.patch.dict(os.environ, environment or {}, clear=True), \
@@ -154,23 +172,58 @@ class AppleAccountPreflightTests(unittest.TestCase):
         self.assertEqual(json.loads(decode(header)), {"alg": "ES256", "kid": KEY_ID, "typ": "JWT"})
         self.assertEqual(json.loads(decode(claims)), {"iss": ISSUER, "iat": 1_800_000_000,
             "exp": 1_800_000_300, "aud": "appstoreconnect-v1"})
-        raw = decode(signature)
-        self.assertEqual(len(raw), 64)
-        parts = []
-        for integer in (raw[:32], raw[32:]):
-            value = integer.lstrip(b"\0") or b"\0"
-            if value[0] & 0x80:
-                value = b"\0" + value
-            parts.append(b"\x02" + bytes([len(value)]) + value)
-        sequence = b"".join(parts)
-        signature_file = self.directory / "fixture-signature.der"
-        signature_file.write_bytes(b"\x30" + bytes([len(sequence)]) + sequence)
-        verified = subprocess.run([self.openssl, "dgst", "-sha256", "-verify", str(self.public),
-            "-signature", str(signature_file)], input=(header + "." + claims).encode(), capture_output=True)
-        self.assertEqual(verified.returncode, 0, "The actual OpenSSL verifier must accept the JWT signature.")
-        tampered = subprocess.run([self.openssl, "dgst", "-sha256", "-verify", str(self.public),
-            "-signature", str(signature_file)], input=(header + "." + claims + "tampered").encode(), capture_output=True)
-        self.assertNotEqual(tampered.returncode, 0)
+        self.assertEqual(self.verify_token(token), 0, "The actual OpenSSL verifier must accept the JWT signature.")
+        self.assertNotEqual(self.verify_token(token, tamper=True), 0)
+
+    def test_twelve_character_key_id_reaches_genuine_signing_and_http_unchanged(self):
+        environment = {**self.bindings(), "ASC_KEY_ID": "MixedCase123"}
+        opener = Opener([collection([bundle()]), collection([bundle("safari")]),
+                         capabilities("APP_GROUPS", "NETWORK_EXTENSIONS"), capabilities("APP_GROUPS")])
+        output = io.StringIO()
+        with mock.patch.dict(os.environ, environment, clear=True), \
+                mock.patch.object(APP, "build_opener", return_value=opener), contextlib.redirect_stdout(output):
+            code = APP.main([])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(opener.requests), 4)
+        bearer = opener.requests[0].get_header("Authorization")
+        self.assertTrue(bearer.startswith("Bearer "))
+        token = bearer[len("Bearer "):]
+        header = token.split(".")[0]
+        decoded = json.loads(base64.urlsafe_b64decode(header + "=" * (-len(header) % 4)))
+        self.assertEqual(decoded["kid"], "MixedCase123")
+        self.assertEqual(self.verify_token(token), 0)
+        self.assertTrue(all(request.get_header("Authorization") == bearer for request in opener.requests))
+        self.assertTrue(token not in output.getvalue(), "Bearer tokens must never appear in summary output.")
+        self.assertTrue(environment["ASC_PRIVATE_KEY_BASE64"] not in output.getvalue(), "Private key material must never be printed.")
+
+    def test_key_id_ascii_bounds_preserve_exact_case(self):
+        for key_id in ("a", "MixedCase123", "Aa" * 32):
+            with self.subTest(length=len(key_id)):
+                key, actual, issuer = APP.credentials({**self.bindings(), "ASC_KEY_ID": key_id})
+                self.assertEqual(actual, key_id)
+                self.assertEqual(issuer, ISSUER)
+                self.assertTrue(key == self.key)
+
+    def test_unsafe_key_ids_reject_before_signing_files_or_http(self):
+        for key_id in ("", "A" * 65, " bad", "bad ", "bad\nkey", "bad\tkey", "bad/key", "bad\\key", "bad.key", "bad-key", "nonASCIIé"):
+            with self.subTest(length=len(key_id)), \
+                    mock.patch.dict(os.environ, {**self.bindings(), "ASC_KEY_ID": key_id}, clear=True), \
+                    mock.patch.object(APP, "jwt") as signing, \
+                    mock.patch.object(APP.tempfile, "TemporaryDirectory") as temporary, \
+                    mock.patch.object(APP, "get_json") as request, contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(APP.main([]), 1)
+                signing.assert_not_called()
+                temporary.assert_not_called()
+                request.assert_not_called()
+
+    def test_direct_jwt_helper_rejects_unsafe_key_ids_before_tools_or_files(self):
+        for key_id in ("", "A" * 65, "bad/key", "bad\nkey", "é"):
+            with self.subTest(length=len(key_id)), \
+                    mock.patch.object(APP.tempfile, "TemporaryDirectory") as temporary, \
+                    mock.patch.object(APP, "openssl") as signing, self.assertRaises(APP.PreflightError):
+                APP.jwt(self.key, key_id, ISSUER)
+            temporary.assert_not_called()
+            signing.assert_not_called()
 
     def test_temporary_private_key_permissions_and_cleanup(self):
         original, observed = APP.openssl, []
@@ -240,7 +293,8 @@ class AppleAccountPreflightTests(unittest.TestCase):
         self.assertTrue("fixture-bearer" not in output)
 
     def test_wrong_prefix_or_unknown_prefix_stops_before_capability_reads(self):
-        for seed, expected in (("WRONG12345", "teamPrefixMismatch"), (None, "teamPrefixUnconfirmed")):
+        for seed, expected in (("WRONG12345", "teamPrefixMismatch"), (None, "teamPrefixUnconfirmed"),
+                               (APP.DEFAULT_TEAM + "AA", "teamPrefixUnconfirmed")):
             with self.subTest(seed=seed):
                 opener = Opener([collection([bundle(seed=seed)])])
                 with self.assertRaises(APP.PreflightError) as failure:
@@ -329,7 +383,8 @@ class AppleAccountPreflightTests(unittest.TestCase):
 
     def test_invalid_public_configuration_fails_before_http(self):
         for bundle_id, team_id in (("com.example/app", APP.DEFAULT_TEAM),
-                                   (APP.DEFAULT_BUNDLE, "not-a-team")):
+                                   (APP.DEFAULT_BUNDLE, "not-a-team"),
+                                   (APP.DEFAULT_BUNDLE, APP.DEFAULT_TEAM + "AA")):
             with self.subTest(bundle_id=bundle_id, team_id=team_id), self.assertRaises(APP.PreflightError):
                 APP.public_configuration(bundle_id, team_id)
 
